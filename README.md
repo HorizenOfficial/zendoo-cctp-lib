@@ -49,7 +49,7 @@ scTxCommitment(height)                                                --> or num
    addCert(scId, epochNumber, quality, endEpochBlockHash, scProof)    --> bool
    getCommitment(/*optional*/scId)                                    --> Field object (see below). If scId is specified,
                                                                           returns only root of scId-related subtree. Calling on
-									  empty scTxCommitment gives field representing zero
+                                                                          empty scTxCommitment gives field representing zero
    getScMerklePath(scId)                                              --> MerklePath for root of sc-related txes subtree
    VerifyScIsCommitted(scLeaf, MerklePath, Commitment)                --> bool, where scLeaf is the root of sc-related txes, i.e.
                                                                           output of getCommitment(scId)
@@ -59,10 +59,10 @@ scTxCommitment(height)                                                --> or num
    where nonce is given from txHash and output idx, and leftMerklePath, rightMerklePath should possibly be null
    
 Field
-   ctor                           --> default one, calling whatever Rust function needed to init field
+   ctor                           --> default one, calling whatever Rust function needed to init field. Forbid copy
    dtor                           --> ensure RAII by encapsulating free function in dtor
    size                           --> unsigned int; this member should support compile time asserts against field size
-   bool operator==(const Field &) --> TO BE ADDED INSTEAD OF zendoo_field_assert_eq (util in MC gtest)
+   bool operator==(const Field &) --> TO BE ADDED INSTEAD OF zendoo_field_assert_eq (util in MC gtest).
    serialize/deserialize          --> only hex <--> field; move all logic to scTxCommitment;
                                       Serialization is needed to read/write scTxCommitmentRoot to MC block header.
                                       In MC Field should actually be exactly the type of CBLockHeader (rather than current CUint256)
@@ -72,7 +72,7 @@ Used in UT only, where can be replaced by scTxCommitment.getCommitment() with "r
 I would like Field to support minimal functionalities for scTxCommitment operations.
 
 MerklePath
-   ctor                           --> default one, calling whatever Rust function needed to init field
+   ctor                           --> default one, calling whatever Rust function needed to init field. Forbid copy
    dtor                           --> ensure RAII by encapsulating free function in dtor
    bool operator==(const Field &) --> maybe useful to compare merkle paths in tests??
    serialize/deserialize          --> To crosscheck if needed
@@ -131,7 +131,7 @@ poseidonHash --> currently only in gtests. Possibly replaced by scTxCommitment a
     finalize
     reset
     dtor
-	
+
 zendoo_verify_ginger_merkle_path --> bool TO BE REPLACED BY scTxCommitment.VerifyScIsCommitted
 
 ZendooGingerMerkleTree --> TO BE REPLACED BY scTxCommitment
@@ -143,7 +143,7 @@ ZendooGingerMerkleTree --> TO BE REPLACED BY scTxCommitment
     reset
     get_empty_node   --> unused in MC. Maybe replaced by scTxCommitment.getCommiment() on default constructed scTxCommitment
     dtor
-	
+
 Tests
     zendoo_get_random_field    --> bool TO BE REPLACED BY getCommitment from adHoc tree, whose leaves may have some randomness
     zendoo_get_field_from_long --> bool TO BE REPLACED BY getCommitment from adHoc tree, whose leaves may have some randomness
