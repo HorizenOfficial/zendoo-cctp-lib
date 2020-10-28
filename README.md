@@ -19,8 +19,8 @@ or maybe
 
 since, depending on commonalities among Mc/Sc_crypto_lib, Mc_crypto_lib could be completelly absorbed into zendooCctp; in fact I currently do not know of any Crosschain related functionalities which belong to mainchain and not sidechain!  
 There are **two main task** that are emerging that zendooCctp is concerned with:  
-+ Sidechain Tx commitment creation and verification; scTxCommitment is created in MC (and UTs in SC) and verified in SC (and UTs in MC)
-+ Proof verification *and possibly creation interface*; proof is created in SC ( and UTs in MC) and verified in MC (and UTs in SC)
++ Sidechain Tx commitment creation and verification; scTxCommitment is created in MC and in SC Unit tests (UTs hereinafter) and verified in SC and in MC UTs  
++ Proof verification *and possibly creation interface*; proof is created in SC and in MC UTs and verified in MC and in SC UTs
 
 Todo: add explanation for functionalities of for other libraries  
 
@@ -33,9 +33,8 @@ Todo: add explanation for functionalities of for other libraries
 
 ## Tentative interface
 ZendooCctp should contain references to the following objects:
-- **Field**, with ctor/dtor/equality, serialization/deserialization starting from the very same attributes (to be checked, especially considering custom sc info)
-- Flavours of **MerkleTrees**, **Merkle Paths**, with ctors/dtors/equality, serialization/deserialization, verifications
-- ~~**Schnorr signature**, likely to be used soon from Mc too (Daniele: maybe not need actually)~~
+- **Commitment**, with ctor/dtor/equality, serialization/deserialization starting from the very same attributes (to be checked, especially considering custom sc info)
+- Flavours of **scTxCommitment**, **ScCommitmentProof**, with ctors/dtors/equality, serialization/deserialization, verifications
 - **ScProof** and related classes like **scVerificationKey**
 - test support functions for all classes above
 - quantities like sizes, to static_assert against them so to verify e.g. field is long enough to duly serialize app data
@@ -43,41 +42,47 @@ ZendooCctp should contain references to the following objects:
 Along algaro indications, the main class should be named scTxCommitment and have kind of the following interface:
 ```
 scTxCommitment(height)                                                --> or number of transactions to be globally handled
-   addSc  (scId, amount, pubKey, nonce)                               --> bool [Note scId and nonce here should be the same]
-   addFwt (scId, amount, pubKey, nonce)                               --> bool
-   addBwt (scId, amount, pubKey, nonce)                               --> bool
+   addSc  (scId, amount, pubKey, withdrawalEpochLength,
+           customData, constant, VerificationKey,
+           txHash, outIdx)                                            --> bool [Note scId is hash of (txHash, outIdx) here, kind of redundant]
+   addFwt (scId, amount, pubKey, txHash, outIdx)                      --> bool
+   addBwt (scId, amount, pubKey, txHash, outIdx)                      --> bool
    addCert(scId, epochNumber, quality, endEpochBlockHash, scProof)    --> bool
-   getCommitment(/*optional*/scId)                                    --> Field object (see below). If scId is specified,
-                                                                          returns only root of scId-related subtree. Calling on
-                                                                          empty scTxCommitment gives field representing zero
-   getScMerklePath(scId)                                              --> MerklePath for root of sc-related txes subtree
-   VerifyScIsCommitted(scLeaf, MerklePath, Commitment)                --> bool, where scLeaf is the root of sc-related txes, i.e.
-                                                                          output of getCommitment(scId)
-   VerifyScIsNotCommitted(scId, leftScLeaf, leftMerklePath, 
-                          rightScLeaf, rightMerklePath, Commitment)   --> bool, check that left/right scLeaves are contiguous inside
+   getCommitment()                                                    --> Commitment object (see below), containing commitment for
+                                                                          all scIds and all txes of each scId. Called on
+                                                                          empty scTxCommitment gives default Commitment.
+   getCommitmentForSc(scId)                                           --> Commitment object (see below) containing commitment for
+                                                                          all txes of for the specified scId. Called on scTxCommitment
+                                                                          not containing scId gives default Commitment.
+   getScCommitmentProof(scId)                                         --> ScCommitmentProof from sc commitment to (global) commitment
+   VerifyScIsCommitted(scCommitment, scCommitmentProof, Commitment)   --> bool, where scCommitment      = getCommitmentForSc(scId)
+                                                                                      scCommitmentProof = getScCommitmentProof(scId)
+                                                                                      Commitment        = getCommitment()
 
-   where nonce is given from txHash and output idx, and leftMerklePath, rightMerklePath should possibly be null
-   
-Field
-   ctor                           --> default one, calling whatever Rust function needed to init field. Forbid copy
-   dtor                           --> ensure RAII by encapsulating free function in dtor
-   size                           --> unsigned int; this member should support compile time asserts against field size
-   bool operator==(const Field &) --> TO BE ADDED INSTEAD OF zendoo_field_assert_eq (util in MC gtest).
-   serialize/deserialize          --> only hex <--> field; move all logic to scTxCommitment;
-                                      Serialization is needed to read/write scTxCommitmentRoot to MC block header.
-                                      In MC Field should actually be exactly the type of CBLockHeader (rather than current CUint256)
+   VerifyScIsNotCommitted(scId, leftscCommitment, leftScCommitmentProof, 
+                          rightScCommitment, rightScCommitmentProof,
+                          Commitment)                                 --> bool, check that left/right scLeaves are contiguous inside
+
+Commitment
+   ctor                                --> default one, calling whatever Rust function needed to init field. Forbid copy
+   dtor                                --> ensure RAII by encapsulating free function in dtor
+   size                                --> unsigned int; this member should support compile time asserts against field size
+   bool operator==(const Commitment &) --> TO BE ADDED INSTEAD OF zendoo_field_assert_eq (util in MC gtest).
+   serialize/deserialize               --> only hex <--> field; move all logic to scTxCommitment;
+                                           Serialization is needed to read/write scTxCommitmentRoot to MC block header.
+                                           In MC Commitment should actually be exactly the type of CBLockHeader (rather than current CUint256)
    
 Note: no createRandom(int seed). I understand need for random, I do not like seed type: why int and not string? It looks leak to me.
 Used in UT only, where can be replaced by scTxCommitment.getCommitment() with "random" inputs fed via addFwt/Bwt.
-I would like Field to support minimal functionalities for scTxCommitment operations.
+I would like Commitment to support minimal functionalities for scTxCommitment operations.
 
-MerklePath
-   ctor                           --> default one, calling whatever Rust function needed to init field. Forbid copy
-   dtor                           --> ensure RAII by encapsulating free function in dtor
-   bool operator==(const Field &) --> maybe useful to compare merkle paths in tests??
-   serialize/deserialize          --> To crosscheck if needed
+ScCommitmentProof
+   ctor                                       --> default one, calling whatever Rust function needed to init field. Forbid copy
+   dtor                                       --> ensure RAII by encapsulating free function in dtor
+   bool operator==(const ScCommitmentProof &) --> maybe useful to compare merkle paths in tests??
+   serialize/deserialize                      --> needed in Sc
 
-Note: verification of Merkle path has been moved to scTxCommitment, unlike current Sc implementation where it is feature of Merkle Path
+Note: verification of ScCommitmentProof has been moved to scTxCommitment, unlike current Sc implementation where it is feature of Merkle Path
 ```
 
 with the following notes:
@@ -85,7 +90,6 @@ with the following notes:
 + **possibly** push down into ```VerifyTxIsNotCommitted``` low level functionalities like ```MerklePath.isNonEmptyRightMost/isLeftMost/leafIndex``` among others.
 
 ## Open points
-- explicitly handle endianess ? [so to avoid reverse bytes in Sidechain ???]
 - (Daniele) possibly remove forwarding functions, so to eliminate inclusion of ginger from mc/sc_crypto_lib and just include zendooCctp from sc_crypto_:lib
 
 ## Compilation notes
@@ -117,7 +121,7 @@ Tests
     zendoo_create_mc_test_proof
     zendoo_sc_vk_assert_eq --> bool TO BE REPLACED BY EQUALITY OPERATOR ON SC_VK
 
-THE STUFF BELOW ABSORBED BY scTxCommitmentTree or Field class
+THE STUFF BELOW ABSORBED BY scTxCommitmentTree or Commitment class
 vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
 Field
    size   --> TO ADD possibility to static_assert against it
