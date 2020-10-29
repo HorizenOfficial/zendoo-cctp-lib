@@ -7,22 +7,20 @@ Crypto functionalities should be regrouped in order to smooth development in two
 
 The libraries inclusion line should be:
 
-       ┌─────────────────────┬──> Mc_crypto_lib
-    ginger ───> zendooCctp ──|
-       └─────────────────────┴──> Sc_crypto_lib
+         +----+Ginger+---+
+         |       +       |
+         |       |       |
+         |       v       |
+         |  Zendoo-cctp  |
+         |       +       |
+         |       |       |
+         +-------+-------+
+         |               |
+         v               v
+    Mc_crypto_lib   Sc_crypto_lib
 
-or maybe
-
-    ginger ───> zendooCctp ───────────┐
-       |                              v
-       └────────────────────────> Sc_crypto_lib
-
-since, depending on commonalities among Mc/Sc_crypto_lib, Mc_crypto_lib could be completelly absorbed into zendooCctp; in fact I currently do not know of any Crosschain related functionalities which belong to mainchain and not sidechain!  
-There are **two main task** that are emerging that zendooCctp is concerned with:  
+Currently the main task of zendooCctp is:  
 + Sidechain Tx commitment creation and verification; scTxCommitment is created in MC and in SC Unit tests (UTs hereinafter) and verified in SC and in MC UTs  
-+ Proof verification *and possibly creation interface*; proof is created in SC and in MC UTs and verified in MC and in SC UTs
-
-Todo: add explanation for functionalities of for other libraries  
 
 ## Design indications
 1. scTxCommitment should be opaque to Mc/Sc; no tree structural stuff should be in control of Mc/Sc, except maybe tree height; ideally Mc/sc should not even know it's a Merkle tree
@@ -35,7 +33,6 @@ Todo: add explanation for functionalities of for other libraries
 ZendooCctp should contain references to the following objects:
 - **Commitment**, with ctor/dtor/equality, serialization/deserialization starting from the very same attributes (to be checked, especially considering custom sc info)
 - Flavours of **scTxCommitment**, **ScCommitmentProof**, with ctors/dtors/equality, serialization/deserialization, verifications
-- **ScProof** and related classes like **scVerificationKey**
 - test support functions for all classes above
 - quantities like sizes, to static_assert against them so to verify e.g. field is long enough to duly serialize app data
 
@@ -89,14 +86,28 @@ with the following notes:
 + In SDK looks like leaves can be added as a list of leaves, not single ones. Duly extend interface above to accomodate for multiple txes.
 + **possibly** push down into ```VerifyTxIsNotCommitted``` low level functionalities like ```MerklePath.isNonEmptyRightMost/isLeftMost/leafIndex``` among others.
 
-## Open points
-- (Daniele) possibly remove forwarding functions, so to eliminate inclusion of ginger from mc/sc_crypto_lib and just include zendooCctp from sc_crypto_:lib
-
 ## Compilation notes
 Picked branch sc_tx_commitment from SDK. It uses ad-hoc jar from zendoo_sc_cryptolib, got from Sasha via telegram. Some failing tests, under control  
 In zendoo-sc-cryptolib branch where PoseidonHash related changes have been implemented is updatable_poseidon. rustc/cargo v 1.40.0 won't compile. Update to 1.47.0 would do with minor warnings. cargo fmt not called, would modify several files  
 Imported on eclipse via File --> Import --> Maven --> Existing Maven Project --> Browse to root dir --> ok ok  
 Eclipse plugin for Rust is called Corrosion: Help --> Eclipse Marketplace --> Search for Corrosion and install. To be tested
+
+## Next steps
+Another operation which cross chain transfer protocol requires is proof verification. Proofs are created in SC and in MC UTs and verified in MC and in SC UTs.  
+Currently proof verification functions are not absorbed into zendooCctp and belong to mc_cryto_lib. However in next future we could move them and get an library inclusion flow as follows:  
+
+    +------+Ginger+-----+
+    |         +         |
+    |         |         |
+    |         v         |
+    |    Zendoo-cctp    |
+    |         +         |
+    |         |         |
+    |         v         |
+    +-> sc_crypto-lib <-+
+
+We should be able to do it since there are currently no crosschain related functionalities which belong to mainchain and not sidechain.  
+(Daniele) possibly remove forwarding functions, so to eliminate inclusion of ginger from mc/sc_crypto_lib and just include zendooCctp from sc_crypto_lib
 
 ## LIST OF CURRENT CLASSES IN MC/SC, YET TO BE REFINED
 ```
