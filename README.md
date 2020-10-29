@@ -20,7 +20,7 @@ The libraries inclusion line should be:
     Mc_crypto_lib   Sc_crypto_lib
 
 Currently the main task of zendooCctp is:  
-+ Sidechain Tx commitment creation and verification; scTxCommitment is created in MC and in SC Unit tests (UTs hereinafter) and verified in SC and in MC UTs  
++ Sidechain Tx commitment creation and verification; scTxCommitment is created in MC and in SC Unit tests (UTs hereinafter) and verified in MC and SC  
 
 ## Design indications
 1. scTxCommitment should be opaque to Mc/Sc; no tree structural stuff should be in control of Mc/Sc, except maybe tree height; ideally Mc/sc should not even know it's a Merkle tree
