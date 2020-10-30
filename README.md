@@ -20,14 +20,14 @@ The libraries inclusion line should be:
     Mc_crypto_lib   Sc_crypto_lib
 
 Currently the main task of zendooCctp is:  
-+ Sidechain Tx commitment creation and verification; scTxCommitment is created in MC and in SC Unit tests (UTs hereinafter) and verified in MC and SC  
++ Sidechain Tx commitment creation and verification; commitments are created in MC and in SC Unit tests (UTs hereinafter) and verified in MC and SC  
 
 ## Design indications
-1. scTxCommitment should be opaque to Mc/Sc; no tree structural stuff should be in control of Mc/Sc, except maybe tree height; ideally Mc/sc should not even know it's a Merkle tree
+1. commitments should be opaque to Mc/Sc; no tree structural stuff should be in control of Mc/Sc, except maybe tree height; ideally Mc/sc should not even know it's a Merkle tree
 2. make explicit quantities like fields/proofs sizes, in order to static assert on and make sure hashing works as expected
 3. (by Algaro) explicitly list quantities zendooCctp works on (e.g. amount, pubKey, nonce)
 4. (by Algaro) make single function for each tx type (fwds, btr, certs)
-5. (by Algaro) main class should be called scTxCommitment
+5. (by Algaro) main class should be called scTxCommitment.  
 
 ## Tentative interface
 ZendooCctp should contain references to the following objects:
@@ -36,21 +36,26 @@ ZendooCctp should contain references to the following objects:
 - test support functions for all classes above
 - quantities like sizes, to static_assert against them so to verify e.g. field is long enough to duly serialize app data
 
-Along algaro indications, the main class should be named scTxCommitment and have kind of the following interface:
 ```
-scTxCommitment(height)                                                --> or number of transactions to be globally handled
-   addSc  (scId, amount, pubKey, withdrawalEpochLength,
+scTxCommitmentBuilder(height)                                         --> or number of transactions to be globally handled
+   addScCreation(scId, amount, pubKey, withdrawalEpochLength,
            customData, constant, VerificationKey,
-           txHash, outIdx)                                            --> Commitment [Note scId is hash of (txHash, outIdx) here, kind of redundant]
-   addFwt (scId, amount, pubKey, txHash, outIdx)                      --> Commitment of all Fwts added so far
-   addBwt (scId, amount, pubKey, txHash, outIdx)                      --> Commitment of all Bwts added so far
-   addCert(scId, epochNumber, quality, endEpochBlockHash, scProof)    --> Commitment
+           txHash, outIdx)                                            --> bool [Note scId is hash of (txHash, outIdx) here, kind of redundant]
+   addFwt (scId, amount, pubKey, txHash, outIdx)                      --> bool
+   addBwt (scId, amount, pubKey, txHash, outIdx)                      --> bool
+   addCert(scId, epochNumber, quality, endEpochBlockHash, scProof)    --> bool
+
+   getScCreationCommitment(scId)                                      --> Commitment
+   getFwtCommitment(scId)                                             --> Commitment
+   getBwtCommitment(scId)                                             --> Commitment
+   getCertCommitment(scId)                                            --> Commitment
+   getCommitmentForSc(scId)                                           --> Commitment containing commitment for
+                                                                          all txes of for the specified scId. Called on scTxCommitmentBuilder
+                                                                          not containing scId gives default Commitment.
    getCommitment()                                                    --> Commitment containing commitment for
                                                                           all scIds and all txes of each scId. Called on
-                                                                          empty scTxCommitment gives default Commitment.
-   getCommitmentForSc(scId)                                           --> Commitment containing commitment for
-                                                                          all txes of for the specified scId. Called on scTxCommitment
-                                                                          not containing scId gives default Commitment.
+                                                                          empty scTxCommitmentBuilder gives default Commitment.
+
    getScCommitmentProof(scId)                                         --> ScCommitmentProof from sc commitment to (global) commitment
    VerifyScIsCommitted(scCommitment, scCommitmentProof, Commitment)   --> bool, where scCommitment      = getCommitmentForSc(scId)
                                                                                       scCommitmentProof = getScCommitmentProof(scId)
@@ -67,13 +72,13 @@ Commitment
    dtor                                --> ensure RAII by encapsulating free function in dtor
    size                                --> unsigned int; this member should support compile time asserts against field size
    bool operator==(const Commitment &) --> TO BE ADDED INSTEAD OF zendoo_field_assert_eq (util in MC gtest).
-   serialize/deserialize               --> only hex <--> field; move all logic to scTxCommitment;
+   serialize/deserialize               --> only hex <--> field; move all logic to scTxCommitmentBuilder;
                                            Serialization is needed to read/write scTxCommitmentRoot to MC block header.
                                            In MC Commitment should actually be exactly the type of CBLockHeader (rather than current CUint256)
    
 Note: no createRandom(int seed). I understand need for random, I do not like seed type: why int and not string? It looks leak to me.
-Used in UT only, where can be replaced by scTxCommitment.getCommitment() with "random" inputs fed via addFwt/Bwt.
-I would like Commitment to support minimal functionalities for scTxCommitment operations.
+Used in UT only, where can be replaced by scTxCommitmentBuilder.getCommitment() with "random" inputs fed via addFwt/Bwt.
+I would like Commitment to support minimal functionalities for scTxCommitmentBuilder operations.
 
 ScCommitmentProof
    ctor                                       --> default one, calling whatever Rust function needed to init field. Forbid copy
