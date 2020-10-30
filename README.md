@@ -26,8 +26,7 @@ Currently the main task of zendooCctp is:
 1. commitments should be opaque to Mc/Sc; no tree structural stuff should be in control of Mc/Sc, except maybe tree height; ideally Mc/sc should not even know it's a Merkle tree
 2. make explicit quantities like fields/proofs sizes, in order to static assert on and make sure hashing works as expected
 3. (by Algaro) explicitly list quantities zendooCctp works on (e.g. amount, pubKey, nonce)
-4. (by Algaro) make single function for each tx type (fwds, btr, certs)
-5. (by Algaro) main class should be called scTxCommitment.  
+4. (by Algaro) make single function for each tx type (fwds, btr, certs)  
 
 ## Tentative interface
 ZendooCctp should contain references to the following objects:
@@ -45,10 +44,11 @@ scTxCommitmentBuilder(height)                                         --> or num
    addBwt (scId, amount, pubKey, txHash, outIdx)                      --> bool
    addCert(scId, epochNumber, quality, endEpochBlockHash, scProof)    --> bool
 
-   getScCreationCommitment(scId)                                      --> Commitment
-   getFwtCommitment(scId)                                             --> Commitment
-   getBwtCommitment(scId)                                             --> Commitment
-   getCertCommitment(scId)                                            --> Commitment
+   getScCreationCommitment(scId)                                      --> Commitment, util for getScCommitmentExtendedProof
+   getFwtCommitment(scId)                                             --> Commitment, util for getScCommitmentExtendedProof
+   getBwtCommitment(scId)                                             --> Commitment, util for getScCommitmentExtendedProof
+   getCertCommitment(scId)                                            --> Commitment, util for getScCommitmentExtendedProof
+
    getCommitmentForSc(scId)                                           --> Commitment containing commitment for
                                                                           all txes of for the specified scId. Called on scTxCommitmentBuilder
                                                                           not containing scId gives default Commitment.
@@ -57,16 +57,23 @@ scTxCommitmentBuilder(height)                                         --> or num
                                                                           empty scTxCommitmentBuilder gives default Commitment.
 
    getScCommitmentProof(scId)                                         --> ScCommitmentProof from sc commitment to (global) commitment
+   getScCommitmentExtendedProof(scId)                                 --> tuple of (FtsCommit,  BtrsCommit,  CertCommit,  ScCommitmentProof)
+                                                                          util for getAbsenceProof
+
+   getNeighbors(scId)                                                 --> pair of (leftScId, rightScId), possibly null. Ordering issue
+                                                                          among scIds should be handled here only
+
+   getAbsenceProof(scId)                                              --> ScAbsenceProof whose components are filled with 
+
    VerifyScIsCommitted(scCommitment, scCommitmentProof, Commitment)   --> bool, where scCommitment      = getCommitmentForSc(scId)
                                                                                       scCommitmentProof = getScCommitmentProof(scId)
                                                                                       Commitment        = getCommitment()
-   VerifyScIsNotCommitted(scId,
-                          leftScId, leftFtsCommit, leftBtrsCommit, leftCertCommit, leftScCommitmentProof, 
-                          rightScId, rightFtsCommit, rightBtrsCommit, rightCertCommit, rightScCommitmentProof,
-                          Commitment)                                 --> bool, check that 
+
+   VerifyScIsNotCommitted(scId, leftScId, rightScId,
+                          ScAbsenceProof, Commitment)                     --> bool, check that 
                                                                           left/right scLeaves are contiguous; leftScId < scId < rightScId
                                                                           left/right elements may or may not exist
-                                                                          left/right*Commit objects come from add{Sc.Fwt,Bwt,Cert} functions
+
 Commitment
    ctor                                --> default one, calling whatever Rust function needed to init field. Forbid copy
    dtor                                --> ensure RAII by encapsulating free function in dtor
@@ -87,6 +94,15 @@ ScCommitmentProof
    serialize/deserialize                      --> needed in Sc
 
 Note: verification of ScCommitmentProof has been moved to scTxCommitment, unlike current Sc implementation where it is feature of Merkle Path
+
+ScAbsenceProof [just wrapper for pair of "extended proofs"]
+   members:
+       leftFtsCommit,  leftBtrsCommit,  leftCertCommit,  leftScCommitmentProof
+       rightFtsCommit, rightBtrsCommit, rightCertCommit, rightScCommitmentProof
+   ctor                                       --> default one, calling whatever Rust function needed to init field. Forbid copy
+   dtor                                       --> ensure RAII by encapsulating free function in dtor
+   bool operator==(const ScCommitmentProof &) --> maybe useful to compare merkle paths in tests??
+   serialize/deserialize                      --> needed in Sc
 ```
 
 with the following notes:
