@@ -1,48 +1,51 @@
-# ZendooCctp: supporting Cross Chain Transfers for Zendoo Protocol
+# zendoo-CCTP-lib: supporting Cross Chain Transfers for Zendoo Protocol
 
 ## Goal
 Crypto functionalities should be regrouped in order to smooth development in two ways:
-+ Make sure that if a new circuit functionality is to be added to a specific sidechain, only Sc_crypto_lib should be recompiled
-+ Make sure that if a new curve/field/crypto functionality is added to ginger, it is propagately smoothly to zendooCctp/Sc_crypto_lib/Mc_crypto_lib upon inclusion
++ Make sure that if a new circuit functionality is to be added to a specific sidechain, only zendoo-sc-cryptolib should be recompiled
++ Make sure that if a new curve/field/crypto functionality is added to ginger-lib, it is propagately smoothly to zendoo-CCTP-lib/zendoo-sc-cryptolib/zendoo-mc-cryptolib upon inclusion
 
 The libraries inclusion line should be:
 
-         +----+Ginger+---+
-         |       +       |
-         |       |       |
-         |       v       |
-         |  Zendoo-cctp  |
-         |       +       |
-         |       |       |
-         +-------+-------+
-         |               |
-         v               v
-    Mc_crypto_lib   Sc_crypto_lib
+           +----+ginger-lib+---+
+           |         +         |
+           |         |         |
+           |         v         |
+           |  zendoo-CCTP-lib  |
+           |         +         |
+           |         |         |
+           +---------+---------+
+           |                   |
+           v                   v
+       zendoo-mc           zendoo-sc
+       cryptolib           cryptolib
 
-Currently the main task of zendooCctp is:  
+Currently the main task of zendoo-CCTP-lib is:  
 + Sidechain Tx commitment creation and verification; commitments are created in MC and in SC Unit tests (UTs hereinafter) and verified in MC and SC  
 
 ## Design indications
 1. commitments should be opaque to Mc/Sc; no tree structural stuff should be in control of Mc/Sc, except maybe tree height; ideally Mc/sc should not even know it's a Merkle tree
 2. make explicit quantities like fields/proofs sizes, in order to static assert on and make sure hashing works as expected
-3. (by Algaro) explicitly list quantities zendooCctp works on (e.g. amount, pubKey, nonce)
+3. (by Algaro) explicitly list quantities zendoo-CCTP-lib works on (e.g. amount, pubKey, nonce)
 4. (by Algaro) make single function for each tx type (fwds, btr, certs)  
 
 ## Tentative interface
-ZendooCctp should contain references to the following objects:
+zendoo-CCTP-lib should contain references to the following objects:
 - **Commitment**, with ctor/dtor/equality, serialization/deserialization starting from the very same attributes (to be checked, especially considering custom sc info)
 - Flavours of **scTxCommitment**, **ScCommitmentProof**, with ctors/dtors/equality, serialization/deserialization, verifications
 - test support functions for all classes above
 - quantities like sizes, to static_assert against them so to verify e.g. field is long enough to duly serialize app data
 
 ```
-scTxCommitmentBuilder(height)                                         --> or number of transactions to be globally handled
+scTxCommitmentBuilder()                                               --> Inner Merkle tree size is know to zendoo-CCTP-lib only; quantities to assert/check
+                                                                          number of txes/certs/Sidechain are provided separately
    addScCreation(scId, amount, pubKey, withdrawalEpochLength,
            customData, constant, VerificationKey,
-           txHash, outIdx)                                            --> bool [Note scId is hash of (txHash, outIdx) here, kind of redundant]
+           txHash, outIdx)                                            --> bool [Note: scId is hash of (txHash, outIdx) here, kind of redundant]
    addFwt (scId, amount, pubKey, txHash, outIdx)                      --> bool
    addBwt (scId, amount, pubKey, txHash, outIdx)                      --> bool
-   addCert(scId, epochNumber, quality, endEpochBlockHash, scProof)    --> bool
+   addCert(scId, epochNumber, quality, endEpochBlockHash, scProof)    --> bool [Note: cert may have sc-specific attributes which should enter this method
+                                                                                scCommitmentProof-related circuit may make use of recursion.]
 
    getScCreationCommitment(scId)                                      --> Commitment, util for getScCommitmentExtendedProof
    getFwtCommitment(scId)                                             --> Commitment, util for getScCommitmentExtendedProof
@@ -117,18 +120,18 @@ Eclipse plugin for Rust is called Corrosion: Help --> Eclipse Marketplace --> Se
 
 ## Next steps
 Another operation which cross chain transfer protocol requires is proof verification. Proofs are created in SC and in MC UTs and verified in MC and in SC UTs.  
-Currently proof verification functions are not absorbed into zendooCctp and belong to mc_cryto_lib. However in next future we could move them and get an library inclusion flow as follows:  
+Currently proof verification functions are not absorbed into zendoo-CCTP-lib and belong to mc_cryto_lib. However in next future we could move them and get an library inclusion flow as follows:  
 
-    +------+Ginger+-----+
-    |         +         |
-    |         |         |
-    |         v         |
-    |    Zendoo-cctp    |
-    |         +         |
-    |         |         |
-    |         v         |
-    +-> sc_crypto-lib <-+
+    +-------+ginger-lib+------+
+    |            +            |
+    |            |            |
+    |            v            |
+    |     zendoo-CCTP-lib     |
+    |            +            |
+    |            |            |
+    |            v            |
+    +-> zendoo-sc-cryptolib <-+
 
 We should be able to do it since there are currently no crosschain related functionalities which belong to mainchain and not sidechain.  
-(Daniele) possibly remove forwarding functions, so to eliminate inclusion of ginger from mc/sc_crypto_lib and just include zendooCctp from sc_crypto_lib
+(Daniele) possibly remove forwarding functions, so to eliminate inclusion of ginger-lib from mc/zendoo-sc-cryptolib and just include zendoo-CCTP-lib from zendoo-sc-cryptolib
 
