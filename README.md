@@ -116,14 +116,14 @@ with the following notes:
 
 ```
 +------+                              Nomenclature:
-|Fwt_1 |\                             Fwt_*  -> forward transfer output data, ordered as in block/tx 
-+------+ \                            Btr_*  -> mainchain backward transfer requests output data, ordered as in block/tx 
-          o                           Crt_*  -> certificates data, ordered as in block
-+------+ / \                          ScC_*  -> sidechain creation output data, ordered as in block/tx
-|Fwt_2 |/   \                         Csw_*  -> ceased sidechain input data, ordered as in block/tx
-+------+     +------+                 scId_* -> sidechain identifier
-             | FtMt |                 *Mt    -> Merkle tree root of the Merkle trees described aside
- ......      +------+                 Sc_*   -> PoseidonHash(h31 | h32 | CswMt | scId_*)
+|Fwt_1 |\                                Fwt_*  -> forward transfer output data,           ordered as in block/tx 
++------+ \                               Btr_*  -> backward transfer requests output data, ordered as in block/tx 
+          o                              Crt_*  -> certificates data,                      ordered as in block
++------+ / \                             ScC_*  -> sidechain creation output data,         ordered as in block/tx
+|Fwt_2 |/   \                            Csw_*  -> ceased sidechain input data,            ordered as in block/tx
++------+     +------+                    scId_* -> sidechain identifier
+             | FtMt |                    *Mt    -> Merkle tree root of the Merkle trees described aside
+ ......      +------+                    Sc_*   -> PoseidonHash(h31 | h32 | CswMt | scId_*), ordered by scId
          \  /        \
           o           \
 +------+ /             \
