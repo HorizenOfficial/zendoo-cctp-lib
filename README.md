@@ -115,39 +115,39 @@ with the following notes:
 ## ScTxCommitmentTree structure
 
 ```
-+------+
-|Fwt_1 |\
-+------+ \
-          o
-+------+ / \
-|Fwt_2 |/   \
-+------+     +------+
-             | FtMt |
- ......      +------+
++------+                              Nomenclature:
+|Fwt_1 |\                             Fwt_*  -> forward transfer output data, ordered as in block/tx 
++------+ \                            Btr_*  -> mainchain backward transfer requests output data, ordered as in block/tx 
+          o                           Crt_*  -> certificates data, ordered as in block
++------+ / \                          ScC_*  -> sidechain creation output data, ordered as in block/tx
+|Fwt_2 |/   \                         Csw_*  -> ceased sidechain input data, ordered as in block/tx
++------+     +------+                 scId_* -> sidechain identifier
+             | FtMt |                 *Mt    -> Merkle tree root of the Merkle trees described aside
+ ......      +------+                 Sc_*   -> PoseidonHash(h31 | h32 | CswMt | scId_*)
          \  /        \
           o           \
 +------+ /             \
 |Fwt_Nf|/               \
 +------+                 \
                           +-----+
-                          | h31 |--+                            +-----+
-+------+                  +-----+  |                            | Sc1 |
-|Btr_1 |\                /         |                            +-----+\
-+------+ \              /          |                                    o
-          o            /           |                            +-----+/ \
-+------+ / \          /            |                            | Sc2 |   \
-|Btr_2 |/   \        /             |                            +-----+    +--------------------+
-+------+     +------+              |                                       | ScTxCommitmentTree |
-             | BtMt |              |                                       +--------------------+
- ......      +------+              |                             .....    /
-         \ /                       |                                   \ /
-          o                        |                                    o
-+------+ /                         |                            +-----+/
-|Btr_Nb|/                          |                            | ScN |
-+------+                           |                            +-----+
-                                   |
-                                   |
-+------+                           |
+                          | h31 |--+                        |    +------+
++------+                  +-----+  |                        |    | Sc_1 |
+|Btr_1 |\                /         |                        |    +------+\
++------+ \              /          |                        |             o
+          o            /           |                        |    +------+/ \
++------+ / \          /            |                        |    | Sc_2 |   \
+|Btr_2 |/   \        /             |                        |    +------+    +--------------------+
++------+     +------+              |                        |                | ScTxCommitmentTree |
+             | BtMt |              |                        |                +--------------------+
+ ......      +------+              |                        |     .....     /
+         \ /                       |                        |            \ /
+          o                        |                        |             o
++------+ /                         |                        |    +------+/
+|Btr_Nb|/                          |                        |    | Sc_N |
++------+                           |                        |    +------+
+                                   |                        |
+                                   |                        v
++------+                           |                        Sc_* ordered by scId
 |Crt_1 |\                          |
 +------+ \                         |
           o                        |
@@ -172,9 +172,9 @@ with the following notes:
 +------+     +------+              |
              | ScMt |              |
  ......      +------+              |
-         \ /                       |   +-----+
-          o                        |---| Sc1 |
-+------+ /                         |   +-----+
+         \ /                       |   +------+
+          o                        |---| Sc_* |
++------+ /                         |   +------+
 |ScC_Ns|/                          |
 +------+                           |
                                    |
@@ -193,9 +193,9 @@ with the following notes:
 +------+ /                         |
 |Csw_Nw|/                          |
 +------+                           |
-                         +------+  |
-                         | scId |--+
-                         +------+
+                       +--------+  |
+                       | scId_* |--+
+                       +--------+
 ```
 
 ## Compilation notes
