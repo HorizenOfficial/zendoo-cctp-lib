@@ -112,6 +112,92 @@ with the following notes:
 + In SDK looks like leaves can be added as a list of leaves, not single ones. Duly extend interface above to accomodate for multiple txes.
 + **possibly** push down into ```VerifyTxIsNotCommitted``` low level functionalities like ```MerklePath.isNonEmptyRightMost/isLeftMost/leafIndex``` among others.
 
+## ScTxCommitmentTree structure
+
+```
++------+
+|Fwt_1 |\
++------+ \
+          o
++------+ / \
+|Fwt_2 |/   \
++------+     +------+
+             | FtMt |
+ ......      +------+
+         \  /        \
+          o           \
++------+ /             \
+|Fwt_Nf|/               \
++------+                 \
+                          +-----+
+                          | h31 |--+                            +-----+
++------+                  +-----+  |                            | Sc1 |
+|Btr_1 |\                /         |                            +-----+\
++------+ \              /          |                                    o
+          o            /           |                            +-----+/ \
++------+ / \          /            |                            | Sc2 |   \
+|Btr_2 |/   \        /             |                            +-----+    +--------------------+
++------+     +------+              |                                       | ScTxCommitmentTree |
+             | BtMt |              |                                       +--------------------+
+ ......      +------+              |                             .....    /
+         \ /                       |                                   \ /
+          o                        |                                    o
++------+ /                         |                            +-----+/
+|Btr_Nb|/                          |                            | ScN |
++------+                           |                            +-----+
+                                   |
+                                   |
++------+                           |
+|Crt_1 |\                          |
++------+ \                         |
+          o                        |
++------+ / \                       |
+|Crt_2 |/   \                      |
++------+     +------+              |
+             |CertMt|              |
+ ......      +------+              |
+         \ /         \             |
+          o           \            |
++------+ /             \           |
+|Crt_Nc|/               \          |
++------+                 \         |
+                          +-----+  |
+                          | h32 |--+
++------+                  +-----+  |
+|ScC_1 |\                /         |
++------+ \              /          |
+          o            /           |
++------+ / \          /            |
+|ScC_2 |/   \        /             |
++------+     +------+              |
+             | ScMt |              |
+ ......      +------+              |
+         \ /                       |   +-----+
+          o                        |---| Sc1 |
++------+ /                         |   +-----+
+|ScC_Ns|/                          |
++------+                           |
+                                   |
+                                   |
++------+                           |
+|Csw_1 |\                          |
++------+ \                         |
+          o                        |
++------+ / \                       |
+|Csw_2 |/   \                      |
++------+     \            +-----+  |
+              ----------->|CswMt|--+
+ ......      /            +-----+  |
+         \  /                      |
+          o                        |
++------+ /                         |
+|Csw_Nw|/                          |
++------+                           |
+                         +------+  |
+                         | scId |--+
+                         +------+
+```
+
 ## Compilation notes
 Picked branch sc_tx_commitment from SDK. It uses ad-hoc jar from zendoo_sc_cryptolib, got from Sasha via telegram. Some failing tests, under control  
 In zendoo-sc-cryptolib branch where PoseidonHash related changes have been implemented is updatable_poseidon. rustc/cargo v 1.40.0 won't compile. Update to 1.47.0 would do with minor warnings. cargo fmt not called, would modify several files  
