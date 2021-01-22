@@ -41,32 +41,34 @@ scTxCommitmentBuilder()                                               --> Inner 
                                                                           number of txes/certs/Sidechain are provided separately
    addScCreation(scId, amount, pubKey, withdrawalEpochLength,
            customData, constant, VerificationKey,
-           txHash, outIdx)                                            --> bool [Note: scId is hash of (txHash, outIdx) here, kind of redundant]
-   addFwt (scId, amount, pubKey, txHash, outIdx)                      --> bool
-   addBwt (scId, amount, pubKey, txHash, outIdx)                      --> bool
-   addCert(scId, epochNumber, quality, endEpochBlockHash, scProof)    --> bool [Note: cert may have sc-specific attributes which should enter this method
-                                                                                scCommitmentProof-related circuit may make use of recursion.]
+           txHash, outIdx)                                           --> bool [Note: scId is hash of (txHash, outIdx) here, kind of redundant]
+   addFwt(scId, amount, pubKey, txHash, outIdx)                      --> bool
+   addBtr(scId, amount, pubKey, txHash, outIdx)                      --> bool
+   addCert(scId, epochNumber, quality, startEpochCumSCBlockTxTree,
+           endEpochCumSCBlockTxTree, BTList, customFieldsList)       --> bool
+   addCsw(scId, amount, nullifier, pkHash, prevCumCertDataHash,
+          curCertDataHash, lastCumCertDataHash)                      --> bool
 
-   getScCreationCommitment(scId)                                      --> Commitment, util for getScCommitmentExtendedProof
-   getFwtCommitment(scId)                                             --> Commitment, util for getScCommitmentExtendedProof
-   getBwtCommitment(scId)                                             --> Commitment, util for getScCommitmentExtendedProof
-   getCertCommitment(scId)                                            --> Commitment, util for getScCommitmentExtendedProof
+   getScCreationCommitment(scId)                                      --> Commitment [Note: util for getScCommitmentExtendedProof]
+   getFwtCommitment(scId)                                             --> Commitment [Note: util for getScCommitmentExtendedProof]
+   getBwtCommitment(scId)                                             --> Commitment [Note: util for getScCommitmentExtendedProof]
+   getCertCommitment(scId)                                            --> Commitment [Note: util for getScCommitmentExtendedProof]
 
-   getCommitmentForSc(scId)                                           --> Commitment containing commitment for
+   getCommitmentForSc(scId)                                           --> Commitment [Note: containing commitment for
                                                                           all txes of for the specified scId. Called on scTxCommitmentBuilder
-                                                                          not containing scId gives default Commitment.
-   getCommitment()                                                    --> Commitment containing commitment for
+                                                                          not containing scId gives default Commitment].
+   getCommitment()                                                    --> Commitment [Note: containing commitment for
                                                                           all scIds and all txes of each scId. Called on
-                                                                          empty scTxCommitmentBuilder gives default Commitment.
+                                                                          empty scTxCommitmentBuilder gives default Commitment].
 
-   getScCommitmentProof(scId)                                         --> ScCommitmentProof from sc commitment to (global) commitment
+   getScCommitmentProof(scId)                                         --> ScCommitmentProof [Note: from sc commitment to (global) commitment]
    getScCommitmentExtendedProof(scId)                                 --> tuple of (FtsCommit,  BtrsCommit,  CertCommit,  ScCommitmentProof)
-                                                                          util for getAbsenceProof
+                                                                          [Note:util for getAbsenceProof]
 
-   getNeighbors(scId)                                                 --> pair of (leftScId, rightScId), possibly null. Ordering issue
-                                                                          among scIds should be handled here only
+   getNeighbors(scId)                                                 --> pair of (leftScId, rightScId), possibly null.
+                                                                          [Note: ordering issue among scIds should be handled here only]
 
-   getAbsenceProof(scId)                                              --> ScAbsenceProof whose components are filled with 
+   getAbsenceProof(scId)                                              --> ScAbsenceProof
 
    VerifyScIsCommitted(scCommitment, scCommitmentProof, Commitment)   --> bool, where scCommitment      = getCommitmentForSc(scId)
                                                                                       scCommitmentProof = getScCommitmentProof(scId)
