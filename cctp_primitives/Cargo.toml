@@ -1,0 +1,18 @@
+[package]
+name = "cctp_primitives"
+version = "0.1.0"
+authors = [""]
+edition = "2018"
+
+[dependencies]
+algebra = {version = "0.1.0", git = "https://github.com/ZencashOfficial/ginger-lib.git", branch = "smt"}
+primitives = {version = "0.1.0", features = ["smt"], git = "https://github.com/ZencashOfficial/ginger-lib.git", branch = "smt"}
+#algebra = { path = "../../ginger-lib/algebra" }
+#primitives = { path = "../../ginger-lib/primitives", features = ["smt"] }
+rand = { version = "0.7" }
+sha1 = "0.6.0"
+
+[lib]
+name = "zendoo_cctp"
+path = "src/lib.rs"
+crate_type = ["cdylib"]
