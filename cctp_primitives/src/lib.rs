@@ -33,4 +33,4 @@ unsafe_code
 )]
 #![forbid(unsafe_code)]
 
-pub mod commitment;
+pub mod commitment_tree;
