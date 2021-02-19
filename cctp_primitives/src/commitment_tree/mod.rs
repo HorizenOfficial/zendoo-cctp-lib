@@ -40,11 +40,12 @@ const CMT_PATH_SUFFIX:   &str = "_cmt";
 pub struct ScExistenceProof{
     mpath: FieldBasedBinaryMHTPath<GingerMerkleTreeParameters>
 }
-
-// pub struct ScAbsenceProof{
-//     mpath_left:  Option<FieldBasedBinaryMHTPath<GingerMerkleTreeParameters>>,
-//     mpath_right: Option<FieldBasedBinaryMHTPath<GingerMerkleTreeParameters>>
-// }
+// Proof of absence of some Sidechain-ID inside of a CommitmentTree;
+// Contains one or two neighbours of an absent ID
+pub struct ScAbsenceProof{
+    left:  Option<(FieldElement, FieldBasedBinaryMHTPath<GingerMerkleTreeParameters>)>, // a smaller ID of an existing SC together with Merkle Path of its SC-commitment
+    right: Option<(FieldElement, FieldBasedBinaryMHTPath<GingerMerkleTreeParameters>)>  // a bigger ID of an existing SC together with Merkle Path of its SC-commitment
+}
 
 pub struct CommitmentTree {
     sc_trees:           Vec<SidechainTree>,         // ordered by IDs list of Sidechain Trees
@@ -168,6 +169,30 @@ impl CommitmentTree {
         }
     }
 
+    // Gets a proof of non-inclusion of a sidechain with specified ID into a current CommitmentTree
+    // Returns None if get_neighbours didn't return any neighbour for a specified ID
+    pub fn get_sc_absence_proof(&mut self, absent_id: &FieldElement) -> Option<ScAbsenceProof> {
+        let (left, right) = self.get_neighbours_for_absent(absent_id);
+        if left.is_some() || right.is_some(){
+            if let Some(tree) = self.get_commitments_tree(){
+                Some(
+                    ScAbsenceProof{
+                        left: if let Some((index, left_id)) = left {
+                            Some((left_id, tree.get_merkle_path(Coord::new(0, index))) )
+                        } else { None },
+                        right: if let Some((index, right_id)) = right {
+                            Some((right_id, tree.get_merkle_path(Coord::new(0, index))) )
+                        } else { None }
+                    }
+                )
+            } else {
+                None
+            }
+        } else {
+            None
+        }
+    }
+
     //----------------------------------------------------------------------------------------------
     // Static methods
     //----------------------------------------------------------------------------------------------
@@ -182,7 +207,49 @@ impl CommitmentTree {
             false
         }
     }
-    // pub fn get_sc_absence_proof(&self, sc_id: &FieldElement)
+
+    // TODO: This method is supposed to be static but it needs to get SC-commitment for any existing SC-ID from the proof
+    // So now it is non-static to have access to get_sc_commitment method;
+    // To make it static the corresponding SC-commitments should be passed as parameters or included into the proof and verified in some way for consistency with SC-IDs from the proof
+    //
+    // Verifies proof of sidechain non-inclusion into a specified CommitmentTree
+    // Takes sidechain ID, sidechain absence proof and a root of CommitmentTree - CMT-commitment
+    // Returns true if proof is correct, false otherwise
+    pub fn verify_sc_absence(&self, absent_id: &FieldElement, proof: &ScAbsenceProof, commitment: &FieldElement) -> bool {
+        if proof.left.is_some() && proof.right.is_some(){
+            let (left_id, left_mpath) = proof.left.as_ref().unwrap();
+            let (right_id, right_mpath) = proof.right.as_ref().unwrap();
+
+            // Validating Merkle Paths of SC-commitments for the given SC-IDs
+            let left_path_status = left_mpath.verify(CMT_SMT_HEIGHT, &self.get_sc_commitment(left_id).unwrap(), commitment);
+            let right_path_status = right_mpath.verify(CMT_SMT_HEIGHT, &self.get_sc_commitment(right_id).unwrap(), commitment);
+
+            left_id < right_id
+                && left_id < absent_id && absent_id < right_id
+                && left_path_status.is_ok() && left_path_status.unwrap() == true
+                && right_path_status.is_ok() && right_path_status.unwrap() == true
+                && left_mpath.leaf_index() + 1 == right_mpath.leaf_index() // the smaller and bigger IDs have adjacent positions in SMT
+
+        } else if proof.left.is_some() {
+            let (left_id, left_mpath) = proof.left.as_ref().unwrap();
+            let left_path_status = left_mpath.verify(CMT_SMT_HEIGHT, &self.get_sc_commitment(left_id).unwrap(), commitment);
+
+            left_id < absent_id
+                && left_path_status.is_ok() && left_path_status.unwrap() == true
+                && (left_mpath.is_rightmost() || left_mpath.is_non_empty_rightmost()) // is a last leaf in SMT or a last non-empty leaf in SMT
+
+        } else if proof.right.is_some() {
+            let (right_id, right_mpath) = proof.right.as_ref().unwrap();
+            let right_path_status = right_mpath.verify(CMT_SMT_HEIGHT, &self.get_sc_commitment(right_id).unwrap(), commitment);
+
+            absent_id < right_id
+                && right_path_status.is_ok() && right_path_status.unwrap() == true
+                && right_mpath.is_leftmost() // the bigger ID is the smallest one in SMT
+
+        } else {
+            panic!("Left and Right IDs can't be absent together in ScAbsenceProof")
+        }
+    }
 
     //----------------------------------------------------------------------------------------------
     // Private auxiliary methods
@@ -381,11 +448,44 @@ impl CommitmentTree {
         }
         self.commitments_tree.as_mut()
     }
+
+    // For a given absent ID gets smaller and bigger neighbours in pair with their positions in a sorted list of existing SC-IDs
+    // If absent ID is smaller then any of existing SC-IDs then a left neighbour is None
+    // If absent ID is bigger then any of existing SC-IDs then a right neighbour is None
+    // If there are no sidechains or a sidechain with a specified ID exists in a current CommitmentTree, returns (None, None)
+    fn get_neighbours_for_absent(&self, absent_id: &FieldElement) -> (Option<(usize, FieldElement)>, Option<(usize, FieldElement)>) {
+        let sc_ids = self.get_indexed_sc_ids();
+        // Check that sidechains-IDs list is non-empty and the given ID is really absent in this list
+        if !sc_ids.is_empty() &&
+            sc_ids.iter().find(|(_, id)| *id == absent_id).is_none(){
+            // Returns a tuple with a copy of SC-ID
+            fn copy(index_idref: (usize, &FieldElement)) -> (usize, FieldElement){
+                (index_idref.0, *index_idref.1)
+            }
+            // Find a bigger neighbour of the absent_id
+            let bigger_id = sc_ids.iter().find(|(_, id)| *id > absent_id);
+            if bigger_id.is_none(){
+                // There is no bigger neighbour, so the last, i.e. the biggest existing SC-ID is the lesser neighbour
+                (Some(copy(sc_ids[sc_ids.len() - 1])), None)
+            } else {
+                let right = bigger_id.unwrap().to_owned();
+                let right_index = right.0;
+                if right_index == 0 {
+                    // There is no lesser neighbour, so the first i.e. the smallest existing SC-ID is the bigger neighbour
+                    (None, Some(copy(right)))
+                } else {
+                    // The lesser neighbour is the previous one
+                    (Some(copy(sc_ids[right_index - 1])), Some(copy(right)))
+                }
+            }
+        } else {
+            (None, None)
+        }
+    }
 }
 
 #[test]
 fn commitment_tree_tests(){
-
     let zero  = FieldElement::zero();
     let one   = FieldElement::one();
     let two   = FieldElement::one() + &one;
@@ -444,8 +544,7 @@ fn commitment_tree_tests(){
     assert_ne!(comm_without_scc, cmt.get_sc_commitment(&sc_ids[0]));
 
     // Commitment of the updated CMT has non-empty value
-    let comm1 = cmt.get_commitment().unwrap();
-    assert_ne!(empty_comm, comm1);
+    assert_ne!(empty_comm, cmt.get_commitment().unwrap());
 
     // There is no existence-proof for a non-existing SC-ID
     assert!(cmt.get_sc_existence_proof(&non_existing_id).is_none());
@@ -455,4 +554,57 @@ fn commitment_tree_tests(){
         cmt.get_sc_commitment(&sc_ids[0]).as_ref().unwrap(),
         cmt.get_sc_existence_proof(&sc_ids[0]).as_ref().unwrap(),
         cmt.get_commitment().as_ref().unwrap()));
+}
+
+#[test]
+fn sc_absence_proofs_tests(){
+    let zero  = FieldElement::zero();
+    let one   = FieldElement::one();
+    let two   = FieldElement::one() + &one;
+    let three = FieldElement::one() + &two;
+    let four  = FieldElement::one() + &three;
+
+    let mut cmt = CommitmentTree::create("./cmt_").unwrap();
+
+    // There is no absence-proof for an empty CommitmentTree
+    assert!(cmt.get_sc_absence_proof(&one).is_none());
+
+    let fe = FieldElement::one();
+
+    // Creating two SC-Trees with IDs: 1 and 3
+    cmt.add_fwt(&one, &fe);
+    cmt.add_csw(&three, &fe);
+
+    // Getting commitment for all SC-trees
+    let commitment = cmt.get_commitment();
+
+    // There is no absence-proof for an existing SC-ID
+    assert!(cmt.get_sc_absence_proof(&one).is_none());
+
+    // Creating and validating absence proof for non-existing ID which value is smaller of any existing IDs
+    let proof_leftmost = cmt.get_sc_absence_proof(&zero);
+    assert!(proof_leftmost.is_some());
+    assert!(cmt.verify_sc_absence(
+        &zero,
+        proof_leftmost.as_ref().unwrap(),
+        commitment.as_ref().unwrap())
+    );
+
+    // Creating and validating absence proof for non-existing ID which value is between existing IDs
+    let proof_midst = cmt.get_sc_absence_proof(&two);
+    assert!(proof_midst.is_some());
+    assert!(cmt.verify_sc_absence(
+        &two,
+        proof_midst.as_ref().unwrap(),
+        commitment.as_ref().unwrap())
+    );
+
+    // Creating and validating absence proof for non-existing ID which value is bigger of any existing IDs
+    let proof_rightmost = cmt.get_sc_absence_proof(&four);
+    assert!(proof_rightmost.is_some());
+    assert!(cmt.verify_sc_absence(
+        &four,
+        proof_rightmost.as_ref().unwrap(),
+        commitment.as_ref().unwrap())
+    );
 }
