@@ -126,58 +126,58 @@ with the following notes:
 +------+ / \                             ScC_*  -> sidechain creation output data,         ordered as in block/tx
 |Fwt_2 |/   \                            Csw_*  -> ceased sidechain input data,            ordered as in block/tx
 +------+     +------+                    scId_* -> sidechain identifier
-             | FtMt |                    *Mt    -> Merkle tree root of the Merkle trees described aside
- ......      +------+                    Sc_*   -> for Alive Sidechain subtree, PoseidonHash(h31 | h32 | CswMt | scId_*), ordered by scId
-         \  /        \                          -> for Ceased Sidechain subtree, PoseidonHash(CswMt | scId_*), ordered by scId
-          o           \
-+------+ /             \
-|Fwt_Nf|/               \
-+------+                 \                                  scTxCommitmentTree upper level structure
-                          +-----+
-                          | h31 |--+                        |    +------+
-+------+                  +-----+  |                        |    | Sc_1 |
-|Btr_1 |\                /         |                        |    +------+\
-+------+ \              /          |                        |             o
-          o            /           |                        |    +------+/ \
-+------+ / \          /            |                        |    | Sc_2 |   \
-|Btr_2 |/   \        /             |                        |    +------+    +--------------------+
-+------+     +------+              |                        |                | ScTxCommitmentTree |
-             | BtMt |              |                        |                +--------------------+
- ......      +------+              |                        |     .....     /
-         \ /                       |                        |            \ /
-          o                        |                        |             o
-+------+ /                         |                        |    +------+/
-|Btr_Nb|/                          |                        |    | Sc_N |
-+------+                           |                        |    +------+
-                                   |                        |
-                                   |                        v
-+------+                           |                        Sc_* ordered by scId
-|Crt_1 |\                          |
-+------+ \                         |
-          o                        |   +------+
-+------+ / \                       |---| Sc_* |
-|Crt_2 |/   \                      |   +------+
-+------+     +------+              |                        
-             |CertMt|              |                           Ceased Sidechain Subtree Structure
- ......      +------+              |                        +------+
-         \ /         \             |                        |Csw_1 |\
-          o           \            |                        +------+ \
-+------+ /             \           |                                  o
-|Crt_Nc|/               \          |                        +------+ / \
-+------+                 \         |                        |Csw_2 |/   \
-                          +-----+  |                        +------+     \       +-----+
-                          | h32 |--+                                      ------>|CswMt|--+
-                          +-----+  |                         ......      /       +-----+  |
-                         /         |                                 \  /                 |
-                        /          |                                  o                   |
-+------+               /           |                        +------+ /                    |   +------+
-|ScC_* |--------------o            |                        |Csw_Nw|/                     |---| Sc_* |
-+------+                           |                        +------+                      |   +------+
-                                   |                                                      |
-                                   |                                                      |
-             +--------+            |                                +--------+            |
-             | scId_* |------------+                                | scId_* |------------+
-             +--------+                                             +--------+
+             | FtMt |-----+            *Mt    -> Merkle tree root of the Merkle trees described aside
+ ......      +------+     |              Sc_*   -> for Alive Sidechain subtree, PoseidonHash(h31 | h32 | CswMt | scId_*), ordered by scId
+         \  /             |                     -> for Ceased Sidechain subtree, PoseidonHash(CswMt | scId_*), ordered by scId
+          o               |
++------+ /                |
+|Fwt_Nf|/                 |
++------+                  |                               scTxCommitmentTree upper level structure
+                          |
+                          |                        |    +------+
++------+                  |                        |    | Sc_1 |
+|Btr_1 |\                 |                        |    +------+\
++------+ \                |                        |             o
+          o               |                        |    +------+/ \
++------+ / \              |                        |    | Sc_2 |   \
+|Btr_2 |/   \             |                        |    +------+    +--------------------+
++------+     +------+     |                        |                | ScTxCommitmentTree |
+             | BtMt |-----|                        |                +--------------------+
+ ......      +------+     |                        |     .....     /
+         \ /              |                        |            \ /
+          o               |                        |             o
++------+ /                |                        |    +------+/
+|Btr_Nb|/                 |                        |    | Sc_N |
++------+                  |   +------+             |    +------+
+                          |---| Sc_* |             |
+                          |   +------+             v
++------+                  |                        Sc_* ordered by scId
+|Crt_1 |\                 |
++------+ \                |
+          o               |
++------+ / \              |
+|Crt_2 |/   \             |
++------+     +------+     |
+             |CertMt|-----|                         Ceased Sidechain Subtree Structure
+ ......      +------+     |                        +------+
+         \ /              |                        |Csw_1 |\
+          o               |                        +------+ \
++------+ /                |                                  o
+|Crt_Nc|/                 |                        +------+ / \
++------+                  |                        |Csw_2 |/   \
+                          |                        +------+     +-----+
+                          |                                     |CswMt|-----+
++------+                  |                         ......      +-----+     |
+|ScC_* |------------------|                                 \  /            |
++------+                  |                                  o              |
+                          |                        +------+ /               |   +------+
+                          |                        |Csw_Nw|/                |---| Sc_* |
+            +--------+    |                        +------+                 |   +------+
+            | scId_* |----+                                                 |
+            +--------+                                                      |
+                                                              +--------+    |
+                                                              | scId_* |----+
+                                                              +--------+
 ```
 
 ## Compilation notes
