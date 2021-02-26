@@ -117,6 +117,8 @@ with the following notes:
 ## ScTxCommitmentTree structure
 
 ```
+
+ Alive Sidechain Subtree Structure
 +------+                              Nomenclature:
 |Fwt_1 |\                                Fwt_*  -> forward transfer output data,           ordered as in block/tx 
 +------+ \                               Btr_*  -> backward transfer requests output data, ordered as in block/tx 
@@ -125,12 +127,12 @@ with the following notes:
 |Fwt_2 |/   \                            Csw_*  -> ceased sidechain input data,            ordered as in block/tx
 +------+     +------+                    scId_* -> sidechain identifier
              | FtMt |                    *Mt    -> Merkle tree root of the Merkle trees described aside
- ......      +------+                    Sc_*   -> PoseidonHash(h31 | h32 | CswMt | scId_*), ordered by scId
-         \  /        \
+ ......      +------+                    Sc_*   -> for Alive Sidechain subtree, PoseidonHash(h31 | h32 | CswMt | scId_*), ordered by scId
+         \  /        \                          -> for Ceased Sidechain subtree, PoseidonHash(CswMt | scId_*), ordered by scId
           o           \
 +------+ /             \
 |Fwt_Nf|/               \
-+------+                 \
++------+                 \                                  scTxCommitmentTree upper level structure
                           +-----+
                           | h31 |--+                        |    +------+
 +------+                  +-----+  |                        |    | Sc_1 |
@@ -152,52 +154,30 @@ with the following notes:
 +------+                           |                        Sc_* ordered by scId
 |Crt_1 |\                          |
 +------+ \                         |
-          o                        |
-+------+ / \                       |
-|Crt_2 |/   \                      |
-+------+     +------+              |
-             |CertMt|              |
- ......      +------+              |
-         \ /         \             |
-          o           \            |
-+------+ /             \           |
-|Crt_Nc|/               \          |
-+------+                 \         |
-                          +-----+  |
-                          | h32 |--+
-+------+                  +-----+  |
-|ScC_1 |\                /         |
-+------+ \              /          |
-          o            /           |
-+------+ / \          /            |
-|ScC_2 |/   \        /             |
-+------+     +------+              |
-             | ScMt |              |
- ......      +------+              |
-         \ /                       |   +------+
-          o                        |---| Sc_* |
-+------+ /                         |   +------+
-|ScC_Ns|/                          |
-+------+                           |
-                                   |
-                                   |
-+------+                           |
-|Csw_1 |\                          |
-+------+ \                         |
-          o                        |
-+------+ / \                       |
-|Csw_2 |/   \                      |
-+------+     \            +-----+  |
-              ----------->|CswMt|--+
- ......      /            +-----+  |
-         \  /                      |
-          o                        |
-+------+ /                         |
-|Csw_Nw|/                          |
-+------+                           |
-                       +--------+  |
-                       | scId_* |--+
-                       +--------+
+          o                        |   +------+
++------+ / \                       |---| Sc_* |
+|Crt_2 |/   \                      |   +------+
++------+     +------+              |                        
+             |CertMt|              |                           Ceased Sidechain Subtree Structure
+ ......      +------+              |                        +------+
+         \ /         \             |                        |Csw_1 |\
+          o           \            |                        +------+ \
++------+ /             \           |                                  o
+|Crt_Nc|/               \          |                        +------+ / \
++------+                 \         |                        |Csw_2 |/   \
+                          +-----+  |                        +------+     \       +-----+
+                          | h32 |--+                                      ------>|CswMt|--+
+                          +-----+  |                         ......      /       +-----+  |
+                         /         |                                 \  /                 |
+                        /          |                                  o                   |
++------+               /           |                        +------+ /                    |   +------+
+|ScC_* |--------------o            |                        |Csw_Nw|/                     |---| Sc_* |
++------+                           |                        +------+                      |   +------+
+                                   |                                                      |
+                                   |                                                      |
+             +--------+            |                                +--------+            |
+             | scId_* |------------+                                | scId_* |------------+
+             +--------+                                             +--------+
 ```
 
 ## Compilation notes
