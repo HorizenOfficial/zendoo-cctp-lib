@@ -117,64 +117,67 @@ with the following notes:
 ## ScTxCommitmentTree structure
 
 ```
- Alive Sidechain Subtree Structure            Ceased Sidechain Subtree Structure
+ ALIVE SIDECHAIN SUBTREE STRUCTURE            CEASED SIDECHAIN SUBTREE STRUCTURE
 
-+------+                                      +------+
-|Fwt_1 |\                                     |Csw_1 |\
-+------+ \                                    +------+ \
-          o                                             o
-+------+ / \                                  +------+ / \
-|Fwt_2 |/   \                                 |Csw_2 |/   \
-+------+     +------+                         +------+     +-----+
-             | FtMt |-----+                                |CswMt|-----+
- ......      +------+     |                    ......      +-----+     |
-         \  /             |                            \  /            |
-          o               |                             o              |
-+------+ /                |                   +------+ /               |   +------+
-|Fwt_Nf|/                 |                   |Csw_Nw|/                |---| Sc_* |
-+------+                  |                   +------+                 |   +------+                        
-                          |                                            |
-                          |                                            |
-+------+                  |                              +--------+    |
-|Btr_1 |\                 |                              | scId_* |----+
-+------+ \                |                              +--------+
-          o               |
-+------+ / \              |
-|Btr_2 |/   \             |
-+------+     +------+     |                   scTxCommitmentTree upper level structure                       
-             | BtMt |-----|                 (bringing together Alive and Ceased subtrees)
- ......      +------+     |                   |    +------+
-         \ /              |                   |    | Sc_1 |
-          o               |                   |    +------+\
-+------+ /                |                   |             o
-|Btr_Nb|/                 |                   |    +------+/ \
-+------+                  |   +------+        |    | Sc_2 |   \
-                          |---| Sc_* |        |    +------+    +--------------------+
-                          |   +------+        |                | ScTxCommitmentTree |
-+------+                  |                   |                +--------------------+
-|Crt_1 |\                 |                   |     .....     /
-+------+ \                |                   |            \ /
-          o               |                   |             o
-+------+ / \              |                   |    +------+/
-|Crt_2 |/   \             |                   |    | Sc_N |
-+------+     +------+     |                   |    +------+
-             |CrtMt |-----|                   |     
- ......      +------+     |                   v    
-         \ /              |                   Sc_* ordered by scId    
-          o               |                        
-+------+ /                |                        
-|Crt_Nc|/                 |         Nomenclature:                        
-+------+                  |          Fwt_*  -> forward transfer output data,           ordered as in block/tx
-                          |          Btr_*  -> backward transfer requests output data, ordered as in block/tx
-                          |          Crt_*  -> certificates data,                      ordered as in block
-+------+                  |          ScC_*  -> sidechain creation output data,         ordered as in block/tx                
-|ScC_* |------------------|          Csw_*  -> ceased sidechain input data,            ordered as in block/tx               
-+------+                  |          scId_* -> sidechain identifier               
-                          |          *Mt    -> Merkle tree root of the Merkle trees described aside               
-                          |          Sc_*   -> for Alive Sidechain subtree, PoseidonHash(FtMt | BtMt | CertMt | scId_*), ordered by scId
-            +--------+    |                 -> for Ceased Sidechain subtree, PoseidonHash(CswMt | scId_*), ordered by scId
-            | scId_* |----+ 
-            +--------+
+|  +------+                                      |  +------+
+|  |Fwt_1 |\                                     |  |Csw_1 |\
+|  +------+ \                                    |  +------+ \
+|            o                                   |            o
+|  +------+ / \                                  |  +------+ / \
+|  |Fwt_2 |/   \                                 |  |Csw_2 |/   \
+|  +------+     +------+                         |  +------+     +-----+
+|               | FtMt |-----+                   |               |CswMt|-----+
+|   ......      +------+     |                   |   ......      +-----+     |
+|           \  /             |                   |           \  /            |
+|            o               |                   |            o              |
+|  +------+ /                |                   |  +------+ /               |   +------+
+|  |Fwt_Nf|/                 |                   |  |Csw_Nw|/                |---| Sc_* |
+|  +------+                  |                   |  +------+                 |   +------+                        
+|                            |                   |                           |
+|                            |                   |                           |
+|  +------+                  |                   |             +--------+    |
+|  |Btr_1 |\                 |                   |             | scId_* |----+
+|  +------+ \                |                   |             +--------+
+|            o               |                   v
+|  +------+ / \              |                   Csw_* ordered as they appear in block and transactions
+|  |Btr_2 |/   \             |
+|  +------+     +------+     |                   
+|               | BtMt |-----|                    scTxCommitmentTree UPPER LEVEL STRUCTURE
+|   ......      +------+     |                   (bringing together Alive and Ceased subtrees)  
+|           \ /              |                   
+|            o               |                   |  +------+
+|  +------+ /                |                   |  | Sc_1 |
+|  |Btr_Nb|/                 |                   |  +------+\
+|  +------+                  |   +------+        |           o
+|                            |---| Sc_* |        |  +------+/ \
+|                            |   +------+        |  | Sc_2 |   \
+|  +------+                  |                   |  +------+    +--------------------+
+|  |Crt_1 |\                 |                   |              | ScTxCommitmentTree |
+|  +------+ \                |                   |              +--------------------+
+|            o               |                   |   .....     /
+|  +------+ / \              |                   |          \ /
+|  |Crt_2 |/   \             |                   |           o
+|  +------+     +------+     |                   |  +------+/
+|               |CrtMt |-----|                   |  | Sc_N |
+|   ......      +------+     |                   |  +------+
+|           \ /              |                   |
+|            o               |                   v     
+|  +------+ /                |                   Sc_* ordered by scId     
+|  |Crt_Nc|/                 |         
+|  +------+                  |         Nomenclature:
+|                            |          Fwt_*  -> forward transfer output data
+|                            |          Btr_*  -> backward transfer requests output data
+|  +------+                  |          Crt_*  -> certificates data
+|  |ScC_* |------------------|          ScC_*  -> sidechain creation output data
+|  +------+                  |          Csw_*  -> ceased sidechain input data
+|                            |          scId_* -> sidechain identifier
+|                            |          *Mt    -> Merkle tree root of the Merkle trees described aside               
+|              +--------+    |          Sc_*   -> for Alive Sidechain subtree, PoseidonHash(FtMt | BtMt | CertMt | scId_*)       
+|              | scId_* |----+                 -> for Ceased Sidechain subtree, PoseidonHash(CswMt | scId_*)
+|              +--------+
+v
+Fwt_*, Btr_*, Crt_* and ScC_* each ordered
+as they appear in block and transactions
 ```
 
 ## Compilation notes
