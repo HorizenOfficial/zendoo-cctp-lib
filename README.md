@@ -36,50 +36,56 @@ zendoo-CCTP-lib should contain references to the following objects:
 - test support functions for all classes above
 - quantities like sizes, to static_assert against them so to verify e.g. field is long enough to duly serialize app data
 
+**Note: Mapping from single attributes (scId, amount pkHash) to one or more field must be specified here,
+  since it's common to both sc and mc**
 ```
-scTxCommitmentBuilder()                                               --> Inner Merkle tree size is know to zendoo-CCTP-lib only; quantities to assert/check
-                                                                          number of txes/certs/Sidechain are provided separately
-   addScCreation(scId, amount, pubKey, withdrawalEpochLength,
-           customData, constant, VerificationKey,
-           txHash, outIdx)                                           --> bool [Note: scId is hash of (txHash, outIdx) here, kind of redundant]
-   addFwt(scId, amount, pubKey, txHash, outIdx)                      --> bool
-   addBtr(scId, amount, pubKey, txHash, outIdx)                      --> bool
-   addCert(scId, epochNumber, quality, startEpochCumSCBlockTxTree,
-           endEpochCumSCBlockTxTree, BTList, customFieldsList)       --> bool
-   addCsw(scId, amount, nullifier, pkHash, prevCumCertDataHash,
-          curCertDataHash, lastCumCertDataHash)                      --> bool
+aliveScTxCommitmentTree
+   addScC(scId, amount, pubKey,withdrawalEpochLength,
+          customData, constant,
+          CertVerificationKey,
+          BtrVerificationKey,
+          CswVerificationKey,
+          txHash, outIdx)                              --> bool [Note: BtrVerificationKey and  CswVerificationKey are optional]
+   addFwt(scId, amount, pubKey, txHash, outIdx)        --> bool
+   addBtr(scId, amount, pubKey, txHash, outIdx)        --> bool
+   addCrt(scId, epochNumber, quality,
+          certDataHash,
+          BTList,
+          customFieldsMerkleRoot,
+          endCumulativeScTxCommitmentTreeRoot)         --> bool [Note: endCumulativeScTxCommitmentTreeRoot to be added to Cert;
+                                                                       certDataHash of *this* cert, for which addCrt is called;
+                                                                       both top and lower quality certs must be processed]
+   getScCCommitment(scId)                              --> Commitment
+   getFwtCommitment(scId)                              --> Commitment
+   getBwtCommitment(scId)                              --> Commitment
+   getCrtCommitment(scId)                              --> Commitment
+--------------------------------------------------------------------------------------------------------------------------------
+ceasedScTxCommitmentTree
+   addCsw(scId, amount, nullifier, pkHash,
+          ActiveCertDataHash)                          --> bool
+   getaddCswCommitment(scId)                           --> Commitment
+--------------------------------------------------------------------------------------------------------------------------------
+Common methods for alive/ceased ScTxCommitmentTree
+   getCommitmentForSc(scId)                            --> Commitment [Note: containing commitment for
+                                                                             all txes of for the specified scId. Called on scTxCommitmentBuilder
+                                                                             not containing scId gives default Commitment].
+   getCommitment()                                     --> Commitment [Note: containing commitment for
+                                                                             all scIds and all txes of each scId. Called on
+                                                                             empty scTxCommitmentBuilder gives default Commitment].
 
-   getScCreationCommitment(scId)                                      --> Commitment [Note: util for getScCommitmentExtendedProof]
-   getFwtCommitment(scId)                                             --> Commitment [Note: util for getScCommitmentExtendedProof]
-   getBwtCommitment(scId)                                             --> Commitment [Note: util for getScCommitmentExtendedProof]
-   getCertCommitment(scId)                                            --> Commitment [Note: util for getScCommitmentExtendedProof]
+   getScExistenceProof(scId)                           --> ScCommitmentProof [Note: from sc commitment to (global) commitment]
+   getScAbsenceProof(scId)                             --> ScAbsenceProof    [Note: from missing scId to (global) commitment]
 
-   getCommitmentForSc(scId)                                           --> Commitment [Note: containing commitment for
-                                                                          all txes of for the specified scId. Called on scTxCommitmentBuilder
-                                                                          not containing scId gives default Commitment].
-   getCommitment()                                                    --> Commitment [Note: containing commitment for
-                                                                          all scIds and all txes of each scId. Called on
-                                                                          empty scTxCommitmentBuilder gives default Commitment].
+   VerifyScCommitment(scCommitment,
+                      scCommitmentProof, Commitment)   --> bool, where scCommitment      = getCommitmentForSc(scId)
+                                                                       scCommitmentProof = getScCommitmentProof(scId)
+                                                                       Commitment        = getCommitment()
 
-   getScCommitmentProof(scId)                                         --> ScCommitmentProof [Note: from sc commitment to (global) commitment]
-   getScCommitmentExtendedProof(scId)                                 --> tuple of (FtsCommit,  BtrsCommit,  CertCommit,  ScCommitmentProof)
-                                                                          [Note:util for getAbsenceProof]
-
-   getNeighbors(scId)                                                 --> pair of (leftScId, rightScId), possibly null.
-                                                                          [Note: ordering issue among scIds should be handled here only]
-
-   getAbsenceProof(scId)                                              --> ScAbsenceProof
-
-   VerifyScIsCommitted(scCommitment, scCommitmentProof, Commitment)   --> bool, where scCommitment      = getCommitmentForSc(scId)
-                                                                                      scCommitmentProof = getScCommitmentProof(scId)
-                                                                                      Commitment        = getCommitment()
-
-   VerifyScIsNotCommitted(scId, leftScId, rightScId,
-                          ScAbsenceProof, Commitment)                     --> bool, check that 
-                                                                          left/right scLeaves are contiguous; leftScId < scId < rightScId
-                                                                          left/right elements may or may not exist
-
-Commitment
+   VerifyScAbsence(scId, ScAbsenceProof, Commitment)   --> bool, where scId is missing sidechain id
+                                                                       ScAbsenceProof = getScAbsenceProof(scId),
+                                                                       Commitment        = getCommitment()  
+--------------------------------------------------------------------------------------------------------------------------------
+Commitment [Note: essentially a wrapper for a field]
    ctor                                --> default one, calling whatever Rust function needed to init field. Forbid copy
    dtor                                --> ensure RAII by encapsulating free function in dtor
    size                                --> unsigned int; this member should support compile time asserts against field size
@@ -92,15 +98,13 @@ Note: no createRandom(int seed). I understand need for random, I do not like see
 Used in UT only, where can be replaced by scTxCommitmentBuilder.getCommitment() with "random" inputs fed via addFwt/Bwt.
 I would like Commitment to support minimal functionalities for scTxCommitmentBuilder operations.
 
-ScCommitmentProof
+ScCommitmentProof [Note: essentially a merkle path from given sc-related subtree to global commitment]
    ctor                                       --> default one, calling whatever Rust function needed to init field. Forbid copy
    dtor                                       --> ensure RAII by encapsulating free function in dtor
    bool operator==(const ScCommitmentProof &) --> maybe useful to compare merkle paths in tests??
    serialize/deserialize                      --> needed in Sc
 
-Note: verification of ScCommitmentProof has been moved to scTxCommitment, unlike current Sc implementation where it is feature of Merkle Path
-
-ScAbsenceProof [just wrapper for pair of "extended proofs"]
+ScAbsenceProof [Note: contains one or two merkle path for neighbors subtrees and the scId of there neighbors]
    members:
        leftFtsCommit,  leftBtrsCommit,  leftCertCommit,  leftScCommitmentProof
        rightFtsCommit, rightBtrsCommit, rightCertCommit, rightScCommitmentProof
