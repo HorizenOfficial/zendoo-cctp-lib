@@ -29,7 +29,8 @@ Currently the main task of zendoo-CCTP-lib is:
 3. (by Algaro) explicitly list quantities zendoo-CCTP-lib works on (e.g. amount, pubKey, nonce)
 4. (by Algaro) make single function for each tx type (fwds, btr, certs)  
 
-## Tentative interface
+## ScTxCommitmentTree
+### Tentative interface
 zendoo-CCTP-lib should contain references to the following objects:
 - **Commitment**, with ctor/dtor/equality, serialization/deserialization starting from the very same attributes (to be checked, especially considering custom sc info)
 - Flavours of **scTxCommitment**, **ScCommitmentProof**, with ctors/dtors/equality, serialization/deserialization, verifications
@@ -59,12 +60,17 @@ aliveScTxCommitmentTree
    getFwtCommitment(scId)                              --> Commitment
    getBwtCommitment(scId)                              --> Commitment
    getCrtCommitment(scId)                              --> Commitment
---------------------------------------------------------------------------------------------------------------------------------
+
+   getCrtLeaves(scId)                                  --> list of Commitment objects, returning all leaves added
+                                                           via addCrt for given scId. Util for non-forger nodes.
+   addCrtLeaf(scId, leaf)                              --> bool re-add leaf retrieved from getCrtLeaves(scId).
+                                                           Util for non-forger nodes.
+--------------------------------------------------------------------------------
 ceasedScTxCommitmentTree
    addCsw(scId, amount, nullifier, pkHash,
           ActiveCertDataHash)                          --> bool
-   getaddCswCommitment(scId)                           --> Commitment
---------------------------------------------------------------------------------------------------------------------------------
+   getCswCommitment(scId)                              --> Commitment
+--------------------------------------------------------------------------------
 Common methods for alive/ceased ScTxCommitmentTree
    getCommitmentForSc(scId)                            --> Commitment [Note: containing commitment for
                                                                              all txes of for the specified scId. Called on scTxCommitmentBuilder
@@ -84,7 +90,7 @@ Common methods for alive/ceased ScTxCommitmentTree
    VerifyScAbsence(scId, ScAbsenceProof, Commitment)   --> bool, where scId is missing sidechain id
                                                                        ScAbsenceProof = getScAbsenceProof(scId),
                                                                        Commitment        = getCommitment()  
---------------------------------------------------------------------------------------------------------------------------------
+--------------------------------------------------------------------------------
 Commitment [Note: essentially a wrapper for a field]
    ctor                                --> default one, calling whatever Rust function needed to init field. Forbid copy
    dtor                                --> ensure RAII by encapsulating free function in dtor
@@ -106,19 +112,18 @@ ScCommitmentProof [Note: essentially a merkle path from given sc-related subtree
 
 ScAbsenceProof [Note: contains one or two merkle path for neighbors subtrees and the scId of there neighbors]
    members:
-       leftFtsCommit,  leftBtrsCommit,  leftCertCommit,  leftScCommitmentProof
-       rightFtsCommit, rightBtrsCommit, rightCertCommit, rightScCommitmentProof
+       scId, leftFtsCommit,  leftBtrsCommit,  leftCertCommit,  leftScCommitmentProof
+       scId, rightFtsCommit, rightBtrsCommit, rightCertCommit, rightScCommitmentProof
    ctor                                       --> default one, calling whatever Rust function needed to init field. Forbid copy
    dtor                                       --> ensure RAII by encapsulating free function in dtor
-   bool operator==(const ScCommitmentProof &) --> maybe useful to compare merkle paths in tests??
+   bool operator==(const ScAbsenceProof &)    --> maybe useful to compare merkle paths in tests??
    serialize/deserialize                      --> needed in Sc
 ```
 
 with the following notes:
 + In SDK looks like leaves can be added as a list of leaves, not single ones. Duly extend interface above to accomodate for multiple txes.
-+ **possibly** push down into ```VerifyTxIsNotCommitted``` low level functionalities like ```MerklePath.isNonEmptyRightMost/isLeftMost/leafIndex``` among others.
 
-## ScTxCommitmentTree structure
+### Schematics
 
 ```
  ALIVE SIDECHAIN SUBTREE STRUCTURE            CEASED SIDECHAIN SUBTREE STRUCTURE
