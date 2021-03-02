@@ -484,127 +484,133 @@ impl CommitmentTree {
     }
 }
 
-#[test]
-fn commitment_tree_tests(){
-    let zero  = FieldElement::zero();
-    let one   = FieldElement::one();
-    let two   = FieldElement::one() + &one;
-    let three = FieldElement::one() + &two;
+#[cfg(test)]
+mod test {
+    use algebra::Field;
+    use crate::commitment_tree::{FieldElement, CommitmentTree};
 
-    // Empty db_path is not allowed
-    assert!(CommitmentTree::create("").is_err());
-    let mut cmt = CommitmentTree::create("./cmt_").unwrap();
+    #[test]
+    fn commitment_tree_tests(){
+        let zero  = FieldElement::zero();
+        let one   = FieldElement::one();
+        let two   = FieldElement::one() + &one;
+        let three = FieldElement::one() + &two;
 
-    let sc_ids = vec![three, two, one, zero];
-    let non_existing_id = FieldElement::one() + &three;
+        // Empty db_path is not allowed
+        assert!(CommitmentTree::create("").is_err());
+        let mut cmt = CommitmentTree::create("/tmp/cmt_tests_").unwrap();
 
-    // Initial commitment_tree value of an empty CMT
-    let empty_comm = cmt.get_commitment().unwrap();
+        let sc_ids = vec![three, two, one, zero];
+        let non_existing_id = FieldElement::one() + &three;
 
-    // Initial SCT commitments are empty due to absence of such SCTs
-    assert_eq!(cmt.get_fwt_commitment (&sc_ids[0]), None);
-    assert_eq!(cmt.get_bwtr_commitment(&sc_ids[1]), None);
-    assert_eq!(cmt.get_cert_commitment(&sc_ids[2]), None);
-    assert_eq!(cmt.get_csw_commitment (&sc_ids[3]), None);
+        // Initial commitment_tree value of an empty CMT
+        let empty_comm = cmt.get_commitment().unwrap();
 
-    let fe = FieldElement::one();
-    // Set values in corresponding subtrees with transparent creation of the SCTs with specified IDs
-    assert!(cmt.add_fwt (&sc_ids[0], &fe));
-    assert!(cmt.add_bwtr(&sc_ids[1], &fe));
-    assert!(cmt.add_cert(&sc_ids[2], &fe));
-    assert!(cmt.add_csw (&sc_ids[3], &fe));
+        // Initial SCT commitments are empty due to absence of such SCTs
+        assert_eq!(cmt.get_fwt_commitment (&sc_ids[0]), None);
+        assert_eq!(cmt.get_bwtr_commitment(&sc_ids[1]), None);
+        assert_eq!(cmt.get_cert_commitment(&sc_ids[2]), None);
+        assert_eq!(cmt.get_csw_commitment (&sc_ids[3]), None);
 
-    // All updated subtrees should have non-empty subtrees roots
-    assert!(cmt.get_fwt_commitment (&sc_ids[0]).is_some());
-    assert!(cmt.get_bwtr_commitment(&sc_ids[1]).is_some());
-    assert!(cmt.get_cert_commitment(&sc_ids[2]).is_some());
-    assert!(cmt.get_csw_commitment (&sc_ids[3]).is_some());
+        let fe = FieldElement::one();
+        // Set values in corresponding subtrees with transparent creation of the SCTs with specified IDs
+        assert!(cmt.add_fwt (&sc_ids[0], &fe));
+        assert!(cmt.add_bwtr(&sc_ids[1], &fe));
+        assert!(cmt.add_cert(&sc_ids[2], &fe));
+        assert!(cmt.add_csw (&sc_ids[3], &fe));
 
-    // All updated SCTs should have non-empty commitments
-    sc_ids.iter().for_each(|sc_id|
-        assert!(cmt.get_sc_commitment(sc_id).is_some())
-    );
+        // All updated subtrees should have non-empty subtrees roots
+        assert!(cmt.get_fwt_commitment (&sc_ids[0]).is_some());
+        assert!(cmt.get_bwtr_commitment(&sc_ids[1]).is_some());
+        assert!(cmt.get_cert_commitment(&sc_ids[2]).is_some());
+        assert!(cmt.get_csw_commitment (&sc_ids[3]).is_some());
 
-    // There is no SCT for ID which wasn't added during previous calls
-    assert!(cmt.get_sc_commitment(&non_existing_id).is_none());
+        // All updated SCTs should have non-empty commitments
+        sc_ids.iter().for_each(|sc_id|
+            assert!(cmt.get_sc_commitment(sc_id).is_some())
+        );
 
-    // No CSW data can be added to any SCT
-    assert!(!cmt.add_csw (&sc_ids[0], &fe));
-    assert!(!cmt.add_csw (&sc_ids[1], &fe));
-    assert!(!cmt.add_csw (&sc_ids[2], &fe));
+        // There is no SCT for ID which wasn't added during previous calls
+        assert!(cmt.get_sc_commitment(&non_existing_id).is_none());
 
-    // No SCT-related data can be added to SCTC
-    assert!(!cmt.add_fwt (&sc_ids[3], &fe));
-    assert!(!cmt.add_bwtr(&sc_ids[3], &fe));
-    assert!(!cmt.add_cert(&sc_ids[3], &fe));
+        // No CSW data can be added to any SCT
+        assert!(!cmt.add_csw (&sc_ids[0], &fe));
+        assert!(!cmt.add_csw (&sc_ids[1], &fe));
+        assert!(!cmt.add_csw (&sc_ids[2], &fe));
 
-    // Updating SCC in the first SCT and checking that commitment of this tree also has been updated
-    let comm_without_scc = cmt.get_sc_commitment(&sc_ids[0]);
-    cmt.set_scc(&sc_ids[0], &fe);
-    assert_ne!(comm_without_scc, cmt.get_sc_commitment(&sc_ids[0]));
+        // No SCT-related data can be added to SCTC
+        assert!(!cmt.add_fwt (&sc_ids[3], &fe));
+        assert!(!cmt.add_bwtr(&sc_ids[3], &fe));
+        assert!(!cmt.add_cert(&sc_ids[3], &fe));
 
-    // Commitment of the updated CMT has non-empty value
-    assert_ne!(empty_comm, cmt.get_commitment().unwrap());
+        // Updating SCC in the first SCT and checking that commitment of this tree also has been updated
+        let comm_without_scc = cmt.get_sc_commitment(&sc_ids[0]);
+        cmt.set_scc(&sc_ids[0], &fe);
+        assert_ne!(comm_without_scc, cmt.get_sc_commitment(&sc_ids[0]));
 
-    // There is no existence-proof for a non-existing SC-ID
-    assert!(cmt.get_sc_existence_proof(&non_existing_id).is_none());
+        // Commitment of the updated CMT has non-empty value
+        assert_ne!(empty_comm, cmt.get_commitment().unwrap());
 
-    // Verification of a valid existence-proof
-    assert!(CommitmentTree::verify_sc_commitment(
-        cmt.get_sc_commitment(&sc_ids[0]).as_ref().unwrap(),
-        cmt.get_sc_existence_proof(&sc_ids[0]).as_ref().unwrap(),
-        cmt.get_commitment().as_ref().unwrap()));
-}
+        // There is no existence-proof for a non-existing SC-ID
+        assert!(cmt.get_sc_existence_proof(&non_existing_id).is_none());
 
-#[test]
-fn sc_absence_proofs_tests(){
-    let zero  = FieldElement::zero();
-    let one   = FieldElement::one();
-    let two   = FieldElement::one() + &one;
-    let three = FieldElement::one() + &two;
-    let four  = FieldElement::one() + &three;
+        // Verification of a valid existence-proof
+        assert!(CommitmentTree::verify_sc_commitment(
+            cmt.get_sc_commitment(&sc_ids[0]).as_ref().unwrap(),
+            cmt.get_sc_existence_proof(&sc_ids[0]).as_ref().unwrap(),
+            cmt.get_commitment().as_ref().unwrap()));
+    }
 
-    let mut cmt = CommitmentTree::create("./cmt_").unwrap();
+    #[test]
+    fn sc_absence_proofs_tests(){
+        let zero  = FieldElement::zero();
+        let one   = FieldElement::one();
+        let two   = FieldElement::one() + &one;
+        let three = FieldElement::one() + &two;
+        let four  = FieldElement::one() + &three;
 
-    // There is no absence-proof for an empty CommitmentTree
-    assert!(cmt.get_sc_absence_proof(&one).is_none());
+        let mut cmt = CommitmentTree::create("/tmp/cmt_proofs_tests_").unwrap();
 
-    let fe = FieldElement::one();
+        // There is no absence-proof for an empty CommitmentTree
+        assert!(cmt.get_sc_absence_proof(&one).is_none());
 
-    // Creating two SC-Trees with IDs: 1 and 3
-    cmt.add_fwt(&one, &fe);
-    cmt.add_csw(&three, &fe);
+        let fe = FieldElement::one();
 
-    // Getting commitment for all SC-trees
-    let commitment = cmt.get_commitment();
+        // Creating two SC-Trees with IDs: 1 and 3
+        assert!(cmt.add_fwt(&one, &fe));
+        assert!(cmt.add_csw(&three, &fe));
 
-    // There is no absence-proof for an existing SC-ID
-    assert!(cmt.get_sc_absence_proof(&one).is_none());
+        // Getting commitment for all SC-trees
+        let commitment = cmt.get_commitment();
 
-    // Creating and validating absence proof for non-existing ID which value is smaller of any existing IDs
-    let proof_leftmost = cmt.get_sc_absence_proof(&zero);
-    assert!(proof_leftmost.is_some());
-    assert!(cmt.verify_sc_absence(
-        &zero,
-        proof_leftmost.as_ref().unwrap(),
-        commitment.as_ref().unwrap())
-    );
+        // There is no absence-proof for an existing SC-ID
+        assert!(cmt.get_sc_absence_proof(&one).is_none());
 
-    // Creating and validating absence proof for non-existing ID which value is between existing IDs
-    let proof_midst = cmt.get_sc_absence_proof(&two);
-    assert!(proof_midst.is_some());
-    assert!(cmt.verify_sc_absence(
-        &two,
-        proof_midst.as_ref().unwrap(),
-        commitment.as_ref().unwrap())
-    );
+        // Creating and validating absence proof for non-existing ID which value is smaller of any existing IDs
+        let proof_leftmost = cmt.get_sc_absence_proof(&zero);
+        assert!(proof_leftmost.is_some());
+        assert!(cmt.verify_sc_absence(
+            &zero,
+            proof_leftmost.as_ref().unwrap(),
+            commitment.as_ref().unwrap())
+        );
 
-    // Creating and validating absence proof for non-existing ID which value is bigger of any existing IDs
-    let proof_rightmost = cmt.get_sc_absence_proof(&four);
-    assert!(proof_rightmost.is_some());
-    assert!(cmt.verify_sc_absence(
-        &four,
-        proof_rightmost.as_ref().unwrap(),
-        commitment.as_ref().unwrap())
-    );
+        // Creating and validating absence proof for non-existing ID which value is between existing IDs
+        let proof_midst = cmt.get_sc_absence_proof(&two);
+        assert!(proof_midst.is_some());
+        assert!(cmt.verify_sc_absence(
+            &two,
+            proof_midst.as_ref().unwrap(),
+            commitment.as_ref().unwrap())
+        );
+
+        // Creating and validating absence proof for non-existing ID which value is bigger of any existing IDs
+        let proof_rightmost = cmt.get_sc_absence_proof(&four);
+        assert!(proof_rightmost.is_some());
+        assert!(cmt.verify_sc_absence(
+            &four,
+            proof_rightmost.as_ref().unwrap(),
+            commitment.as_ref().unwrap())
+        );
+    }
 }

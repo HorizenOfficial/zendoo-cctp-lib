@@ -44,27 +44,33 @@ impl SidechainTreeCeased{
     }
 }
 
-#[test]
-fn sidechain_tree_ceased_tests(){
+#[cfg(test)]
+mod test {
+    use algebra::Field;
+    use crate::commitment_tree::FieldElement;
+    use crate::commitment_tree::sidechain_tree_ceased::SidechainTreeCeased;
 
-    let sc_id = FieldElement::one();
+    #[test]
+    fn sidechain_tree_ceased_tests(){
+        let sc_id = FieldElement::one();
 
-    // Empty db_path is not allowed
-    assert!(SidechainTreeCeased::create(&sc_id, "").is_err());
+        // Empty db_path is not allowed
+        assert!(SidechainTreeCeased::create(&sc_id, "").is_err());
 
-    let mut sctc = SidechainTreeCeased::create(&sc_id, "./sctc_").unwrap();
+        let mut sctc = SidechainTreeCeased::create(&sc_id, "/tmp/sctc_").unwrap();
 
-    // Initial commitment_tree values of empty subtrees before updating them
-    let empty_csw = sctc.get_csw_commitment();
-    // Initial commitment_tree value of an empty SCTC
-    let empty_comm = sctc.get_commitment();
+        // Initial commitment_tree values of empty subtrees before updating them
+        let empty_csw = sctc.get_csw_commitment();
+        // Initial commitment_tree value of an empty SCTC
+        let empty_comm = sctc.get_commitment();
 
-    let fe = FieldElement::one();
-    // Updating subtree
-    sctc.add_csw (&fe);
+        let fe = FieldElement::one();
+        // Updating subtree
+        sctc.add_csw (&fe);
 
-    // An updated subtree should have non-empty commitment_tree value
-    assert_ne!(empty_csw, sctc.get_csw_commitment());
-    // SCTC commitment_tree has non-empty value
-    assert_ne!(empty_comm, sctc.get_commitment());
+        // An updated subtree should have non-empty commitment_tree value
+        assert_ne!(empty_csw, sctc.get_csw_commitment());
+        // SCTC commitment_tree has non-empty value
+        assert_ne!(empty_comm, sctc.get_commitment());
+    }
 }

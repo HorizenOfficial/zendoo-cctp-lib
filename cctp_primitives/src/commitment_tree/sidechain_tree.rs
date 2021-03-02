@@ -94,43 +94,49 @@ impl SidechainTree{
     }
 }
 
-#[test]
-fn sidechain_tree_tests(){
+#[cfg(test)]
+mod test {
+    use crate::commitment_tree::FieldElement;
+    use algebra::Field;
+    use crate::commitment_tree::sidechain_tree::SidechainTree;
 
-    let sc_id = FieldElement::one();
+    #[test]
+    fn sidechain_tree_tests(){
+        let sc_id = FieldElement::one();
 
-    // Empty db_path is not allowed
-    assert!(SidechainTree::create(&sc_id, "").is_err());
+        // Empty db_path is not allowed
+        assert!(SidechainTree::create(&sc_id, "").is_err());
 
-    let mut sct = SidechainTree::create(&sc_id, "./sct_").unwrap();
+        let mut sct = SidechainTree::create(&sc_id, "/tmp/sct_").unwrap();
 
-    // Initial commitment_tree values of empty subtrees before updating them
-    let empty_fwt  = sct.get_fwt_commitment ();
-    let empty_bwtr = sct.get_bwtr_commitment();
-    let empty_cert = sct.get_cert_commitment();
-    // Initial commitment_tree value of an empty SCT
-    let empty_comm = sct.get_commitment();
+        // Initial commitment_tree values of empty subtrees before updating them
+        let empty_fwt  = sct.get_fwt_commitment ();
+        let empty_bwtr = sct.get_bwtr_commitment();
+        let empty_cert = sct.get_cert_commitment();
+        // Initial commitment_tree value of an empty SCT
+        let empty_comm = sct.get_commitment();
 
-    // All subtrees have the same initial commitment_tree value
-    assert_eq!(empty_fwt, empty_bwtr);
-    assert_eq!(empty_bwtr, empty_cert);
+        // All subtrees have the same initial commitment_tree value
+        assert_eq!(empty_fwt, empty_bwtr);
+        assert_eq!(empty_bwtr, empty_cert);
 
-    let fe = FieldElement::one();
-    // Updating subtrees
-    sct.add_fwt (&fe);
-    sct.add_bwtr(&fe);
-    sct.add_cert(&fe);
+        let fe = FieldElement::one();
+        // Updating subtrees
+        sct.add_fwt (&fe);
+        sct.add_bwtr(&fe);
+        sct.add_cert(&fe);
 
-    // All updated subtrees should have non-empty commitment_tree values
-    assert_ne!(empty_fwt,  sct.get_fwt_commitment ());
-    assert_ne!(empty_bwtr, sct.get_bwtr_commitment());
-    assert_ne!(empty_cert, sct.get_cert_commitment());
+        // All updated subtrees should have non-empty commitment_tree values
+        assert_ne!(empty_fwt,  sct.get_fwt_commitment ());
+        assert_ne!(empty_bwtr, sct.get_bwtr_commitment());
+        assert_ne!(empty_cert, sct.get_cert_commitment());
 
-    // Updating SCC
-    sct.set_scc(&fe);
-    // Check that CSW is correctly updated
-    assert!(sct.scc == fe);
+        // Updating SCC
+        sct.set_scc(&fe);
+        // Check that CSW is correctly updated
+        assert!(sct.scc == fe);
 
-    // SCT commitment_tree has non-empty value
-    assert_ne!(empty_comm, sct.get_commitment());
+        // SCT commitment_tree has non-empty value
+        assert_ne!(empty_comm, sct.get_commitment());
+    }
 }
