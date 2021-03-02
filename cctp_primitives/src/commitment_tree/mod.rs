@@ -3,7 +3,7 @@ use primitives::{merkle_tree::field_based_mht::{
     poseidon::MNT4753_MHT_POSEIDON_PARAMETERS as MHT_PARAMETERS,
     FieldBasedMerkleTreeParameters
 }, MNT4PoseidonHash, FieldBasedMerkleTreePrecomputedEmptyConstants, FieldBasedBinaryMHTPath, FieldBasedMerkleTreePath};
-use algebra::{fields::mnt4753::Fr, Field};
+use algebra::fields::mnt4753::Fr;
 use crate::commitment_tree::sidechain_tree::{SidechainTree, SidechainSubtreeType};
 use crate::commitment_tree::utils::{pow2, new_smt, Error};
 use crate::commitment_tree::sidechain_tree_ceased::SidechainTreeCeased;

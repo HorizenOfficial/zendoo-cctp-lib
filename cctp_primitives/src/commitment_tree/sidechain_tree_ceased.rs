@@ -1,4 +1,3 @@
-use algebra::Field;
 use crate::commitment_tree::{FieldElement, FieldElementsSMT};
 use crate::commitment_tree::utils::{sc_base_path, pow2, new_smt, add_leaf, hash_vec, Error};
 
