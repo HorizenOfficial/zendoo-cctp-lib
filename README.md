@@ -118,6 +118,28 @@ ScAbsenceProof [Note: contains one or two merkle path for neighbors subtrees and
    dtor                                       --> ensure RAII by encapsulating free function in dtor
    bool operator==(const ScAbsenceProof &)    --> maybe useful to compare merkle paths in tests??
    serialize/deserialize                      --> needed in Sc
+
+Parameter types are as follows:
+   scId:                                [u8; 256]
+   amount:                              i64
+   pubKey:                              [u8; 256]
+   withdrawalEpochLength:               i32
+   customData :                         Vec<u8>
+   constant:                            Vec<u8>
+   CertVerificationKey:                 [u8: 1544*8]
+   BtrVerificationKey:                  [u8: 1544*8]
+   CswVerificationKey:                  [u8: 1544*8]
+   txHash:                              [u8; 256]
+   outIdx:                              u32
+   epochNumber:                         i32
+   quality:                             i64
+   certDataHash:                        [u8; 256]
+   BTList:                              vec<(i64,[u8; 256])>
+   customFieldsMerkleRoot:              "a sidechain field"
+   endCumulativeScTxCommitmentTreeRoot: "a sidechain field"
+   nullifier:                           "a sidechain field"
+   pkHash:                              [u8:160]
+   ActiveCertDataHash                   "a sidechain field"
 ```
 
 with the following notes:
@@ -126,7 +148,7 @@ with the following notes:
 ### Schematics
 
 ```
- ALIVE SIDECHAIN SUBTREE STRUCTURE            CEASED SIDECHAIN SUBTREE STRUCTURE
+ ALIVE SIDECHAIN SUBTREE STRUCTURE                 CEASED SIDECHAIN SUBTREE STRUCTURE
 
 |  +------+                                      |  +------+
 |  |Fwt_1 |\                                     |  |Csw_1 |\
@@ -152,7 +174,7 @@ with the following notes:
 |  |Btr_2 |/   \             |
 |  +------+     +------+     |                   
 |               | BtMt |-----|                    scTxCommitmentTree UPPER LEVEL STRUCTURE
-|   ......      +------+     |                   (bringing together Alive and Ceased subtrees)  
+|   ......      +------+     |                  (bringing together Alive and Ceased subtrees)
 |           \ /              |                   
 |            o               |                   |  +------+
 |  +------+ /                |                   |  | Sc_1 |
@@ -174,15 +196,15 @@ with the following notes:
 |  +------+ /                |                   Sc_* ordered by scId     
 |  |Crt_Nc|/                 |         
 |  +------+                  |         Nomenclature:
-|                            |          Fwt_*  -> forward transfer output data
-|                            |          Btr_*  -> backward transfer requests output data
-|  +------+                  |          Crt_*  -> certificates data
-|  |ScC_* |------------------|          ScC_*  -> sidechain creation output data
-|  +------+                  |          Csw_*  -> ceased sidechain input data
-|                            |          scId_* -> sidechain identifier
-|                            |          *Mt    -> Merkle tree root of the Merkle trees described aside               
-|              +--------+    |          Sc_*   -> for Alive Sidechain subtree, PoseidonHash(FtMt | BtMt | CertMt | scId_*)       
-|              | scId_* |----+                 -> for Ceased Sidechain subtree, PoseidonHash(CswMt | scId_*)
+|                            |         Fwt_*  -> forward transfer output data
+|                            |         Btr_*  -> backward transfer requests output data
+|  +------+                  |         Crt_*  -> certificates data
+|  |ScC_* |------------------|         ScC_*  -> sidechain creation output data
+|  +------+                  |         Csw_*  -> ceased sidechain input data
+|                            |         scId_* -> sidechain identifier
+|                            |         *Mt    -> Merkle tree root of the Merkle trees described aside               
+|              +--------+    |         Sc_*   -> [Alive] PoseidonHash(FtMt | BtMt | CertMt | ScC | scId_*)       
+|              | scId_* |----+                -> [Ceased] PoseidonHash(CswMt | scId_*)
 |              +--------+
 v
 Fwt_*, Btr_*, Crt_* and ScC_* each ordered
