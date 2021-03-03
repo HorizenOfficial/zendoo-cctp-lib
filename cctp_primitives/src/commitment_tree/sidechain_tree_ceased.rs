@@ -2,9 +2,9 @@ use crate::commitment_tree::{FieldElement, FieldElementsSMT};
 use crate::commitment_tree::utils::{sc_base_path, pow2, new_smt, add_leaf, hash_vec, Error};
 
 // Tunable parameters
-const CSW_SMT_HEIGHT:   usize = 12;
-const CSW_SMT_CAPACITY: usize = pow2(CSW_SMT_HEIGHT);
-const CSW_PATH_SUFFIX:  &str = "_csw";
+pub const CSW_SMT_HEIGHT: usize = 12;
+const CSW_SMT_CAPACITY:   usize = pow2(CSW_SMT_HEIGHT);
+const CSW_PATH_SUFFIX:    &str = "_csw";
 
 pub struct SidechainTreeCeased{
     sc_id:    FieldElement,     // ID of a sidechain, for which SidechainTree is created

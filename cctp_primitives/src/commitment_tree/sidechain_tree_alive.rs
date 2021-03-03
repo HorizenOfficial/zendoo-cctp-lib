@@ -3,9 +3,9 @@ use crate::commitment_tree::{FieldElement, FieldElementsSMT};
 use crate::commitment_tree::utils::{sc_base_path, hash_vec, pow2, new_smt, add_leaf, Error};
 
 // Tunable parameters
-const FWT_SMT_HEIGHT:  usize = 12;
-const BWTR_SMT_HEIGHT: usize = 12;
-const CERT_SMT_HEIGHT: usize = 12;
+pub const FWT_SMT_HEIGHT:  usize = 12;
+pub const BWTR_SMT_HEIGHT: usize = 12;
+pub const CERT_SMT_HEIGHT: usize = 12;
 
 const FWT_SMT_CAPACITY:  usize = pow2(FWT_SMT_HEIGHT);
 const BWTR_SMT_CAPACITY: usize = pow2(BWTR_SMT_HEIGHT);
@@ -16,12 +16,12 @@ const BWTR_PATH_SUFFIX: &str = "_bwtr";
 const CERT_PATH_SUFFIX: &str = "_cert";
 
 // Types of contained subtrees
-pub enum SidechainSubtreeType {
+pub enum SidechainAliveSubtreeType {
     FWT, BWTR, CERT, SCC
 }
 
-pub struct SidechainTree{
-    sc_id:    FieldElement,     // ID of a sidechain, for which SidechainTree is created
+pub struct SidechainTreeAlive {
+    sc_id:    FieldElement,     // ID of a sidechain, for which SidechainTreeAlive is created
     scc:      FieldElement,     // Sidechain Creation Transaction hash
 
     fwt_smt:  FieldElementsSMT, // SMT for Forward Transfer Transactions
@@ -33,12 +33,12 @@ pub struct SidechainTree{
     cert_num: usize,            // Number of contained Certificates
 }
 
-impl SidechainTree{
+impl SidechainTreeAlive {
 
-    // Creates a new instance of SidechainTree with a specified ID
-    pub fn create(sc_id: &FieldElement, db_path: &str) -> Result<SidechainTree, Error> {
+    // Creates a new instance of SidechainTreeAlive with a specified ID
+    pub fn create(sc_id: &FieldElement, db_path: &str) -> Result<SidechainTreeAlive, Error> {
         Ok(
-            SidechainTree{
+            SidechainTreeAlive {
                 sc_id:    (*sc_id).clone(),
                 scc:      FieldElement::zero(),
 
@@ -53,7 +53,7 @@ impl SidechainTree{
         )
     }
 
-    // Gets ID of a SidechainTree
+    // Gets ID of a SidechainTreeAlive
     pub fn id(&self) -> &FieldElement { &self.sc_id }
 
     // Sequentially adds leafs to the FWT SMT
@@ -83,7 +83,7 @@ impl SidechainTree{
     // Gets commitment_tree of the Certificates tree
     pub fn get_cert_commitment(&self) -> FieldElement { self.cert_smt.get_root() }
 
-    // Gets commitment_tree of a SidechainTree
+    // Gets commitment_tree of a SidechainTreeAlive
     // Commitment = hash( fwt_root | bwtr_root | cert_root | SCC | SC_ID )
     pub fn get_commitment(&self) -> FieldElement {
         let fwt_mr  = self.get_fwt_commitment();
@@ -98,16 +98,16 @@ impl SidechainTree{
 mod test {
     use crate::commitment_tree::FieldElement;
     use algebra::Field;
-    use crate::commitment_tree::sidechain_tree::SidechainTree;
+    use crate::commitment_tree::sidechain_tree_alive::SidechainTreeAlive;
 
     #[test]
     fn sidechain_tree_tests(){
         let sc_id = FieldElement::one();
 
         // Empty db_path is not allowed
-        assert!(SidechainTree::create(&sc_id, "").is_err());
+        assert!(SidechainTreeAlive::create(&sc_id, "").is_err());
 
-        let mut sct = SidechainTree::create(&sc_id, "/tmp/sct_").unwrap();
+        let mut sct = SidechainTreeAlive::create(&sc_id, "/tmp/sct_").unwrap();
 
         // Initial commitment_tree values of empty subtrees before updating them
         let empty_fwt  = sct.get_fwt_commitment ();
