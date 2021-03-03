@@ -1,6 +1,6 @@
 use primitives::{merkle_tree::field_based_mht::{
     smt::{BigMerkleTree, Coord},
-    poseidon::MNT4753_MHT_POSEIDON_PARAMETERS as MHT_PARAMETERS,
+    parameters::MNT4753_MHT_POSEIDON_PARAMETERS as MHT_PARAMETERS,
     FieldBasedMerkleTreeParameters
 }, MNT4PoseidonHash, FieldBasedMerkleTreePrecomputedEmptyConstants, FieldBasedBinaryMHTPath, FieldBasedMerkleTreePath};
 use algebra::fields::mnt4753::Fr;
