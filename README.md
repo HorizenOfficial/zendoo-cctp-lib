@@ -120,25 +120,25 @@ ScAbsenceProof [Note: contains one or two merkle path for neighbors subtrees and
    serialize/deserialize                      --> needed in Sc
 
 Parameter types are as follows:
-   scId:                                [u8; 256]
+   scId:                                [u8; 32]
    amount:                              i64
-   pubKey:                              [u8; 256]
+   pubKey:                              [u8; 32]
    withdrawalEpochLength:               i32
    customData :                         Vec<u8>
    constant:                            Vec<u8>
-   CertVerificationKey:                 [u8: 1544*8]
-   BtrVerificationKey:                  [u8: 1544*8]
-   CswVerificationKey:                  [u8: 1544*8]
-   txHash:                              [u8; 256]
+   CertVerificationKey:                 [u8: 1544]
+   BtrVerificationKey:                  [u8: 1544]
+   CswVerificationKey:                  [u8: 1544]
+   txHash:                              [u8; 32]
    outIdx:                              u32
    epochNumber:                         i32
    quality:                             i64
-   certDataHash:                        [u8; 256]
-   BTList:                              vec<(i64,[u8; 256])>
+   certDataHash:                        [u8; 32]
+   BTList:                              vec<(i64,[u8; 32])>
    customFieldsMerkleRoot:              "a sidechain field"
    endCumulativeScTxCommitmentTreeRoot: "a sidechain field"
    nullifier:                           "a sidechain field"
-   pkHash:                              [u8:160]
+   pkHash:                              [u8:20]
    ActiveCertDataHash                   "a sidechain field"
 ```
 
