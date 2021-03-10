@@ -11,6 +11,7 @@ primitives = {version = "0.1.0", features = ["smt", "mnt4_753", "mnt6_753"], git
 #primitives = { path = "../../ginger-lib/primitives", features = ["smt"] }
 rand = { version = "0.7" }
 sha1 = "0.6.0"
+byteorder = "1.4.2"
 
 [lib]
 name = "zendoo_cctp"

@@ -90,7 +90,7 @@ impl SidechainTreeAlive {
         let bwtr_mr = self.get_bwtr_commitment();
         let cert_mr = self.get_cert_commitment();
 
-        hash_vec(&vec![&fwt_mr, &bwtr_mr, &cert_mr, &self.scc, &self.sc_id])
+        hash_vec(&vec![fwt_mr, bwtr_mr, cert_mr, self.scc, self.sc_id])
     }
 }
 
