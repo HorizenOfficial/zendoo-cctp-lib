@@ -9,12 +9,11 @@ algebra = {version = "0.1.0", git = "https://github.com/HorizenOfficial/ginger-l
 primitives = {version = "0.1.0", features = ["smt", "mnt4_753", "mnt6_753"], git = "https://github.com/HorizenOfficial/ginger-lib.git", branch = "algebra_ocl"}
 #algebra = { path = "../../ginger-lib/algebra" }
 #primitives = { path = "../../ginger-lib/primitives", features = ["smt"] }
-rand = { version = "0.7" }
+rand = { version = "0.8.3" }
 sha1 = "0.6.0"
 
 bzip2 = { version = "0.4.2" }
 flate2 = { version = "1.0.20" }
-rand_chacha = { version = "0.2.0" }
 
 [lib]
 name = "zendoo_cctp"
