@@ -14,6 +14,7 @@ sha1 = "0.6.0"
 
 bzip2 = { version = "0.4.2" }
 flate2 = { version = "1.0.20" }
+rand_chacha = { version = "0.2.0" }
 
 [lib]
 name = "zendoo_cctp"
