@@ -16,7 +16,4 @@ bit-vec = "0.6"
 bzip2 = "0.4.2"
 flate2 = "1.0.20"
 
-[lib]
-name = "zendoo_cctp"
-path = "src/lib.rs"
-crate_type = ["cdylib"]
+
