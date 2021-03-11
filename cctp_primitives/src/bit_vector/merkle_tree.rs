@@ -1,7 +1,7 @@
-use bitvec::prelude::*;
+use bit_vec::BitVec;
 
 use algebra::{
-    fields::tweedle::Fr as TweedleFr, ToConstraintField
+    fields::tweedle::Fr as TweedleFr, ToConstraintField//FromBits
 };
 
 use primitives::{
@@ -35,7 +35,8 @@ type Error = Box<dyn std::error::Error>;
 pub fn merkle_root_from_bytes(compressed_bit_vector: &[u8], expected_uncompressed_size: usize) -> Result<algebra::Fp256<algebra::fields::tweedle::FrParameters>, Error> {
 
     let uncompressed_bit_vector = compression::decompress_bit_vector(compressed_bit_vector, expected_uncompressed_size)?;
-    let bv = BitVec::<Lsb0, _>::from_slice(&uncompressed_bit_vector)?.into_vec();
+    let bv = BitVec::from_bytes(&uncompressed_bit_vector);
+    let bool_vector: Vec<bool> = bv.into_iter().map(|x| x).collect();
 
     let height = 12;
     let num_leaves = 1 << height;
@@ -44,10 +45,14 @@ pub fn merkle_root_from_bytes(compressed_bit_vector: &[u8], expected_uncompresse
         num_leaves,
     );
 
-    let leaves = bv.to_field_elements()?;
-    
+    let leaves = bool_vector.to_field_elements()?;
+
     leaves[..].iter().for_each(|&leaf| { mt.append(leaf); });
-    mt.finalize_in_place().root().ok_or(Err("Unable to compute the merkle tree root hash")?)
+
+    match mt.finalize_in_place().root() {
+        Some(x) => Ok(x),
+        None => Err("Unable to compute the merkle tree root hash")?
+    }
 }
 
 #[cfg(test)]
@@ -57,8 +62,17 @@ mod test {
 
     #[test]
     fn merkle_tree_trivial() {
-        let bit_vector = vec![0u8; 5];
+        let mut bit_vector: Vec<u8> = vec![0; 63];
 
-        assert!(merkle_root_from_bytes(&bit_vector, bit_vector.len() - 1).is_err());
+        assert!(merkle_root_from_bytes(&bit_vector, bit_vector.len()).is_err());
+
+        bit_vector.clear();
+        bit_vector.push(0);
+
+        for i in 0..63 {
+            bit_vector.push(i);
+        }
+        
+        assert!(merkle_root_from_bytes(&bit_vector, bit_vector.len() - 1).is_ok());
     }
 }
