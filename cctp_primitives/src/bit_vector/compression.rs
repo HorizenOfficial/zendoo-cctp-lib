@@ -6,6 +6,7 @@ use flate2::{Compression as GzipCompression, write::GzEncoder, read::GzDecoder};
 
 type Error = Box<dyn std::error::Error>;
 
+#[derive(Copy, Clone)]
 pub enum CompressionAlgorithm {
     Uncompressed,
     Bzip2,
@@ -28,6 +29,15 @@ impl TryFrom<u8> for CompressionAlgorithm {
 pub fn compress_bit_vector(raw_bit_vector: &[u8], algorithm: CompressionAlgorithm) -> Result<Vec<u8>, Error> {
     let compressed_bit_vector_result;
 
+    println!("Compressing bit vector...");
+    println!("Algorithm: {}, size: {}, address: {:p}", algorithm as u8, raw_bit_vector.len(), raw_bit_vector);
+
+    println!("Bit vector content:");
+
+    raw_bit_vector.iter().for_each(|byte| print!("|{}", byte));
+
+    println!("|");
+
     match algorithm {
         CompressionAlgorithm::Uncompressed => compressed_bit_vector_result = Ok(raw_bit_vector.to_vec()),
         CompressionAlgorithm::Bzip2 => compressed_bit_vector_result = bzip2_compress(raw_bit_vector),
@@ -46,6 +56,14 @@ pub fn compress_bit_vector(raw_bit_vector: &[u8], algorithm: CompressionAlgorith
 
 pub fn decompress_bit_vector(compressed_bit_vector: &[u8], expected_size: usize) -> Result<Vec<u8>, Error> {
     
+    println!("Decompressing bit vector...");
+    println!("Algorithm: {}, size: {}, expected decompressed size: {}, address: {:p}", compressed_bit_vector[0], compressed_bit_vector.len(), expected_size, compressed_bit_vector);
+
+    println!("Bit vector content:");
+
+    compressed_bit_vector.iter().for_each(|byte| print!("|{}", byte));
+
+    println!("|");
         
     let raw_bit_vector_result =  match compressed_bit_vector[0].try_into() {
         Ok(CompressionAlgorithm::Uncompressed) => Ok(compressed_bit_vector[1..].to_vec()),
