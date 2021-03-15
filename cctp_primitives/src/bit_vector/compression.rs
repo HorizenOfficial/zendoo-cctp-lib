@@ -1,3 +1,8 @@
+//! # Compression
+//!
+//! `compression` exposes functions to compress and decompress bit vectors.
+//! Currently supported compression algorithms are Bzip2 and Gzip.
+
 use std::convert::{TryFrom, TryInto};
 use std::io::{Read, Write};
 
@@ -8,6 +13,7 @@ use crate::{ printdbg, printlndbg};
 
 type Error = Box<dyn std::error::Error>;
 
+/// Available compression algorithms.
 #[derive(Copy, Clone)]
 pub enum CompressionAlgorithm {
     Uncompressed,
@@ -28,6 +34,34 @@ impl TryFrom<u8> for CompressionAlgorithm {
     }
 }
 
+/// Compresses `raw_bit vector` (represented as a byte vector)
+/// by using the specified compression `algorithm`.
+/// The resulting compressed bit vector has an additional first byte
+/// representing the algorithm used for the compression process.
+///
+/// # Examples
+///
+/// ```
+/// use cctp_primitives::bit_vector::compression::*;
+///
+/// let bit_vector: Vec<u8> = (0..100).collect();
+///
+/// let compressed_bit_vector = compress_bit_vector(&bit_vector, CompressionAlgorithm::Uncompressed).unwrap();
+/// assert_eq!(compressed_bit_vector[0], CompressionAlgorithm::Uncompressed as u8);
+/// assert_eq!(bit_vector.len() + 1, compressed_bit_vector.len());
+/// let decompressed_bit_vector = decompress_bit_vector(&compressed_bit_vector, bit_vector.len()).unwrap();
+/// assert_eq!(bit_vector, decompressed_bit_vector);
+///
+/// let compressed_bit_vector = compress_bit_vector(&bit_vector, CompressionAlgorithm::Bzip2).unwrap();
+/// assert_eq!(compressed_bit_vector[0], CompressionAlgorithm::Bzip2 as u8);
+/// let decompressed_bit_vector = decompress_bit_vector(&compressed_bit_vector, bit_vector.len()).unwrap();
+/// assert_eq!(bit_vector, decompressed_bit_vector);
+///
+/// let compressed_bit_vector = compress_bit_vector(&bit_vector, CompressionAlgorithm::Gzip).unwrap();
+/// assert_eq!(compressed_bit_vector[0], CompressionAlgorithm::Gzip as u8);
+/// let decompressed_bit_vector = decompress_bit_vector(&compressed_bit_vector, bit_vector.len()).unwrap();
+/// assert_eq!(bit_vector, decompressed_bit_vector);
+/// ```
 #[allow(unused_variables)]
 pub fn compress_bit_vector(raw_bit_vector: &[u8], algorithm: CompressionAlgorithm) -> Result<Vec<u8>, Error> {
     let compressed_bit_vector_result;
@@ -57,6 +91,36 @@ pub fn compress_bit_vector(raw_bit_vector: &[u8], algorithm: CompressionAlgorith
     compressed_bit_vector_result
 }
 
+/// Decompresses `compressed_bit vector` (represented as a byte vector slice)
+/// by using the compression `algorithm` specified as the first byte of the vector.
+/// The function requires the resulting vector to have `expected_size` bytes.
+///
+/// # Errors
+/// Returns an error if the decompressed size is different than `expected size` (bytes).
+/// 
+/// # Examples
+///
+/// ```
+/// use cctp_primitives::bit_vector::compression::*;
+///
+/// let bit_vector: Vec<u8> = (0..100).collect();
+///
+/// let compressed_bit_vector = compress_bit_vector(&bit_vector, CompressionAlgorithm::Uncompressed).unwrap();
+/// assert_eq!(compressed_bit_vector[0], CompressionAlgorithm::Uncompressed as u8);
+/// assert_eq!(bit_vector.len() + 1, compressed_bit_vector.len());
+/// let decompressed_bit_vector = decompress_bit_vector(&compressed_bit_vector, bit_vector.len()).unwrap();
+/// assert_eq!(bit_vector, decompressed_bit_vector);
+///
+/// let compressed_bit_vector = compress_bit_vector(&bit_vector, CompressionAlgorithm::Bzip2).unwrap();
+/// assert_eq!(compressed_bit_vector[0], CompressionAlgorithm::Bzip2 as u8);
+/// let decompressed_bit_vector = decompress_bit_vector(&compressed_bit_vector, bit_vector.len()).unwrap();
+/// assert_eq!(bit_vector, decompressed_bit_vector);
+///
+/// let compressed_bit_vector = compress_bit_vector(&bit_vector, CompressionAlgorithm::Gzip).unwrap();
+/// assert_eq!(compressed_bit_vector[0], CompressionAlgorithm::Gzip as u8);
+/// let decompressed_bit_vector = decompress_bit_vector(&compressed_bit_vector, bit_vector.len()).unwrap();
+/// assert_eq!(bit_vector, decompressed_bit_vector);
+/// ```
 #[allow(unused_variables)]
 pub fn decompress_bit_vector(compressed_bit_vector: &[u8], expected_size: usize) -> Result<Vec<u8>, Error> {
     
