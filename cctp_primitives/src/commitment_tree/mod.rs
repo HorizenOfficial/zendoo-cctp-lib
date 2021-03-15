@@ -1,10 +1,9 @@
 use primitives::{merkle_tree::field_based_mht::{
-    smt::{BigMerkleTree, Coord},
     parameters::MNT4753_MHT_POSEIDON_PARAMETERS as MHT_PARAMETERS,
     FieldBasedMerkleTreeParameters
-}, MNT4PoseidonHash, FieldBasedMerkleTreePrecomputedEmptyConstants, FieldBasedBinaryMHTPath, FieldBasedMerkleTreePath};
+}, MNT4PoseidonHash, FieldBasedMerkleTreePrecomputedEmptyConstants, FieldBasedMerkleTreePath, FieldBasedOptimizedMHT, BatchFieldBasedMerkleTreeParameters, MNT4BatchPoseidonHash, FieldBasedMerkleTree, FieldBasedMHTPath};
 use algebra::fields::mnt4753::{Fr, FqParameters};
-use crate::commitment_tree::utils::{pow2, new_smt, Error};
+use crate::commitment_tree::utils::{pow2, new_mt};
 use crate::commitment_tree::sidechain_tree_alive::{SidechainTreeAlive, SidechainAliveSubtreeType};
 use crate::commitment_tree::sidechain_tree_ceased::SidechainTreeCeased;
 use algebra::FpParameters;
@@ -19,6 +18,7 @@ pub type FieldElement = Fr;
 pub type FieldHash = MNT4PoseidonHash;
 pub const FIELD_ELEMENT_BITS_CAPACITY: usize = FqParameters::CAPACITY as usize;
 
+//--------------------------------------------------------------------------------------------------
 #[derive(Debug, Clone)]
 pub struct GingerMerkleTreeParameters;
 
@@ -31,50 +31,44 @@ impl FieldBasedMerkleTreeParameters for GingerMerkleTreeParameters {
         Some(MHT_PARAMETERS);
 }
 
-// FieldElement-based Sparse Merkle Tree
-pub type FieldElementsSMT = BigMerkleTree<GingerMerkleTreeParameters>;
+impl BatchFieldBasedMerkleTreeParameters for GingerMerkleTreeParameters {
+    type BH = MNT4BatchPoseidonHash;
+}
+
+// FieldElement-based Merkle Tree
+pub type FieldElementsMT = FieldBasedOptimizedMHT<GingerMerkleTreeParameters>;
+//--------------------------------------------------------------------------------------------------
 
 // Tunable parameters
 pub const CMT_SMT_HEIGHT: usize = 12;
 const CMT_SMT_CAPACITY:   usize = pow2(CMT_SMT_HEIGHT);
-const CMT_PATH_SUFFIX:    &str = "_cmt";
 
 // Proof of existence of some SidechainTreeAlive/SidechainTreeCeased inside of a CommitmentTree;
 // Actually it is a Merkle Path of SidechainTreeAlive/SidechainTreeCeased in a CommitmentTree
 pub struct ScExistenceProof{
-    mpath: FieldBasedBinaryMHTPath<GingerMerkleTreeParameters>
+    mpath: FieldBasedMHTPath<GingerMerkleTreeParameters>
 }
 // Proof of absence of some Sidechain-ID inside of a CommitmentTree;
 // Contains one or two neighbours of an absent ID
 pub struct ScAbsenceProof{
-    left:  Option<(FieldElement, FieldBasedBinaryMHTPath<GingerMerkleTreeParameters>)>, // a smaller ID of an existing SC together with Merkle Path of its SC-commitment
-    right: Option<(FieldElement, FieldBasedBinaryMHTPath<GingerMerkleTreeParameters>)>  // a bigger ID of an existing SC together with Merkle Path of its SC-commitment
+    left:  Option<(FieldElement, FieldBasedMHTPath<GingerMerkleTreeParameters>)>, // a smaller ID of an existing SC together with Merkle Path of its SC-commitment
+    right: Option<(FieldElement, FieldBasedMHTPath<GingerMerkleTreeParameters>)>  // a bigger ID of an existing SC together with Merkle Path of its SC-commitment
 }
 
 pub struct CommitmentTree {
-    alive_sc_trees:     Vec<SidechainTreeAlive>,    // list of Alive Sidechain Trees
-    ceased_sc_trees:    Vec<SidechainTreeCeased>,   // list of Ceased Sidechain Trees
-    base_path:          String,                     // path for underlying SMT-based subtrees
-    commitments_tree:   Option<FieldElementsSMT>,   // cached Commitment-SMT, which is recomputed in case of some changes in underlying Alive/Ceased Sidechain Trees
+    alive_sc_trees:   Vec<SidechainTreeAlive>,    // list of Alive Sidechain Trees
+    ceased_sc_trees:  Vec<SidechainTreeCeased>,   // list of Ceased Sidechain Trees
+    commitments_tree: Option<FieldElementsMT>,    // cached Commitment-MT, which is recomputed in case of some changes in underlying Alive/Ceased Sidechain Trees
 }
 
 impl CommitmentTree {
 
-    // Creates new instance of a CommitmentTree
-    // db_path - is a path to some not yet created directory; it is needed for underlying Sparse Merkle Trees.
-    // NOTE: The last part of the db_path is used as a prefix of subdirectories name, i.e. for /tmp/cmt, the CMT's subdirectories will be placed in /tmp with their own directories names prefixed with 'cmt'
-    pub fn create(db_path: &str) -> Result<CommitmentTree, Error> {
-        if !db_path.is_empty(){
-            Ok(
-                CommitmentTree{
-                    alive_sc_trees: Vec::new(),
-                    ceased_sc_trees: Vec::new(),
-                    base_path: db_path.to_owned(),
-                    commitments_tree: None
-                }
-            )
-        } else {
-            Err("Empty db_path".into())
+    // Creates a new instance of CommitmentTree
+    pub fn create() -> CommitmentTree {
+        CommitmentTree{
+            alive_sc_trees:   Vec::new(),
+            ceased_sc_trees:  Vec::new(),
+            commitments_tree: None
         }
     }
 
@@ -211,34 +205,34 @@ impl CommitmentTree {
 
     // Gets commitment, i.e. root of the Forward Transfer Transactions subtree of a specified SidechainTreeAlive
     // Returns None if SidechainTreeAlive with a specified ID doesn't exist in a current CommitmentTree
-    pub fn get_fwt_commitment(&self, sc_id: &FieldElement) -> Option<FieldElement> {
+    pub fn get_fwt_commitment(&mut self, sc_id: &FieldElement) -> Option<FieldElement> {
         self.scta_get_subtree_commitment(sc_id, SidechainAliveSubtreeType::FWT)
     }
 
     // Gets commitment, i.e. root of the Backward Transfer Requests Transactions subtree of a specified SidechainTreeAlive
     // Returns None if SidechainTreeAlive with a specified ID doesn't exist in a current CommitmentTree
-    pub fn get_bwtr_commitment(&self, sc_id: &FieldElement) -> Option<FieldElement> {
+    pub fn get_bwtr_commitment(&mut self, sc_id: &FieldElement) -> Option<FieldElement> {
         self.scta_get_subtree_commitment(sc_id, SidechainAliveSubtreeType::BWTR)
     }
 
     // Gets commitment, i.e. root of the Certificates subtree of a specified SidechainTreeAlive
     // Returns None if SidechainTreeAlive with a specified ID doesn't exist in a current CommitmentTree
-    pub fn get_cert_commitment(&self, sc_id: &FieldElement) -> Option<FieldElement> {
+    pub fn get_cert_commitment(&mut self, sc_id: &FieldElement) -> Option<FieldElement> {
         self.scta_get_subtree_commitment(sc_id, SidechainAliveSubtreeType::CERT)
     }
 
     // Gets commitment, i.e. root of the Ceased Sidechain Withdrawals subtree of a specified SidechainTreeAlive
     // Returns None if SidechainTreeCeased with a specified ID doesn't exist in a current CommitmentTree
-    pub fn get_csw_commitment(&self, sc_id: &FieldElement) -> Option<FieldElement> {
+    pub fn get_csw_commitment(&mut self, sc_id: &FieldElement) -> Option<FieldElement> {
         self.sctc_get_subtree_commitment(sc_id)
     }
 
     // Gets commitment of a specified SidechainTreeAlive/SidechainTreeCeased
     // Returns None if SidechainTreeAlive/SidechainTreeCeased with a specified ID doesn't exist in a current CommitmentTree
-    pub fn get_sc_commitment(&self, sc_id: &FieldElement) -> Option<FieldElement> {
-        if let Some(sct) = self.get_scta(sc_id){
+    pub fn get_sc_commitment(&mut self, sc_id: &FieldElement) -> Option<FieldElement> {
+        if let Some(sct) = self.get_scta_mut(sc_id){
             Some(sct.get_commitment())
-        } else if let Some(sctc) = self.get_sctc(sc_id){
+        } else if let Some(sctc) = self.get_sctc_mut(sc_id){
             Some(sctc.get_commitment())
         } else {
             None
@@ -250,7 +244,7 @@ impl CommitmentTree {
     // Note: The commitment value is computed as a root of SMT with SCT-commitments leafs ordered by corresponding SCT-IDs
     pub fn get_commitment(&mut self) -> Option<FieldElement> {
         if let Some(cmt) = self.get_commitments_tree() {
-            Some(cmt.get_root())
+            cmt.finalize().root()
         } else {
             None
         }
@@ -261,7 +255,7 @@ impl CommitmentTree {
     pub fn get_sc_existence_proof(&mut self, sc_id: &FieldElement) -> Option<ScExistenceProof> {
         if let Some(index) = self.sc_id_to_index(sc_id){
             if let Some(tree) = self.get_commitments_tree(){
-                Some(ScExistenceProof{mpath: tree.get_merkle_path(Coord::new(0, index))})
+                Some(ScExistenceProof{mpath: tree.finalize().get_merkle_path(index).unwrap()})
             } else {
                 None
             }
@@ -279,10 +273,10 @@ impl CommitmentTree {
                 Some(
                     ScAbsenceProof{
                         left: if let Some((index, left_id)) = left {
-                            Some((left_id, tree.get_merkle_path(Coord::new(0, index))) )
+                            Some((left_id, tree.finalize().get_merkle_path(index).unwrap()) )
                         } else { None },
                         right: if let Some((index, right_id)) = right {
-                            Some((right_id, tree.get_merkle_path(Coord::new(0, index))) )
+                            Some((right_id, tree.finalize().get_merkle_path(index).unwrap()) )
                         } else { None }
                     }
                 )
@@ -316,7 +310,7 @@ impl CommitmentTree {
     // Verifies proof of sidechain non-inclusion into a specified CommitmentTree
     // Takes sidechain ID, sidechain absence proof and a root of CommitmentTree - CMT-commitment
     // Returns true if proof is correct, false otherwise
-    pub fn verify_sc_absence(&self, absent_id: &FieldElement, proof: &ScAbsenceProof, commitment: &FieldElement) -> bool {
+    pub fn verify_sc_absence(&mut self, absent_id: &FieldElement, proof: &ScAbsenceProof, commitment: &FieldElement) -> bool {
         if proof.left.is_some() && proof.right.is_some(){
             let (left_id, left_mpath) = proof.left.as_ref().unwrap();
             let (right_id, right_mpath) = proof.right.as_ref().unwrap();
@@ -380,13 +374,22 @@ impl CommitmentTree {
     fn get_sctc(&self, sc_id: &FieldElement) -> Option<&SidechainTreeCeased> {
         self.ceased_sc_trees.iter().find(|sc| sc.id() == sc_id)
     }
+    // Gets mutable reference to a SidechainTreeCeased with a specified ID; If such a tree doesn't exist returns None
+    fn get_sctc_mut(&mut self, sc_id: &FieldElement) -> Option<&mut SidechainTreeCeased> {
+        self.ceased_sc_trees.iter_mut().find(|sc_tree| sc_tree.id() == sc_id)
+    }
+
+    // Gets mutable reference to a SidechainTreeAlive with a specified ID; If such a tree doesn't exist returns None
+    fn get_scta_mut(&mut self, sc_id: &FieldElement) -> Option<&mut SidechainTreeAlive> {
+        self.alive_sc_trees.iter_mut().find(|sc_tree| sc_tree.id() == sc_id)
+    }
 
     // Adds an empty SidechainTreeAlive with a specified ID to a CommitmentTree
     // Returns mutable reference to a new SidechainTreeAlive or
     //         None if CommitmentTree is full or an error occurred during creation of a new SidechainTreeAlive
     fn add_scta(&mut self, sc_id: &FieldElement) -> Option<&mut SidechainTreeAlive> {
         if !self.is_full(){
-            if let Ok(new_sct) = SidechainTreeAlive::create(&sc_id, &self.base_path){
+            if let Ok(new_sct) = SidechainTreeAlive::create(&sc_id){
                 self.alive_sc_trees.push(new_sct);
                 self.alive_sc_trees.last_mut()
             } else {
@@ -402,7 +405,7 @@ impl CommitmentTree {
     //         None if CommitmentTree is full or an error occurred during creation of a new SidechainTreeCeased
     fn add_sctc(&mut self, sc_id: &FieldElement) -> Option<&mut SidechainTreeCeased> {
         if !self.is_full(){ // Add new SidechainTreeCeased if there is free space in CommitmentTree
-            if let Ok(new_sctc) = SidechainTreeCeased::create(&sc_id, &self.base_path) {
+            if let Ok(new_sctc) = SidechainTreeCeased::create(&sc_id) {
                 self.ceased_sc_trees.push(new_sctc);
                 self.ceased_sc_trees.last_mut()
             } else {
@@ -416,22 +419,22 @@ impl CommitmentTree {
     // Gets mutable reference to a SidechainTreeAlive with a specified ID;
     // If such a SidechainTreeAlive doesn't exist adds new tree with a specified ID and returns mutable reference to it
     // Returns None if SidechainTreeAlive with a specified ID doesn't exist and can't be added
-    fn get_scta_mut(&mut self, sc_id: &FieldElement) -> Option<&mut SidechainTreeAlive> {
-        if !self.is_present_scta(sc_id) { // Add new SidechainTreeAlive if there is free space
-            self.add_scta(sc_id)
+    fn get_add_scta_mut(&mut self, sc_id: &FieldElement) -> Option<&mut SidechainTreeAlive> {
+        if self.is_present_scta(sc_id) { // Add new SidechainTreeAlive if there is free space
+            self.get_scta_mut(sc_id)
         } else {
-            self.alive_sc_trees.iter_mut().find(|sc_tree| sc_tree.id() == sc_id)
+            self.add_scta(sc_id)
         }
     }
 
     // Gets mutable reference to a SidechainTreeCeased with a specified ID;
     // If such a SidechainTreeCeased doesn't exist adds new tree with a specified ID and returns mutable reference to it
     // Returns None if SidechainTreeCeased with a specified ID doesn't exist and can't be added
-    fn get_sctc_mut(&mut self, sc_id: &FieldElement) -> Option<&mut SidechainTreeCeased> {
-        if !self.is_present_sctc(sc_id) && !self.is_full() {
-            self.add_sctc(sc_id)
+    fn get_add_sctc_mut(&mut self, sc_id: &FieldElement) -> Option<&mut SidechainTreeCeased> {
+        if self.is_present_sctc(sc_id) && !self.is_full() {
+            self.get_sctc_mut(sc_id)
         } else {
-            self.ceased_sc_trees.iter_mut().find(|sc_tree| sc_tree.id() == sc_id)
+            self.add_sctc(sc_id)
         }
     }
 
@@ -439,7 +442,7 @@ impl CommitmentTree {
     // Returns false if there is SidechainTreeCeased with the same ID or if get_sct_mut couldn't get SidechainTreeAlive with a specified ID
     fn scta_add_subtree_leaf(&mut self, sc_id: &FieldElement, leaf: &FieldElement, subtree_type: SidechainAliveSubtreeType) -> bool {
         if !self.is_present_sctc(sc_id) { // there shouldn't be SCTC with the same ID
-            if let Some(sct) = self.get_scta_mut(sc_id){
+            if let Some(sct) = self.get_add_scta_mut(sc_id){
                 let result = match subtree_type {
                     SidechainAliveSubtreeType::FWT  => sct.add_fwt (leaf),
                     SidechainAliveSubtreeType::BWTR => sct.add_bwtr(leaf),
@@ -461,7 +464,7 @@ impl CommitmentTree {
     // Returns false if there is SidechainTreeAlive with the same ID or if get_sctc_mut couldn't get SidechainTreeCeased with a specified ID
     fn sctc_add_subtree_leaf(&mut self, sc_id: &FieldElement, leaf: &FieldElement) -> bool {
         if !self.is_present_scta(sc_id) { // there shouldn't be SCTA with the same ID
-            if let Some(sctc) = self.get_sctc_mut(sc_id){
+            if let Some(sctc) = self.get_add_sctc_mut(sc_id){
                 let result = sctc.add_csw(leaf);
                 // If contents of the commitment tree has been updated then it should be rebuilt, so discard its current version
                 if self.commitments_tree.is_some() && result == true { self.commitments_tree = None }
@@ -476,8 +479,8 @@ impl CommitmentTree {
 
     // Gets commitment i.e. root of a subtree of a specified type in a specified SidechainTreeAlive
     // Returns None if get_sct couldn't get SidechainTreeAlive with a specified ID
-    fn scta_get_subtree_commitment(&self, sc_id: &FieldElement, subtree_type: SidechainAliveSubtreeType) -> Option<FieldElement> {
-        if let Some(sc_tree) = self.get_scta(sc_id){
+    fn scta_get_subtree_commitment(&mut self, sc_id: &FieldElement, subtree_type: SidechainAliveSubtreeType) -> Option<FieldElement> {
+        if let Some(sc_tree) = self.get_scta_mut(sc_id){
             Some(
                 match subtree_type {
                     SidechainAliveSubtreeType::FWT  => sc_tree.get_fwt_commitment(),
@@ -493,8 +496,8 @@ impl CommitmentTree {
 
     // Gets commitment i.e. root of a subtree of a specified type in a specified SidechainTreeCeased
     // Returns None if get_sctc couldn't get SidechainTreeCeased with a specified ID
-    fn sctc_get_subtree_commitment(&self, sc_id: &FieldElement) -> Option<FieldElement> {
-        if let Some(sctc) = self.get_sctc(sc_id){
+    fn sctc_get_subtree_commitment(&mut self, sc_id: &FieldElement) -> Option<FieldElement> {
+        if let Some(sctc) = self.get_sctc_mut(sc_id){
             Some(sctc.get_csw_commitment())
         } else {
             None
@@ -514,10 +517,11 @@ impl CommitmentTree {
     }
 
     // Build SMT with ID-ordered SC-commitments as its leafs
-    fn build_commitments_tree(&self) -> Option<FieldElementsSMT> {
-        if let Ok(mut cmt) = new_smt(&(self.base_path.to_owned() + CMT_PATH_SUFFIX), CMT_SMT_HEIGHT){
-            for (i, id) in self.get_indexed_sc_ids().into_iter() {
-                cmt.insert_leaf(Coord::new(0, i), self.get_sc_commitment(id).unwrap()); // SCTAs/SCTCs with such IDs exist, so unwrap() is safe here
+    fn build_commitments_tree(&mut self) -> Option<FieldElementsMT> {
+        if let Ok(mut cmt) = new_mt(CMT_SMT_HEIGHT){
+            let ids = self.get_indexed_sc_ids().into_iter().map(|s| *s.1).collect::<Vec<FieldElement>>();
+            for id in ids {
+                cmt.append(self.get_sc_commitment(&id).unwrap()); // SCTAs/SCTCs with such IDs exist, so unwrap() is safe here
             }
             Some(cmt)
         } else {
@@ -539,7 +543,7 @@ impl CommitmentTree {
 
     // Gets a mutable reference ot a current sc-commitments tree
     // Builds sc-commitments tree in case of its absence
-    fn get_commitments_tree(&mut self) -> Option<&mut FieldElementsSMT> {
+    fn get_commitments_tree(&mut self) -> Option<&mut FieldElementsMT> {
         // build or rebuild a sidechain-commitments tree if there were updates of sc-subtrees
         if self.commitments_tree.is_none() {
             self.commitments_tree = self.build_commitments_tree()
@@ -597,9 +601,7 @@ mod test {
         let two   = FieldElement::one() + &one;
         let three = FieldElement::one() + &two;
 
-        // Empty db_path is not allowed
-        assert!(CommitmentTree::create("").is_err());
-        let mut cmt = CommitmentTree::create("/tmp/cmt_tests_").unwrap();
+        let mut cmt = CommitmentTree::create();
 
         let sc_ids = vec![three, two, one, zero];
         let non_existing_id = FieldElement::one() + &three;
@@ -670,7 +672,7 @@ mod test {
         let three = FieldElement::one() + &two;
         let four  = FieldElement::one() + &three;
 
-        let mut cmt = CommitmentTree::create("/tmp/cmt_proofs_tests_").unwrap();
+        let mut cmt = CommitmentTree::create();
 
         // There is no absence-proof for an empty CommitmentTree
         assert!(cmt.get_sc_absence_proof(&one).is_none());
@@ -718,7 +720,7 @@ mod test {
     #[test]
     fn data_adding_tests(){
         let mut rng = rand::thread_rng();
-        let mut cmt = CommitmentTree::create("/tmp/cmt_data_adding_").unwrap();
+        let mut cmt = CommitmentTree::create();
 
         let comm0 = cmt.get_commitment();
 
