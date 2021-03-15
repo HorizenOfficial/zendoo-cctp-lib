@@ -1,6 +1,7 @@
 use primitives::{Coord, FieldBasedHash};
 use std::path::Path;
 use crate::commitment_tree::{FieldElement, FieldElementsSMT, FieldHash};
+use rand::Rng;
 
 pub type Error = Box<dyn std::error::Error>;
 
@@ -50,10 +51,16 @@ pub fn sc_base_path(sc_id: &FieldElement, db_path: &str) -> Result<String, Error
 }
 
 // Calculates hash of a sequentially concatenated data elements
-pub fn hash_vec(data: &Vec<&FieldElement>) -> FieldElement {
+pub fn hash_vec(data: &Vec<FieldElement>) -> FieldElement {
     let mut hasher = <FieldHash>::init(None);
     for &fe in data {
-        hasher.update(*fe);
+        hasher.update(fe);
     }
     hasher.finalize()
+}
+
+// Generated vector of random bytes
+pub fn rand_vec(len: usize) -> Vec<u8> {
+    let mut rng = rand::thread_rng();
+    (0.. len).map(|_|rng.gen()).collect()
 }

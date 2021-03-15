@@ -40,7 +40,7 @@ impl SidechainTreeCeased{
     // Commitment = hash( csw_root | SC_ID )
     pub fn get_commitment(&self) -> FieldElement {
         let csw_mr = self.get_csw_commitment();
-        hash_vec(&vec![&csw_mr, &self.sc_id])
+        hash_vec(&vec![csw_mr, self.sc_id])
     }
 }
 

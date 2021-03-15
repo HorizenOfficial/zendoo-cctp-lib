@@ -11,6 +11,7 @@ primitives = {version = "0.1.0", git = "https://github.com/HorizenOfficial/ginge
 #primitives = { path = "../../ginger-lib/primitives", features = ["smt"] }
 rand = { version = "0.8.3" }
 sha1 = "0.6.0"
+byteorder = "1.4.2"
 
 bit-vec = "0.6"
 bzip2 = "0.4.2"
