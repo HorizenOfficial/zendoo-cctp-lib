@@ -1,3 +1,7 @@
+//! # Merkle Tree
+//!
+//! `merkle_tree` exposes functions to compute a bit vector Merkle tree.
+
 use bit_vec::BitVec;
 
 use algebra::{
@@ -32,6 +36,22 @@ type TweedlePoseidonMHT = FieldBasedOptimizedMHT<TweedleFieldBasedMerkleTreePara
 
 type Error = Box<dyn std::error::Error>;
 
+/// Computes the root hash of the Merkle tree created as a representation
+/// of `compressed_bit_vector`.
+/// The function internally decompresses the bit_vector by using the algorithm
+/// specified by the first byte of the vector itself and requires the
+/// decompressed bit vector to have exactly `expected_uncompressed_size` bytes.
+///
+/// # Examples
+///
+/// ```
+/// use cctp_primitives::bit_vector::merkle_tree::*;
+///
+/// let bit_vector: Vec<u8> = (0..100).collect();
+/// let compressed_bit_vector = compress_bit_vector(&bit_vector, CompressionAlgorithm::Uncompressed).unwrap();
+/// let merkle_root = merkle_root_from_bytes(compressed_bit_vector, bit_vector.len()).unwrap();
+/// 
+/// ```
 pub fn merkle_root_from_bytes(compressed_bit_vector: &[u8], expected_uncompressed_size: usize) -> Result<algebra::Fp256<algebra::fields::tweedle::FrParameters>, Error> {
 
     let uncompressed_bit_vector = compression::decompress_bit_vector(compressed_bit_vector, expected_uncompressed_size)?;
@@ -61,7 +81,7 @@ mod test {
     use super::*;
 
     #[test]
-    fn merkle_tree_trivial() {
+    fn expected_size() {
         let mut bit_vector: Vec<u8> = vec![0; 63];
 
         assert!(merkle_root_from_bytes(&bit_vector, bit_vector.len()).is_err());
