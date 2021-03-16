@@ -84,11 +84,11 @@ pub fn compress_bit_vector(raw_bit_vector: &[u8], algorithm: CompressionAlgorith
     if compressed_bit_vector_result.is_ok() {
         let mut compressed_bit_vector = compressed_bit_vector_result.unwrap();
         compressed_bit_vector.insert(0, algorithm as u8);
-
+        compressed_bit_vector.shrink_to_fit();
         return Ok(compressed_bit_vector);
+    } else {
+        compressed_bit_vector_result
     }
-
-    compressed_bit_vector_result
 }
 
 /// Decompresses `compressed_bit vector` (represented as a byte vector slice)
@@ -133,7 +133,7 @@ pub fn decompress_bit_vector(compressed_bit_vector: &[u8], expected_size: usize)
 
     printlndbg!("|");
         
-    let raw_bit_vector_result =  match compressed_bit_vector[0].try_into() {
+    let mut raw_bit_vector_result =  match compressed_bit_vector[0].try_into() {
         Ok(CompressionAlgorithm::Uncompressed) => Ok(compressed_bit_vector[1..].to_vec()),
         Ok(CompressionAlgorithm::Bzip2) => bzip2_decompress(&compressed_bit_vector[1..]),
         Ok(CompressionAlgorithm::Gzip) => gzip_decompress(&compressed_bit_vector[1..]),
@@ -144,6 +144,7 @@ pub fn decompress_bit_vector(compressed_bit_vector: &[u8], expected_size: usize)
         Err(format!("Wrong bit vector size. Expected {} bytes, found {} bytes", expected_size, raw_bit_vector_result.len()))?
     }
 
+    raw_bit_vector_result.shrink_to_fit();
     Ok(raw_bit_vector_result)
 }
 
@@ -205,17 +206,23 @@ mod test {
         let compressed_bit_vector = compress_bit_vector(&empty_bit_vector, CompressionAlgorithm::Uncompressed).unwrap();
         assert_eq!(compressed_bit_vector.len(), empty_bit_vector.len() + 1);
         assert_eq!(compressed_bit_vector[0], CompressionAlgorithm::Uncompressed as u8);
-        assert_eq!(decompress_bit_vector(&compressed_bit_vector, empty_bit_vector.len()).unwrap(), empty_bit_vector);
+        let decompressed_bit_vector = decompress_bit_vector(&compressed_bit_vector, empty_bit_vector.len()).unwrap();
+        assert_eq!(decompressed_bit_vector, empty_bit_vector);
+        assert_eq!(compressed_bit_vector.len(), compressed_bit_vector.capacity());
 
         let compressed_bit_vector = compress_bit_vector(&empty_bit_vector, CompressionAlgorithm::Bzip2).unwrap();
         assert!(compressed_bit_vector.len() > empty_bit_vector.len());
         assert_eq!(compressed_bit_vector[0], CompressionAlgorithm::Bzip2 as u8);
-        assert_eq!(decompress_bit_vector(&compressed_bit_vector, empty_bit_vector.len()).unwrap(), empty_bit_vector);
+        let decompressed_bit_vector = decompress_bit_vector(&compressed_bit_vector, empty_bit_vector.len()).unwrap();
+        assert_eq!(decompressed_bit_vector, empty_bit_vector);
+        assert_eq!(compressed_bit_vector.len(), compressed_bit_vector.capacity());
 
         let compressed_bit_vector = compress_bit_vector(&empty_bit_vector, CompressionAlgorithm::Gzip).unwrap();
         assert!(compressed_bit_vector.len() > empty_bit_vector.len());
         assert_eq!(compressed_bit_vector[0], CompressionAlgorithm::Gzip as u8);
-        assert_eq!(decompress_bit_vector(&compressed_bit_vector, empty_bit_vector.len()).unwrap(), empty_bit_vector);
+        let decompressed_bit_vector = decompress_bit_vector(&compressed_bit_vector, empty_bit_vector.len()).unwrap();
+        assert_eq!(decompressed_bit_vector, empty_bit_vector);
+        assert_eq!(compressed_bit_vector.len(), compressed_bit_vector.capacity());
     }
 
     #[test]
@@ -252,13 +259,16 @@ mod test {
         assert!(decompress_bit_vector(&compressed_bit_vector, original_bit_vector.len()).is_err());
         compressed_bit_vector[0] = CompressionAlgorithm::Gzip as u8;
         assert!(decompress_bit_vector(&compressed_bit_vector, original_bit_vector.len()).is_err());
+        assert_eq!(compressed_bit_vector.len(), compressed_bit_vector.capacity());
 
         compressed_bit_vector = compress_bit_vector(&original_bit_vector, CompressionAlgorithm::Bzip2).unwrap();
         compressed_bit_vector[0] = CompressionAlgorithm::Gzip as u8;
         assert!(decompress_bit_vector(&compressed_bit_vector, original_bit_vector.len()).is_err());
+        assert_eq!(compressed_bit_vector.len(), compressed_bit_vector.capacity());
 
         compressed_bit_vector = compress_bit_vector(&original_bit_vector, CompressionAlgorithm::Gzip).unwrap();
         compressed_bit_vector[0] = CompressionAlgorithm::Bzip2 as u8;
         assert!(decompress_bit_vector(&compressed_bit_vector, original_bit_vector.len()).is_err());
+        assert_eq!(compressed_bit_vector.len(), compressed_bit_vector.capacity());
     }
 }
