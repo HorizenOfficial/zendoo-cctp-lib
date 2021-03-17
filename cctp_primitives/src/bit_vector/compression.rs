@@ -14,7 +14,7 @@ use crate::{ printdbg, printlndbg};
 type Error = Box<dyn std::error::Error>;
 
 /// Available compression algorithms.
-/// The ffi repr(C) tag has been added here because this must be exported from mc-cryptolib
+/// The ffi repr(C) tag has been added here because this enum must be exported from mc-cryptolib.
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub enum CompressionAlgorithm {
