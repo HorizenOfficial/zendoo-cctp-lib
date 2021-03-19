@@ -1,23 +1,30 @@
-use primitives::{merkle_tree::field_based_mht::{
-    parameters::MNT4753_MHT_POSEIDON_PARAMETERS as MHT_PARAMETERS,
-    FieldBasedMerkleTreeParameters
-}, MNT4PoseidonHash, FieldBasedMerkleTreePrecomputedEmptyConstants, FieldBasedMerkleTreePath, FieldBasedOptimizedMHT, BatchFieldBasedMerkleTreeParameters, MNT4BatchPoseidonHash, FieldBasedMerkleTree, FieldBasedMHTPath};
-use algebra::fields::mnt4753::{Fr, FqParameters};
-use crate::commitment_tree::utils::{pow2, new_mt};
+use primitives::{merkle_tree::field_based_mht::FieldBasedMerkleTreeParameters, FieldBasedMerkleTreePrecomputedEmptyConstants, FieldBasedMerkleTreePath, FieldBasedOptimizedMHT, BatchFieldBasedMerkleTreeParameters, FieldBasedMerkleTree, FieldBasedMHTPath};
+use algebra::FpParameters;
 use crate::commitment_tree::sidechain_tree_alive::{SidechainTreeAlive, SidechainAliveSubtreeType};
 use crate::commitment_tree::sidechain_tree_ceased::SidechainTreeCeased;
-use algebra::FpParameters;
 use crate::commitment_tree::hashers::{hash_fwt, hash_id, hash_bwtr, hash_scc, hash_cert, hash_csw};
+use crate::commitment_tree::utils::{pow2, new_mt};
 
 pub mod sidechain_tree_alive;
 pub mod sidechain_tree_ceased;
 pub mod utils;
 pub mod hashers;
 
-pub type FieldElement = Fr;
-pub type FieldHash = MNT4PoseidonHash;
-pub const FIELD_ELEMENT_BITS_CAPACITY: usize = FqParameters::CAPACITY as usize;
+//--------------------------------------------------------------------------------------------------
+// Underlying FieldElement, FieldHash and field-related parameters
+//--------------------------------------------------------------------------------------------------
+use algebra::fields::tweedle::{Fr, FrParameters};
+use primitives::{TweedleFrPoseidonHash, TweedleFrBatchPoseidonHash};
+use primitives::merkle_tree::field_based_mht::parameters::tweedle_fr::TWEEDLE_MHT_POSEIDON_PARAMETERS as MHT_PARAMETERS;
 
+pub type FieldElement = Fr;
+pub type FieldHash = TweedleFrPoseidonHash;
+pub type FieldBatchHash = TweedleFrBatchPoseidonHash;
+
+pub const FIELD_ELEMENT_BITS_CAPACITY: usize = FrParameters::CAPACITY as usize;
+
+//--------------------------------------------------------------------------------------------------
+// Parameters for a Field-based Merkle Tree
 //--------------------------------------------------------------------------------------------------
 #[derive(Debug, Clone)]
 pub struct GingerMerkleTreeParameters;
@@ -32,7 +39,7 @@ impl FieldBasedMerkleTreeParameters for GingerMerkleTreeParameters {
 }
 
 impl BatchFieldBasedMerkleTreeParameters for GingerMerkleTreeParameters {
-    type BH = MNT4BatchPoseidonHash;
+    type BH = FieldBatchHash;
 }
 
 // FieldElement-based Merkle Tree
