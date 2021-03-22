@@ -5,20 +5,11 @@ authors = [""]
 edition = "2018"
 
 [dependencies]
-#<<<<<<< HEAD
-#algebra = {version = "0.1.0", git = "https://github.com/HorizenOfficial/ginger-lib.git", branch = "algebra_ocl", features = ["tweedle"]}
-#primitives = {version = "0.1.0", git = "https://github.com/HorizenOfficial/ginger-lib.git", branch = "algebra_ocl", features = ["smt", "mnt4_753", "mnt6_753", "tweedle"]}
-#algebra = { path = "../../ginger-lib/algebra" }
-#primitives = { path = "../../ginger-lib/primitives", features = ["smt"] }
-#rand = { version = "0.8.3" }
-#sha1 = "0.6.0"
-#=======
 algebra = {version = "0.1.0", git = "https://github.com/HorizenOfficial/ginger-lib.git", branch = "algebra_ocl"}
 primitives = {version = "0.1.0", features = ["smt", "tweedle"], git = "https://github.com/HorizenOfficial/ginger-lib.git", branch = "algebra_ocl"}
 #algebra = { path = "../../ginger-lib/algebra" }
 #primitives = { path = "../../ginger-lib/primitives", features = ["smt", "tweedle"] }
 rand = { version = "0.7" }
-#>>>>>>> inmem_mt
 byteorder = "1.4.2"
 
 bit-vec = "0.6"
