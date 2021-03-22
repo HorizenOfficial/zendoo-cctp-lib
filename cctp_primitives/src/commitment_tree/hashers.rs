@@ -22,17 +22,19 @@ pub fn hash_fwt(amount: i64,
 }
 
 // Computes FieldElement-based hash on the given Backward Transfer Request Transaction data
-pub fn hash_bwtr(sc_fee:  u64,
+pub fn hash_bwtr(sc_fee:  i64,
                  pk_hash: &[u8],
                  tx_hash: &[u8],
-                 out_idx: u32)
+                 out_idx: u32,
+                 sc_request_data: &[u8])
     -> Result<FieldElement, Error> {
     let mut bytes = Vec::<u8>::new();
 
-    bytes.write_u64::<BigEndian>(sc_fee)?;
+    bytes.write_i64::<BigEndian>(sc_fee)?;
     bytes.extend(&pk_hash.to_vec());
     bytes.extend(&tx_hash.to_vec());
     bytes.write_u32::<BigEndian>(out_idx)?;
+    bytes.extend(&sc_request_data.to_vec());
 
     Ok(hash_bytes(&bytes))
 }
@@ -44,7 +46,7 @@ pub fn hash_cert(epoch_number: u32,
                  bt_list: &[(u64,[u8; 20])],
                  custom_fields_merkle_root: &[u8],
                  end_cumulative_sc_tx_commitment_tree_root: &[u8])
-                 -> Result<FieldElement, Error> {
+    -> Result<FieldElement, Error> {
     let mut bytes = Vec::<u8>::new();
 
     bytes.write_u32::<BigEndian>(epoch_number)?;
@@ -62,7 +64,7 @@ pub fn hash_scc(amount: i64,
                 pub_key: &[u8],
                 withdrawal_epoch_length: u32,
                 custom_data: &[u8],
-                constant: &[u8],
+                constant: Option<&[u8]>,
                 cert_verification_key: &[u8],
                 btr_verification_key: Option<&[u8]>,
                 csw_verification_key: Option<&[u8]>,
@@ -75,7 +77,9 @@ pub fn hash_scc(amount: i64,
     bytes.extend(&pub_key.to_vec());
     bytes.write_u32::<BigEndian>(withdrawal_epoch_length)?;
     bytes.extend(&custom_data.to_vec());
-    bytes.extend(&constant.to_vec());
+    if constant.is_some(){
+        bytes.extend(&constant.unwrap().to_vec());
+    }
     bytes.extend(&cert_verification_key.to_vec());
     if btr_verification_key.is_some(){
         bytes.extend(&btr_verification_key.unwrap().to_vec());
@@ -177,7 +181,8 @@ mod test {
                 rng.gen(),
                 &rand_vec(32),
                 &rand_vec(32),
-                rng.gen()
+                rng.gen(),
+                &rand_vec(32),
             ).is_ok()
         );
 
@@ -199,7 +204,7 @@ mod test {
                 &rand_vec(32),
                 rng.gen(),
                 &rand_vec(32),
-                &rand_vec(32),
+                Some(&rand_vec(32)),
                 &rand_vec(1544),
                 Some(&rand_vec(1544)),
                 Some(&rand_vec(1544)),
