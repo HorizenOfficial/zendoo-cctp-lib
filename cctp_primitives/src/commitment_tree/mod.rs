@@ -1,23 +1,30 @@
-use primitives::{merkle_tree::field_based_mht::{
-    parameters::MNT4753_MHT_POSEIDON_PARAMETERS as MHT_PARAMETERS,
-    FieldBasedMerkleTreeParameters
-}, MNT4PoseidonHash, FieldBasedMerkleTreePrecomputedEmptyConstants, FieldBasedMerkleTreePath, FieldBasedOptimizedMHT, BatchFieldBasedMerkleTreeParameters, MNT4BatchPoseidonHash, FieldBasedMerkleTree, FieldBasedMHTPath};
-use algebra::fields::mnt4753::{Fr, FqParameters};
-use crate::commitment_tree::utils::{pow2, new_mt};
+use primitives::{merkle_tree::field_based_mht::FieldBasedMerkleTreeParameters, FieldBasedMerkleTreePrecomputedEmptyConstants, FieldBasedMerkleTreePath, FieldBasedOptimizedMHT, BatchFieldBasedMerkleTreeParameters, FieldBasedMerkleTree, FieldBasedMHTPath};
+use algebra::FpParameters;
 use crate::commitment_tree::sidechain_tree_alive::{SidechainTreeAlive, SidechainAliveSubtreeType};
 use crate::commitment_tree::sidechain_tree_ceased::SidechainTreeCeased;
-use algebra::FpParameters;
 use crate::commitment_tree::hashers::{hash_fwt, hash_id, hash_bwtr, hash_scc, hash_cert, hash_csw};
+use crate::commitment_tree::utils::{pow2, new_mt};
 
 pub mod sidechain_tree_alive;
 pub mod sidechain_tree_ceased;
 pub mod utils;
 pub mod hashers;
 
-pub type FieldElement = Fr;
-pub type FieldHash = MNT4PoseidonHash;
-pub const FIELD_ELEMENT_BITS_CAPACITY: usize = FqParameters::CAPACITY as usize;
+//--------------------------------------------------------------------------------------------------
+// Underlying FieldElement, FieldHash and field-related parameters
+//--------------------------------------------------------------------------------------------------
+use algebra::fields::tweedle::{Fr, FrParameters};
+use primitives::{TweedleFrPoseidonHash, TweedleFrBatchPoseidonHash};
+use primitives::merkle_tree::field_based_mht::parameters::tweedle_fr::TWEEDLE_MHT_POSEIDON_PARAMETERS as MHT_PARAMETERS;
 
+pub type FieldElement = Fr;
+pub type FieldHash = TweedleFrPoseidonHash;
+pub type FieldBatchHash = TweedleFrBatchPoseidonHash;
+
+pub const FIELD_ELEMENT_BITS_CAPACITY: usize = FrParameters::CAPACITY as usize;
+
+//--------------------------------------------------------------------------------------------------
+// Parameters for a Field-based Merkle Tree
 //--------------------------------------------------------------------------------------------------
 #[derive(Debug, Clone)]
 pub struct GingerMerkleTreeParameters;
@@ -32,7 +39,7 @@ impl FieldBasedMerkleTreeParameters for GingerMerkleTreeParameters {
 }
 
 impl BatchFieldBasedMerkleTreeParameters for GingerMerkleTreeParameters {
-    type BH = MNT4BatchPoseidonHash;
+    type BH = FieldBatchHash;
 }
 
 // FieldElement-based Merkle Tree
@@ -77,7 +84,7 @@ impl CommitmentTree {
     //         otherwise returns the same as add_fwt_leaf method
     pub fn add_fwt(&mut self,
                    sc_id: &[u8],
-                   amount: u64,
+                   amount: i64,
                    pub_key: &[u8],
                    tx_hash: &[u8],
                    out_idx: u32) -> bool {
@@ -95,12 +102,12 @@ impl CommitmentTree {
     //         otherwise returns the same as add_bwtr_leaf method
     pub fn add_bwtr(&mut self,
                      sc_id: &[u8],
-                     amount: u64,
-                     pub_key: &[u8],
+                     sc_fee: u64,
+                     pk_hash: &[u8],
                      tx_hash: &[u8],
                      out_idx: u32) -> bool {
         if let Ok(bwtr_leaf) = hash_bwtr(
-            amount, pub_key, tx_hash, out_idx
+            sc_fee, pk_hash, tx_hash, out_idx
         ){
             self.add_bwtr_leaf(&hash_id(sc_id), &bwtr_leaf)
         } else {
@@ -116,7 +123,7 @@ impl CommitmentTree {
                     epoch_number: u32,
                     quality: u64,
                     cert_data_hash: &[u8],
-                    bt_list: &[(i64,[u8; 32])],
+                    bt_list: &[(u64,[u8; 20])],
                     custom_fields_merkle_root: &[u8],
                     end_cumulative_sc_tx_commitment_tree_root: &[u8])-> bool {
         if let Ok(cert_leaf) = hash_cert(
@@ -134,14 +141,14 @@ impl CommitmentTree {
     //         otherwise returns the same as set_scc_leaf method
     pub fn add_scc(&mut self,
                    sc_id: &[u8],
-                   amount: u64,
+                   amount: i64,
                    pub_key: &[u8],
                    withdrawal_epoch_length: u32,
                    custom_data: &[u8],
                    constant: &[u8],
                    cert_verification_key: &[u8],
-                   btr_verification_key: &[u8],
-                   csw_verification_key: &[u8],
+                   btr_verification_key: Option<&[u8]>,
+                   csw_verification_key: Option<&[u8]>,
                    tx_hash: &[u8],
                    out_idx: u32)-> bool {
         if let Ok(scc_leaf) = hash_scc(
@@ -750,13 +757,13 @@ mod test {
         let comm2 = cmt.get_commitment();
         assert_ne!(comm1, comm2);
 
-        let bt = (rng.gen::<i64>(), <[u8; 32]>::try_from(rand_vec(32).as_slice()).unwrap());
+        let bt = (rng.gen::<u64>(), <[u8; 20]>::try_from(rand_vec(20).as_slice()).unwrap());
         assert!(
             cmt.add_cert(
                 &rand_vec(32),
                 rng.gen(),
                 rng.gen(),
-                &rand_vec(32),
+                &rand_vec(20),
                 &vec![bt, bt],
                 &rand_vec(32),
                 &rand_vec(32)
@@ -775,8 +782,8 @@ mod test {
                 &rand_vec(32),
                 &rand_vec(32),
                 &rand_vec(1544),
-                &rand_vec(1544),
-                &rand_vec(1544),
+                Some(&rand_vec(1544)),
+                Some(&rand_vec(1544)),
                 &rand_vec(32),
                 rng.gen()
             )
