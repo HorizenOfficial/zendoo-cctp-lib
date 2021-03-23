@@ -1,5 +1,4 @@
 use primitives::{merkle_tree::field_based_mht::FieldBasedMerkleTreeParameters, FieldBasedMerkleTreePrecomputedEmptyConstants, FieldBasedMerkleTreePath, FieldBasedOptimizedMHT, BatchFieldBasedMerkleTreeParameters, FieldBasedMerkleTree, FieldBasedMHTPath};
-use algebra::FpParameters;
 use crate::commitment_tree::sidechain_tree_alive::{SidechainTreeAlive, SidechainAliveSubtreeType};
 use crate::commitment_tree::sidechain_tree_ceased::SidechainTreeCeased;
 use crate::commitment_tree::hashers::{hash_fwt, hash_id, hash_bwtr, hash_scc, hash_cert, hash_csw};
@@ -11,18 +10,14 @@ pub mod utils;
 pub mod hashers;
 
 //--------------------------------------------------------------------------------------------------
-// Underlying FieldElement, FieldHash and field-related parameters
+// Underlying FieldElement, FieldHash, FieldBatchHash and field-related MHT-parameters
 //--------------------------------------------------------------------------------------------------
-use algebra::fields::tweedle::{Fr, FrParameters};
-use primitives::{TweedleFrPoseidonHash, TweedleFrBatchPoseidonHash};
-use primitives::merkle_tree::field_based_mht::parameters::tweedle_fr::TWEEDLE_MHT_POSEIDON_PARAMETERS as MHT_PARAMETERS;
-
-pub type FieldElement = Fr;
-pub type FieldHash = TweedleFrPoseidonHash;
-pub type FieldBatchHash = TweedleFrBatchPoseidonHash;
-
-pub const FIELD_ELEMENT_BITS_CAPACITY: usize = FrParameters::CAPACITY as usize;
-
+use algebra::fields::tweedle::Fr as FieldElement;
+use primitives::{
+    TweedleFrPoseidonHash as FieldHash,
+    TweedleFrBatchPoseidonHash as FieldBatchHash,
+    merkle_tree::field_based_mht::parameters::tweedle_fr::TWEEDLE_MHT_POSEIDON_PARAMETERS as MHT_PARAMETERS
+};
 //--------------------------------------------------------------------------------------------------
 // Parameters for a Field-based Merkle Tree
 //--------------------------------------------------------------------------------------------------
@@ -101,14 +96,14 @@ impl CommitmentTree {
     // Returns false if hash_bwtr can't get hash for data given in parameters;
     //         otherwise returns the same as add_bwtr_leaf method
     pub fn add_bwtr(&mut self,
-                     sc_id: &[u8],
-                     sc_fee: i64,
-                     pk_hash: &[u8],
-                     tx_hash: &[u8],
-                     out_idx: u32,
-                     sc_request_data: &[u8]) -> bool {
+                    sc_id: &[u8],
+                    sc_fee: i64,
+                    sc_request_data: &[u8],
+                    pk_hash: &[u8],
+                    tx_hash: &[u8],
+                    out_idx: u32) -> bool {
         if let Ok(bwtr_leaf) = hash_bwtr(
-            sc_fee, pk_hash, tx_hash, out_idx, sc_request_data
+            sc_fee, sc_request_data, pk_hash, tx_hash, out_idx
         ){
             self.add_bwtr_leaf(&hash_id(sc_id), &bwtr_leaf)
         } else {
@@ -124,7 +119,7 @@ impl CommitmentTree {
                     epoch_number: u32,
                     quality: u64,
                     cert_data_hash: &[u8],
-                    bt_list: &[(u64,[u8; 20])],
+                    bt_list: &[(i64,[u8; 20])],
                     custom_fields_merkle_root: &[u8],
                     end_cumulative_sc_tx_commitment_tree_root: &[u8])-> bool {
         if let Ok(cert_leaf) = hash_cert(
@@ -751,15 +746,15 @@ mod test {
                 rng.gen(),
                 &rand_vec(32),
                 &rand_vec(32),
-                rng.gen(),
                 &rand_vec(32),
+                rng.gen()
             )
         );
 
         let comm2 = cmt.get_commitment();
         assert_ne!(comm1, comm2);
 
-        let bt = (rng.gen::<u64>(), <[u8; 20]>::try_from(rand_vec(20).as_slice()).unwrap());
+        let bt = (rng.gen::<i64>(), <[u8; 20]>::try_from(rand_vec(20).as_slice()).unwrap());
         assert!(
             cmt.add_cert(
                 &rand_vec(32),
