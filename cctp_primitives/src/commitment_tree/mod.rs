@@ -102,12 +102,13 @@ impl CommitmentTree {
     //         otherwise returns the same as add_bwtr_leaf method
     pub fn add_bwtr(&mut self,
                      sc_id: &[u8],
-                     sc_fee: u64,
+                     sc_fee: i64,
                      pk_hash: &[u8],
                      tx_hash: &[u8],
-                     out_idx: u32) -> bool {
+                     out_idx: u32,
+                     sc_request_data: &[u8]) -> bool {
         if let Ok(bwtr_leaf) = hash_bwtr(
-            sc_fee, pk_hash, tx_hash, out_idx
+            sc_fee, pk_hash, tx_hash, out_idx, sc_request_data
         ){
             self.add_bwtr_leaf(&hash_id(sc_id), &bwtr_leaf)
         } else {
@@ -145,7 +146,7 @@ impl CommitmentTree {
                    pub_key: &[u8],
                    withdrawal_epoch_length: u32,
                    custom_data: &[u8],
-                   constant: &[u8],
+                   constant: Option<&[u8]>,
                    cert_verification_key: &[u8],
                    btr_verification_key: Option<&[u8]>,
                    csw_verification_key: Option<&[u8]>,
@@ -750,7 +751,8 @@ mod test {
                 rng.gen(),
                 &rand_vec(32),
                 &rand_vec(32),
-                rng.gen()
+                rng.gen(),
+                &rand_vec(32),
             )
         );
 
@@ -780,7 +782,7 @@ mod test {
                 &rand_vec(32),
                 rng.gen(),
                 &rand_vec(32),
-                &rand_vec(32),
+                Some(&rand_vec(32)),
                 &rand_vec(1544),
                 Some(&rand_vec(1544)),
                 Some(&rand_vec(1544)),
