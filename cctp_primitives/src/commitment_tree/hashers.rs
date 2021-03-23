@@ -23,18 +23,18 @@ pub fn hash_fwt(amount: i64,
 
 // Computes FieldElement-based hash on the given Backward Transfer Request Transaction data
 pub fn hash_bwtr(sc_fee:  i64,
+                 sc_request_data: &[u8],
                  pk_hash: &[u8],
                  tx_hash: &[u8],
-                 out_idx: u32,
-                 sc_request_data: &[u8])
+                 out_idx: u32)
     -> Result<FieldElement, Error> {
     let mut bytes = Vec::<u8>::new();
 
     bytes.write_i64::<BigEndian>(sc_fee)?;
+    bytes.extend(&sc_request_data.to_vec());
     bytes.extend(&pk_hash.to_vec());
     bytes.extend(&tx_hash.to_vec());
     bytes.write_u32::<BigEndian>(out_idx)?;
-    bytes.extend(&sc_request_data.to_vec());
 
     Ok(hash_bytes(&bytes))
 }
@@ -43,7 +43,7 @@ pub fn hash_bwtr(sc_fee:  i64,
 pub fn hash_cert(epoch_number: u32,
                  quality: u64,
                  cert_data_hash: &[u8],
-                 bt_list: &[(u64,[u8; 20])],
+                 bt_list: &[(i64,[u8; 20])],
                  custom_fields_merkle_root: &[u8],
                  end_cumulative_sc_tx_commitment_tree_root: &[u8])
     -> Result<FieldElement, Error> {
@@ -114,10 +114,10 @@ pub fn hash_csw(amount: u64,
 pub fn hash_id(sc_id: &[u8]) -> FieldElement { hash_bytes(sc_id) }
 
 // Converts list of BTs to byte-array
-fn bt_list_to_bytes(bt_list: &[(u64,[u8; 20])]) -> Result<Vec<u8>, Error>{
+fn bt_list_to_bytes(bt_list: &[(i64,[u8; 20])]) -> Result<Vec<u8>, Error>{
     let mut bytes = Vec::<u8>::new();
     for bt in bt_list {
-        bytes.write_u64::<BigEndian>(bt.0)?;
+        bytes.write_i64::<BigEndian>(bt.0)?;
         bytes.extend(bt.1.to_vec())
     }
     Ok(bytes)
@@ -142,8 +142,8 @@ mod test {
 
     #[test]
     fn test_bt_list_to_bytes(){
-        let bt0 = (2u64, <[u8; 20]>::try_from(vec![1u8; 20].as_slice()).unwrap());
-        let bt1 = (4u64, <[u8; 20]>::try_from(vec![2u8; 20].as_slice()).unwrap());
+        let bt0 = (2i64, <[u8; 20]>::try_from(vec![1u8; 20].as_slice()).unwrap());
+        let bt1 = (4i64, <[u8; 20]>::try_from(vec![2u8; 20].as_slice()).unwrap());
 
         assert_eq!(
             bt_list_to_bytes(&vec![bt0, bt1]).unwrap(),
@@ -170,12 +170,12 @@ mod test {
                 rng.gen(),
                 &rand_vec(32),
                 &rand_vec(32),
-                rng.gen(),
                 &rand_vec(32),
+                rng.gen()
             ).is_ok()
         );
 
-        let bt = (rng.gen::<u64>(), <[u8; 20]>::try_from(rand_vec(20).as_slice()).unwrap());
+        let bt = (rng.gen::<i64>(), <[u8; 20]>::try_from(rand_vec(20).as_slice()).unwrap());
         assert!(
             hash_cert(
                 rng.gen(),
