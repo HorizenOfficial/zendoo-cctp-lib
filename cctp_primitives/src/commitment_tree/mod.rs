@@ -1,5 +1,4 @@
 use primitives::{merkle_tree::field_based_mht::FieldBasedMerkleTreeParameters, FieldBasedMerkleTreePrecomputedEmptyConstants, FieldBasedMerkleTreePath, FieldBasedOptimizedMHT, BatchFieldBasedMerkleTreeParameters, FieldBasedMerkleTree, FieldBasedMHTPath};
-use algebra::FpParameters;
 use crate::commitment_tree::sidechain_tree_alive::{SidechainTreeAlive, SidechainAliveSubtreeType};
 use crate::commitment_tree::sidechain_tree_ceased::SidechainTreeCeased;
 use crate::commitment_tree::hashers::{hash_fwt, hash_id, hash_bwtr, hash_scc, hash_cert, hash_csw};
@@ -11,18 +10,14 @@ pub mod utils;
 pub mod hashers;
 
 //--------------------------------------------------------------------------------------------------
-// Underlying FieldElement, FieldHash and field-related parameters
+// Underlying FieldElement, FieldHash, FieldBatchHash and field-related MHT-parameters
 //--------------------------------------------------------------------------------------------------
-use algebra::fields::tweedle::{Fr, FrParameters};
-use primitives::{TweedleFrPoseidonHash, TweedleFrBatchPoseidonHash};
-use primitives::merkle_tree::field_based_mht::parameters::tweedle_fr::TWEEDLE_MHT_POSEIDON_PARAMETERS as MHT_PARAMETERS;
-
-pub type FieldElement = Fr;
-pub type FieldHash = TweedleFrPoseidonHash;
-pub type FieldBatchHash = TweedleFrBatchPoseidonHash;
-
-pub const FIELD_ELEMENT_BITS_CAPACITY: usize = FrParameters::CAPACITY as usize;
-
+use algebra::fields::tweedle::Fr as FieldElement;
+use primitives::{
+    TweedleFrPoseidonHash as FieldHash,
+    TweedleFrBatchPoseidonHash as FieldBatchHash,
+    merkle_tree::field_based_mht::parameters::tweedle_fr::TWEEDLE_MHT_POSEIDON_PARAMETERS as MHT_PARAMETERS
+};
 //--------------------------------------------------------------------------------------------------
 // Parameters for a Field-based Merkle Tree
 //--------------------------------------------------------------------------------------------------

@@ -1,5 +1,5 @@
-use algebra::FromBits;
-use crate::commitment_tree::{FieldElement, FIELD_ELEMENT_BITS_CAPACITY};
+use algebra::ToConstraintField;
+use crate::commitment_tree::FieldElement;
 use crate::commitment_tree::utils::{hash_vec, Error};
 use primitives::bytes_to_bits;
 use byteorder;
@@ -130,19 +130,8 @@ fn hash_bytes(bytes: &[u8]) -> FieldElement {
 
 // Converts byte-array into a sequence of FieldElements
 fn bytes_to_field_elements(bytes: &[u8]) -> Vec<FieldElement> {
-    fn bits_to_field_elements(bits: &[bool]) -> Vec<FieldElement> {
-        bits.chunks(FIELD_ELEMENT_BITS_CAPACITY)
-            .map(|chunk| {
-                FieldElement::read_bits(chunk.to_vec()).unwrap()
-            }).collect()
-    }
-    bits_to_field_elements(&bytes_to_bits(bytes))
+    bytes_to_bits(bytes).to_field_elements().unwrap()
 }
-// TODO: The `to_field_elements` method currently is inaccessible from FieldElement, so its functionality is re-implemented in the method above
-// fn bytes_to_field_elements(bytes: &[u8]) -> Vec<FieldElement> {
-//     let bits = bytes_to_bits(bytes);
-//     ToConstraintField::<FieldElement>::to_field_elements(&bits).unwrap()
-// }
 
 #[cfg(test)]
 mod test {
