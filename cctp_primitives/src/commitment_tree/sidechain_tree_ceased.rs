@@ -8,9 +8,9 @@ pub const CSW_SMT_HEIGHT: usize = 12;
 const CSW_SMT_CAPACITY:   usize = pow2(CSW_SMT_HEIGHT);
 
 pub struct SidechainTreeCeased{
-    sc_id:    FieldElement,      // ID of a sidechain, for which SidechainTree is created
-    csw_smt: FieldElementsMT, // SMT for Ceased Sidechain Withdrawals
-    csw_num:  usize              // Number of contained Ceased Sidechain Withdrawals
+    sc_id:   FieldElement,     // ID of a sidechain for which SidechainTree is created
+    csw_smt: FieldElementsMT,  // SMT for Ceased Sidechain Withdrawals
+    csw_num: usize             // Number of contained Ceased Sidechain Withdrawals
 }
 
 impl SidechainTreeCeased{
