@@ -19,16 +19,16 @@ pub enum SidechainAliveSubtreeType {
 }
 
 pub struct SidechainTreeAlive {
-    sc_id:    FieldElement,     // ID of a sidechain, for which SidechainTreeAlive is created
-    scc:      FieldElement,     // Sidechain Creation Transaction hash
+    sc_id:    FieldElement,    // ID of a sidechain for which SidechainTreeAlive is created
+    scc:      FieldElement,    // Sidechain Creation Transaction hash
 
-    fwt_smt: FieldElementsMT, // SMT for Forward Transfer Transactions
+    fwt_smt:  FieldElementsMT, // SMT for Forward Transfer Transactions
     bwtr_smt: FieldElementsMT, // SMT for Backward Transfers Requests Transactions
     cert_smt: FieldElementsMT, // SMT for Certificates
 
-    fwt_num:  usize,            // Number of contained Forward Transfers Transactions
-    bwtr_num: usize,            // Number of contained Backward Transfers Requests Transactions
-    cert_num: usize,            // Number of contained Certificates
+    fwt_num:  usize,           // Number of contained Forward Transfers Transactions
+    bwtr_num: usize,           // Number of contained Backward Transfers Requests Transactions
+    cert_num: usize,           // Number of contained Certificates
 }
 
 impl SidechainTreeAlive {
@@ -71,6 +71,22 @@ impl SidechainTreeAlive {
 
     // Sets SCC value
     pub fn set_scc(&mut self, scc: &FieldElement){ self.scc = *scc }
+
+    // Gets SCC value
+    pub fn get_scc(&self) -> FieldElement{ self.scc }
+
+    // Gets all leaves of the FWT SMT
+    pub fn get_fwt_leaves(&self) -> Vec<FieldElement> {
+        self.fwt_smt.get_leaves().to_vec()
+    }
+    // Gets all leaves of the BWTR SMT
+    pub fn get_bwtr_leaves(&self) -> Vec<FieldElement> {
+        self.bwtr_smt.get_leaves().to_vec()
+    }
+    // Gets all leaves of the CERT SMT
+    pub fn get_cert_leaves(&self) -> Vec<FieldElement> {
+        self.cert_smt.get_leaves().to_vec()
+    }
 
     // Gets commitment_tree of the Forward Transfer Transactions tree
     pub fn get_fwt_commitment(&mut self)  -> FieldElement { self.fwt_smt.borrow_mut().finalize().root().unwrap() }
@@ -121,6 +137,11 @@ mod test {
         sct.add_bwtr(&fe);
         sct.add_cert(&fe);
 
+        // The updated subtrees should have the same leaves as what have been added
+        assert_eq!(sct.get_fwt_leaves(),  vec![fe]);
+        assert_eq!(sct.get_bwtr_leaves(), vec![fe]);
+        assert_eq!(sct.get_cert_leaves(), vec![fe]);
+
         // All updated subtrees should have non-empty commitment_tree values
         assert_ne!(empty_fwt,  sct.get_fwt_commitment ());
         assert_ne!(empty_bwtr, sct.get_bwtr_commitment());
@@ -129,7 +150,7 @@ mod test {
         // Updating SCC
         sct.set_scc(&fe);
         // Check that CSW is correctly updated
-        assert!(sct.scc == fe);
+        assert_eq!(sct.get_scc(), fe);
 
         // SCT commitment_tree has non-empty value
         assert_ne!(empty_comm, sct.get_commitment());
