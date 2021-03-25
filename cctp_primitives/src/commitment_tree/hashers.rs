@@ -123,7 +123,7 @@ fn bt_list_to_bytes(bt_list: &[(i64,[u8; 20])]) -> Result<Vec<u8>, Error>{
 }
 
 // Computes FieldElement-based hash on the given byte-array
-fn hash_bytes(bytes: &[u8]) -> Result<FieldElement, Error> {
+pub fn hash_bytes(bytes: &[u8]) -> Result<FieldElement, Error> {
     Ok(hash_vec(&bytes_to_field_elements(bytes)?))
 }
 
