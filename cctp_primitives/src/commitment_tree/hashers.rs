@@ -94,14 +94,14 @@ pub fn hash_scc(amount: i64,
 }
 
 // Computes FieldElement-based hash on the given Ceased Sidechain Withdrawal data
-pub fn hash_csw(amount: u64,
+pub fn hash_csw(amount: i64,
                 nullifier: &[u8],
                 pk_hash: &[u8],
                 active_cert_data_hash: &[u8])
     -> Result<FieldElement, Error> {
     let mut bytes = Vec::<u8>::new();
 
-    bytes.write_u64::<BigEndian>(amount)?;
+    bytes.write_i64::<BigEndian>(amount)?;
     bytes.extend(&nullifier.to_vec());
     bytes.extend(&pk_hash.to_vec());
     bytes.extend(&active_cert_data_hash.to_vec());
