@@ -165,7 +165,7 @@ impl CommitmentTree {
     //         otherwise returns the same as add_csw_leaf method
     pub fn add_csw(&mut self,
                    sc_id: &[u8],
-                   amount: u64,
+                   amount: i64,
                    nullifier: &[u8],
                    pk_hash: &[u8],
                    active_cert_data_hash: &[u8])-> bool {
