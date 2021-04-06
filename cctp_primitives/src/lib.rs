@@ -36,3 +36,4 @@ unsafe_code
 pub mod commitment_tree;
 pub mod bit_vector;
 pub mod utils;
+pub mod proof_system;

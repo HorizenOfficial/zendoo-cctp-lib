@@ -11,6 +11,9 @@ primitives = {version = "0.1.0", features = ["smt", "tweedle"], git = "https://g
 #primitives = { path = "../../ginger-lib/primitives", features = ["smt", "tweedle"] }
 rand = { version = "0.7" }
 byteorder = "1.4.2"
+digest = "0.8"
+rayon = { version = "1" }
+blake2 = { version = "0.8", default-features = false }
 
 bit-vec = "0.6"
 bzip2 = "0.4.2"

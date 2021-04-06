@@ -19,3 +19,9 @@ incremental = true
 debug-assertions = true
 debug = true
 panic = "unwind"
+
+# Uncomment these lines for local development pathsd
+
+#[patch.'https://github.com/HorizenOfficial/ginger-lib.git']
+#algebra = { path = '../ginger-lib/algebra' }
+#primitives = { path = '../ginger-lib/primitives' }
