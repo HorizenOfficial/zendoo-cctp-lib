@@ -12,6 +12,7 @@ poly-commit = { git = "https://github.com/HorizenLabs/poly-commit", branch = "de
 #primitives = { path = "../../ginger-lib/primitives", features = ["smt", "tweedle"] }
 rand = { version = "0.7" }
 byteorder = "1.4.2"
+lazy_static = "1.4.0"
 blake2 = { version = "0.8", default-features = false }
 
 bit-vec = "0.6"
