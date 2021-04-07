@@ -1,12 +1,7 @@
-use algebra::{
-    curves::tweedle::dee::{
-        Affine, Projective,
-    },
-    FromBytes, ToBytes, to_bytes, AffineCurve, ProjectiveCurve,
-};
-use digest::Digest;
-use blake2::Blake2s;
-use rayon::prelude::*;
+use super::type_mapping::*;
+
+use algebra::curves::tweedle::dee::Affine;
+use algebra::{FromBytes, ToBytes};
 
 use std::{
     sync::Arc,
@@ -19,8 +14,6 @@ use std::{
     }
 };
 
-pub const PROTOCOL_NAME: &'static [u8] = b"PC-DL-2020";
-
 pub fn load_generators(num_generators: usize, file_path: &str) -> IoResult<Arc<Vec<Affine>>> {
     let generators;
     if Path::new(file_path).exists() {
@@ -31,7 +24,7 @@ pub fn load_generators(num_generators: usize, file_path: &str) -> IoResult<Arc<V
         }
         generators = (0..count).map(|_| Affine::read(&fs).unwrap()).collect();
     } else {
-        generators = sample_generators(num_generators);
+        generators = IPAPC::sample_generators(num_generators);
         let fs = File::create(file_path)?;
         (generators.len() as u32).write(&fs)?;
         generators.write(&fs)?;
@@ -39,28 +32,10 @@ pub fn load_generators(num_generators: usize, file_path: &str) -> IoResult<Arc<V
     Ok(Arc::new(generators))
 }
 
-fn sample_generators(num_generators: usize) -> Vec<Affine> {
-    let generators: Vec<_> = (0..num_generators).into_par_iter()
-        .map(|i| {
-            let i = i as u64;
-            let mut hash = Blake2s::digest(&to_bytes![&PROTOCOL_NAME, i].unwrap());
-            let mut g = Affine::from_random_bytes(&hash);
-            let mut j = 0u64;
-            while g.is_none() {
-                hash = Blake2s::digest(&to_bytes![&PROTOCOL_NAME, i, j].unwrap());
-                g = Affine::from_random_bytes(&hash);
-                j += 1;
-            }
-            let generator = g.unwrap();
-            generator.mul_by_cofactor().into_projective()
-        })
-        .collect();
-    Projective::batch_normalization_into_affine(generators)
-}
-
 #[cfg(test)]
 mod test {
-    use crate::proof_system::init::{load_generators, sample_generators};
+    use crate::proof_system::type_mapping::*;
+    use crate::proof_system::load_generators;
     use std::fs::{File, remove_file};
     use algebra::ToBytes;
 
@@ -71,7 +46,7 @@ mod test {
 
         println!("Sampling...");
 
-        let generators_init = sample_generators(num_generators);
+        let generators_init = IPAPC::sample_generators(num_generators);
         let fs = File::create(file_path).unwrap();
         (generators_init.len() as u32).write(&fs).unwrap();
         generators_init.write(&fs).unwrap();
