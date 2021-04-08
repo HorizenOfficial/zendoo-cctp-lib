@@ -1,82 +1,162 @@
 use super::type_mapping::*;
 
-use algebra::curves::tweedle::dee::Affine;
-use algebra::{FromBytes, ToBytes};
+use algebra::{FromBytes, ToBytes, AffineCurve};
+
+use poly_commit::PolynomialCommitment;
+use poly_commit::ipa_pc::{CommitterKey, InnerProductArgPC};
 
 use lazy_static::lazy_static;
 
-use std::{
-    sync::Mutex,
-    fs::File,
-    path::Path,
-    io::{
-        Result as IoResult,
-        Error as IoError,
-        ErrorKind as IoErrorKind,
-    }
+use std::sync::Mutex;
+use std::fs::File;
+use std::path::Path;
+use std::io::{
+    Result as IoResult,
+    Error as IoError,
+    ErrorKind as IoErrorKind,
 };
 
+use blake2::Blake2s;
+use rand::thread_rng;
+
 lazy_static! {
-    static ref CACHED_GENERATORS: Mutex<Vec<Affine>> = Mutex::new(vec![]);
+    static ref G1_COMMITTER_KEY: Mutex<CommitterKey<G1Affine>> = Mutex::new(CommitterKey::<G1Affine>::default());
 }
 
-pub fn load_generators(num_generators: usize, file_path: &str) -> IoResult<Vec<Affine>> {
+lazy_static! {
+    static ref G2_COMMITTER_KEY: Mutex<CommitterKey<G2Affine>> = Mutex::new(CommitterKey::<G2Affine>::default());
+}
 
-    let mut cache = CACHED_GENERATORS.lock().unwrap();
+pub fn load_g1_commiter_key(max_degree: usize, file_path: &str) -> IoResult<CommitterKey<G1Affine>> {
 
-    if cache.len() == num_generators {
-        return Ok((*cache).clone());
+    let mut key = G1_COMMITTER_KEY.lock().unwrap();
+
+    if key.max_degree == max_degree {
+        return Ok((*key).clone());
     }
 
-    let generators;
+    match load_generators::<G1Affine>(max_degree, file_path) {
+        Ok(loaded_key) => {
+            key.clone_from(&loaded_key);
+            Ok((*key).clone())
+        },
+        Err(e) => {
+            Err(e)
+        }
+    }
+}
+
+pub fn load_g2_commiter_key(max_degree: usize, file_path: &str) -> IoResult<CommitterKey<G2Affine>> {
+
+    let mut key = G2_COMMITTER_KEY.lock().unwrap();
+
+    if key.max_degree == max_degree {
+        return Ok((*key).clone());
+    }
+
+    match load_generators::<G2Affine>(max_degree, file_path) {
+        Ok(loaded_key) => {
+            key.clone_from(&loaded_key);
+            Ok((*key).clone())
+        },
+        Err(e) => {
+            Err(e)
+        }
+    }
+}
+
+fn load_generators<G: AffineCurve>(max_degree: usize, file_path: &str) -> IoResult<CommitterKey<G>> {
+
+    let pk;
+
     if Path::new(file_path).exists() {
         let fs = File::open(file_path)?;
-        let count = u32::read(&fs)? as usize;
-        if count != num_generators {
-            return Err(IoError::new(IoErrorKind::Other, "Generators count mismatch"));
-        }
-        generators = (0..count).map(|_| Affine::read(&fs).unwrap()).collect();
+        pk = CommitterKey::<G>::read(&fs)?;
     } else {
-        generators = IPAPC::sample_generators(num_generators);
+        let pp = match InnerProductArgPC::<G, Blake2s>::setup(max_degree, &mut thread_rng()) {
+            Ok(pp) => pp,
+            Err(e) => {
+                return Err(IoError::new(IoErrorKind::Other, e));
+            }
+        };
+        pk = match InnerProductArgPC::<G, Blake2s>::trim(&pp, max_degree, 0, None) {
+            Ok((pk, _)) => pk,
+            Err(e) => {
+                return Err(IoError::new(IoErrorKind::Other, e));
+            }
+        };
         let fs = File::create(file_path)?;
-        (generators.len() as u32).write(&fs)?;
-        generators.write(&fs)?;
+        pk.write(&fs)?;
     }
 
-    cache.clone_from(&generators);
-
-    Ok((*cache).clone())
+    Ok(pk)
 }
 
 #[cfg(test)]
 mod test {
+    use super::{G1_COMMITTER_KEY, G2_COMMITTER_KEY};
+
+    use crate::proof_system::{load_g1_commiter_key, load_g2_commiter_key};
     use crate::proof_system::type_mapping::*;
-    use crate::proof_system::load_generators;
-    use std::fs::{File, remove_file};
+
     use algebra::ToBytes;
 
+    use poly_commit::ipa_pc::InnerProductArgPC;
+    use poly_commit::PolynomialCommitment;
+
+    use rand::thread_rng;
+    use blake2::Blake2s;
+
+    use std::fs::{File, remove_file};
+
     #[test]
-    fn check_load_generators() {
-        let num_generators = 1 << 10;
-        let file_path = "sample_generators";
+    fn check_load_g1_commiter_key() {
+        let max_degree = 1 << 10;
+        let file_path = "sample_pk";
 
-        println!("Sampling...");
+        let pp = InnerProductArgPC::<G1Affine, Blake2s>::setup(max_degree, &mut thread_rng()).unwrap();
+        let (pk, _) = InnerProductArgPC::<G1Affine, Blake2s>::trim(&pp, max_degree, 0, None).unwrap();
 
-        let generators_init = IPAPC::sample_generators(num_generators);
         let fs = File::create(file_path).unwrap();
-        (generators_init.len() as u32).write(&fs).unwrap();
-        generators_init.write(&fs).unwrap();
+        pk.write(&fs).unwrap();
 
-        println!("Reading...");
+        let loaded_pk = load_g1_commiter_key(max_degree, file_path).unwrap();
 
-        let generators_read = load_generators(num_generators, "sample_generators").unwrap();
+        assert_eq!(pk.comm_key, loaded_pk.comm_key);
+        assert_eq!(pk.h, loaded_pk.h);
+        assert_eq!(pk.s, loaded_pk.s);
+        assert_eq!(pk.max_degree, loaded_pk.max_degree);
 
-        println!("Checking...");
+        assert_eq!(pk.comm_key, G1_COMMITTER_KEY.lock().unwrap().comm_key);
+        assert_eq!(pk.h, G1_COMMITTER_KEY.lock().unwrap().h);
+        assert_eq!(pk.s, G1_COMMITTER_KEY.lock().unwrap().s);
+        assert_eq!(pk.max_degree, G1_COMMITTER_KEY.lock().unwrap().max_degree);
 
-        assert_eq!(generators_init.len(), generators_read.len());
-        assert_eq!(generators_init, *generators_read);
+        remove_file(file_path).unwrap();
+    }
 
-        println!("Done!");
+    #[test]
+    fn check_load_g2_commiter_key() {
+        let max_degree = 1 << 10;
+        let file_path = "sample_pk";
+
+        let pp = InnerProductArgPC::<G2Affine, Blake2s>::setup(max_degree, &mut thread_rng()).unwrap();
+        let (pk, _) = InnerProductArgPC::<G2Affine, Blake2s>::trim(&pp, max_degree, 0, None).unwrap();
+
+        let fs = File::create(file_path).unwrap();
+        pk.write(&fs).unwrap();
+
+        let loaded_pk = load_g2_commiter_key(max_degree, file_path).unwrap();
+
+        assert_eq!(pk.comm_key, loaded_pk.comm_key);
+        assert_eq!(pk.h, loaded_pk.h);
+        assert_eq!(pk.s, loaded_pk.s);
+        assert_eq!(pk.max_degree, loaded_pk.max_degree);
+
+        assert_eq!(pk.comm_key, G2_COMMITTER_KEY.lock().unwrap().comm_key);
+        assert_eq!(pk.h, G2_COMMITTER_KEY.lock().unwrap().h);
+        assert_eq!(pk.s, G2_COMMITTER_KEY.lock().unwrap().s);
+        assert_eq!(pk.max_degree, G2_COMMITTER_KEY.lock().unwrap().max_degree);
 
         remove_file(file_path).unwrap();
     }
