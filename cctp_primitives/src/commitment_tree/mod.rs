@@ -59,8 +59,8 @@ pub struct CommitmentTree {
 impl CommitmentTree {
 
     // Creates a new instance of CommitmentTree
-    pub fn create() -> CommitmentTree {
-        CommitmentTree{
+    pub fn create() -> Self {
+        Self{
             alive_sc_trees:   Vec::new(),
             ceased_sc_trees:  Vec::new(),
             commitments_tree: None
@@ -344,8 +344,8 @@ impl CommitmentTree {
                     let left_path_status = left.mpath.verify(CMT_MT_HEIGHT, &left_sc_commitment, commitment);
                     let right_path_status = right.mpath.verify(CMT_MT_HEIGHT, &right_sc_commitment, commitment);
 
-                    left.id < right.id
-                        && left.id < absent_id && absent_id < right.id
+                    // `left.id < right.id` is verified transitively with `left.id < absent_id && absent_id < right.id`
+                       left.id < absent_id && absent_id < right.id
                         && left_path_status.is_ok() && left_path_status.unwrap() == true
                         && right_path_status.is_ok() && right_path_status.unwrap() == true
                         && left.mpath.leaf_index() + 1 == right.mpath.leaf_index() // the smaller and bigger IDs have adjacent positions in MT

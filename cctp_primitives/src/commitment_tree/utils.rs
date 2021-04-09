@@ -38,7 +38,7 @@ pub fn hash_vec(data: &Vec<FieldElement>) -> FieldElement {
     hasher.finalize()
 }
 
-// Generated vector of random bytes
+// Generates vector of random bytes
 pub fn rand_vec(len: usize) -> Vec<u8> {
     let mut rng = rand::thread_rng();
     (0.. len).map(|_|rng.gen()).collect()

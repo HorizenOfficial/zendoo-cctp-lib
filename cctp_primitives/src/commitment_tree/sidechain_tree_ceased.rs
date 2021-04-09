@@ -16,9 +16,9 @@ pub struct SidechainTreeCeased{
 impl SidechainTreeCeased{
 
     // Creates a new instance of SidechainTree with a specified ID
-    pub fn create(sc_id: &FieldElement) -> Result<SidechainTreeCeased, Error> {
+    pub fn create(sc_id: &FieldElement) -> Result<Self, Error> {
         Ok(
-            SidechainTreeCeased{
+            Self{
                 sc_id:   (*sc_id).clone(),
                 csw_mt:  new_mt(CSW_MT_HEIGHT)?,
                 csw_num: 0
