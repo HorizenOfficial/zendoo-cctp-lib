@@ -27,41 +27,25 @@ lazy_static! {
     static ref G2_COMMITTER_KEY: Mutex<CommitterKey<G2Affine>> = Mutex::new(CommitterKey::<G2Affine>::default());
 }
 
-pub fn load_g1_commiter_key(max_degree: usize, file_path: &str) -> IoResult<CommitterKey<G1Affine>> {
-
-    let mut key = G1_COMMITTER_KEY.lock().unwrap();
-
-    if key.max_degree == max_degree {
-        return Ok((*key).clone());
-    }
+pub fn load_g1_commiter_key(max_degree: usize, file_path: &str) -> IoResult<()> {
 
     match load_generators::<G1Affine>(max_degree, file_path) {
         Ok(loaded_key) => {
-            key.clone_from(&loaded_key);
-            Ok((*key).clone())
+            G1_COMMITTER_KEY.lock().as_mut().unwrap().clone_from(&loaded_key);
+            Ok(())
         },
-        Err(e) => {
-            Err(e)
-        }
+        Err(e) => Err(e)
     }
 }
 
-pub fn load_g2_commiter_key(max_degree: usize, file_path: &str) -> IoResult<CommitterKey<G2Affine>> {
-
-    let mut key = G2_COMMITTER_KEY.lock().unwrap();
-
-    if key.max_degree == max_degree {
-        return Ok((*key).clone());
-    }
+pub fn load_g2_commiter_key(max_degree: usize, file_path: &str) -> IoResult<()> {
 
     match load_generators::<G2Affine>(max_degree, file_path) {
         Ok(loaded_key) => {
-            key.clone_from(&loaded_key);
-            Ok((*key).clone())
+            G2_COMMITTER_KEY.lock().as_mut().unwrap().clone_from(&loaded_key);
+            Ok(())
         },
-        Err(e) => {
-            Err(e)
-        }
+        Err(e) => Err(e)
     }
 }
 
@@ -112,7 +96,7 @@ mod test {
     #[test]
     fn check_load_g1_commiter_key() {
         let max_degree = 1 << 10;
-        let file_path = "sample_pk";
+        let file_path = "sample_pk_g1";
 
         let pp = InnerProductArgPC::<G1Affine, Blake2s>::setup(max_degree, &mut thread_rng()).unwrap();
         let (pk, _) = InnerProductArgPC::<G1Affine, Blake2s>::trim(&pp, max_degree, 0, None).unwrap();
@@ -120,17 +104,14 @@ mod test {
         let fs = File::create(file_path).unwrap();
         pk.write(&fs).unwrap();
 
-        let loaded_pk = load_g1_commiter_key(max_degree, file_path).unwrap();
+        load_g1_commiter_key(max_degree, file_path).unwrap();
 
-        assert_eq!(pk.comm_key, loaded_pk.comm_key);
-        assert_eq!(pk.h, loaded_pk.h);
-        assert_eq!(pk.s, loaded_pk.s);
-        assert_eq!(pk.max_degree, loaded_pk.max_degree);
+        let ck = G1_COMMITTER_KEY.lock().unwrap();
 
-        assert_eq!(pk.comm_key, G1_COMMITTER_KEY.lock().unwrap().comm_key);
-        assert_eq!(pk.h, G1_COMMITTER_KEY.lock().unwrap().h);
-        assert_eq!(pk.s, G1_COMMITTER_KEY.lock().unwrap().s);
-        assert_eq!(pk.max_degree, G1_COMMITTER_KEY.lock().unwrap().max_degree);
+        assert_eq!(pk.comm_key, ck.comm_key);
+        assert_eq!(pk.h, ck.h);
+        assert_eq!(pk.s, ck.s);
+        assert_eq!(pk.max_degree, ck.max_degree);
 
         remove_file(file_path).unwrap();
     }
@@ -138,7 +119,7 @@ mod test {
     #[test]
     fn check_load_g2_commiter_key() {
         let max_degree = 1 << 10;
-        let file_path = "sample_pk";
+        let file_path = "sample_pk_g2";
 
         let pp = InnerProductArgPC::<G2Affine, Blake2s>::setup(max_degree, &mut thread_rng()).unwrap();
         let (pk, _) = InnerProductArgPC::<G2Affine, Blake2s>::trim(&pp, max_degree, 0, None).unwrap();
@@ -146,17 +127,14 @@ mod test {
         let fs = File::create(file_path).unwrap();
         pk.write(&fs).unwrap();
 
-        let loaded_pk = load_g2_commiter_key(max_degree, file_path).unwrap();
+        load_g2_commiter_key(max_degree, file_path).unwrap();
 
-        assert_eq!(pk.comm_key, loaded_pk.comm_key);
-        assert_eq!(pk.h, loaded_pk.h);
-        assert_eq!(pk.s, loaded_pk.s);
-        assert_eq!(pk.max_degree, loaded_pk.max_degree);
+        let ck = G2_COMMITTER_KEY.lock().unwrap();
 
-        assert_eq!(pk.comm_key, G2_COMMITTER_KEY.lock().unwrap().comm_key);
-        assert_eq!(pk.h, G2_COMMITTER_KEY.lock().unwrap().h);
-        assert_eq!(pk.s, G2_COMMITTER_KEY.lock().unwrap().s);
-        assert_eq!(pk.max_degree, G2_COMMITTER_KEY.lock().unwrap().max_degree);
+        assert_eq!(pk.comm_key, ck.comm_key);
+        assert_eq!(pk.h, ck.h);
+        assert_eq!(pk.s, ck.s);
+        assert_eq!(pk.max_degree, ck.max_degree);
 
         remove_file(file_path).unwrap();
     }
