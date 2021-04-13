@@ -10,8 +10,6 @@ use primitives::merkle_tree::field_based_mht::FieldBasedMerkleTree;
 
 use bit_vec::BitVec;
 
-type Error = Box<dyn std::error::Error>;
-
 const MERKLE_TREE_HEIGHT: usize = 12;
 
 /// Computes the root hash of the Merkle tree created as a representation

@@ -1,6 +1,6 @@
 use algebra::ToConstraintField;
-use crate::type_mapping::FieldElement;
-use crate::commitment_tree::utils::{hash_vec, Error};
+use crate::type_mapping::{FieldElement, Error};
+use crate::commitment_tree::utils::hash_vec;
 use primitives::bytes_to_bits;
 use byteorder;
 use byteorder::{WriteBytesExt, BigEndian};

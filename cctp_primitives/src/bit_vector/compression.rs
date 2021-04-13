@@ -9,9 +9,8 @@ use std::io::{Read, Write};
 use bzip2::read::{BzEncoder, BzDecoder};
 use flate2::{Compression as GzipCompression, write::GzEncoder, read::GzDecoder};
 
-use crate::{ printdbg, printlndbg};
+use crate::{ printdbg, printlndbg, type_mapping::Error };
 
-type Error = Box<dyn std::error::Error>;
 
 /// Available compression algorithms.
 /// The ffi repr(C) tag has been added here because this enum must be exported from mc-cryptolib.

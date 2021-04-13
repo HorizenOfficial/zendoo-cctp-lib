@@ -1,9 +1,7 @@
 use primitives::{FieldBasedHash, FieldBasedMerkleTree};
-use crate::type_mapping::{FieldElement, FieldHash, GingerMHT};
+use crate::type_mapping::{FieldElement, FieldHash, GingerMHT, Error};
 use rand::Rng;
 use algebra::{ToBytes, FromBytes};
-
-pub type Error = Box<dyn std::error::Error>;
 
 pub const fn pow2(power: usize) -> usize { 1 << power }
 

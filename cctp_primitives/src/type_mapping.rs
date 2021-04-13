@@ -42,11 +42,16 @@ pub type CommitterKeyG1 = CommitterKey<G1>;
 pub type CommitterKeyG2 = CommitterKey<G2>;
 
 // Coboundary Marlin instantiations
+pub type CoboundaryMarlin = marlin::Marlin<FieldElement, IPAPC, Digest>;
 pub type CoboundaryMarlinProof = marlin::Proof<FieldElement, IPAPC>;
 pub type CoboundaryMarlinProverKey = marlin::ProverKey<FieldElement, IPAPC>;
 pub type CoboundaryMarlinVerifierKey = marlin::VerifierKey<FieldElement, IPAPC>;
 
 // (Final) Darlin instantiations
+pub type Darlin<'a> = FinalDarlin<'a, G1, G2, Digest>;
 pub type DarlinProof = FinalDarlinProof<G1, G2, Digest>;
 pub type DarlinProverKey = FinalDarlinProverKey<FieldElement, IPAPC>;
 pub type DarlinVerifierKey = FinalDarlinVerifierKey<FieldElement, IPAPC>;
+
+// Others
+pub type Error = Box<dyn std::error::Error>;

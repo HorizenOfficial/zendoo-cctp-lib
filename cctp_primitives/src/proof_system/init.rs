@@ -18,11 +18,11 @@ use std::path::Path;
 // additionally wrapped the committer key in a Mutex.
 
 lazy_static! {
-    static ref G1_COMMITTER_KEY: Mutex<CommitterKeyG1> = Mutex::new(CommitterKeyG1::default());
+    pub static ref G1_COMMITTER_KEY: Mutex<CommitterKeyG1> = Mutex::new(CommitterKeyG1::default());
 }
 
 lazy_static! {
-    static ref G2_COMMITTER_KEY: Mutex<CommitterKeyG2> = Mutex::new(CommitterKeyG2::default());
+    pub static ref G2_COMMITTER_KEY: Mutex<CommitterKeyG2> = Mutex::new(CommitterKeyG2::default());
 }
 
 /// Load G1CommitterKey of degree `max_degree` from `file_path` if it exists, otherwise create it,
@@ -80,12 +80,7 @@ fn load_generators<G: AffineCurve>(max_degree: usize, file_path: &str) -> Result
 
 #[cfg(test)]
 mod test {
-    use super::{G1_COMMITTER_KEY, G2_COMMITTER_KEY};
-
-    use crate::proof_system::{load_g1_committer_key, load_g2_committer_key};
-    use crate::type_mapping::*;
-
-    use algebra::serialize::*;
+    use super::*;
 
     use poly_commit::ipa_pc::InnerProductArgPC;
     use poly_commit::PolynomialCommitment;

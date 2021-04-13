@@ -40,3 +40,27 @@ pub mod commitment_tree;
 pub mod bit_vector;
 pub mod utils;
 pub mod proof_system;
+
+use algebra::serialize::*;
+
+/// Defines common interfaces useful to serialize/deserialize structs.
+pub trait SerializationUtils: CanonicalSerialize + CanonicalDeserialize {
+
+    /// Returns the serialized byte size of `self`.
+    fn get_size(&self) -> usize {
+        self.serialized_size()
+    }
+
+    /// Serialize `self` to a byte array, returning a `SerializationError` if the operation fails.
+    fn to_byte_vec(&self) -> Result<Vec<u8>, SerializationError> {
+        let mut buffer = vec![0u8; self.get_size()];
+        CanonicalSerialize::serialize(self, &mut buffer)?;
+        Ok(buffer)
+    }
+
+    /// Attempts to deserialize a Self instance from `bytes`, returning a `SerializationError`
+    /// if the operation fails.
+    fn from_byte_vec(bytes: Vec<u8>) -> Result<Self, SerializationError> {
+        CanonicalDeserialize::deserialize(bytes.as_slice())
+    }
+}

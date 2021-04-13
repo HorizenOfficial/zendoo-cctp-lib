@@ -9,11 +9,13 @@ algebra = { git = "https://github.com/HorizenOfficial/ginger-lib", branch = "imp
 bench-utils = { git = "https://github.com/HorizenOfficial/ginger-lib.git", branch = "import_canonical_serialize_deserialize" }
 primitives = { git = "https://github.com/HorizenOfficial/ginger-lib.git", branch = "import_canonical_serialize_deserialize", features = ["merkle_tree", "tweedle"]}
 proof-systems = { git = "https://github.com/HorizenOfficial/ginger-lib.git", branch = "import_canonical_serialize_deserialize", features = ["darlin"]}
+r1cs-core = { git = "https://github.com/HorizenOfficial/ginger-lib.git", branch = "import_canonical_serialize_deserialize" }
 
 marlin = { git = "https://github.com/HorizenLabs/marlin", branch = "darlin_serializations" }
 poly-commit = { git = "https://github.com/HorizenLabs/poly-commit", branch = "darlin_serializations" }
 
 rand = { version = "0.7" }
+rayon = { version = "1" }
 byteorder = "1.4.2"
 lazy_static = "1.4.0"
 blake2 = { version = "0.8", default-features = false }
