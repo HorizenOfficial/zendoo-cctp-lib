@@ -1,5 +1,5 @@
 use algebra::ToConstraintField;
-use crate::commitment_tree::FieldElement;
+use crate::type_mapping::FieldElement;
 use crate::commitment_tree::utils::{hash_vec, Error};
 use primitives::bytes_to_bits;
 use byteorder;

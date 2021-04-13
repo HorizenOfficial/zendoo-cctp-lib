@@ -1,4 +1,4 @@
-use crate::commitment_tree::{FieldElement, FieldElementsMT};
+use crate::type_mapping::{FieldElement, GingerMHT};
 use crate::commitment_tree::utils::{pow2, hash_vec, new_mt, add_leaf, Error};
 use std::borrow::BorrowMut;
 use primitives::FieldBasedMerkleTree;
@@ -9,7 +9,7 @@ const CSW_SMT_CAPACITY:   usize = pow2(CSW_SMT_HEIGHT);
 
 pub struct SidechainTreeCeased{
     sc_id:   FieldElement,     // ID of a sidechain for which SidechainTree is created
-    csw_smt: FieldElementsMT,  // SMT for Ceased Sidechain Withdrawals
+    csw_smt: GingerMHT,  // SMT for Ceased Sidechain Withdrawals
     csw_num: usize             // Number of contained Ceased Sidechain Withdrawals
 }
 
@@ -51,7 +51,7 @@ impl SidechainTreeCeased{
 #[cfg(test)]
 mod test {
     use algebra::Field;
-    use crate::commitment_tree::FieldElement;
+    use crate::type_mapping::FieldElement;
     use crate::commitment_tree::sidechain_tree_ceased::SidechainTreeCeased;
 
     #[test]

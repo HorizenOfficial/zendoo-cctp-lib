@@ -5,11 +5,14 @@ authors = [""]
 edition = "2018"
 
 [dependencies]
-algebra = {version = "0.1.0", git = "https://github.com/HorizenOfficial/ginger-lib.git", branch = "algebra_ocl_serializations"}
-primitives = {version = "0.1.0", features = ["smt", "tweedle"], git = "https://github.com/HorizenOfficial/ginger-lib.git", branch = "algebra_ocl_serializations"}
-poly-commit = { git = "https://github.com/HorizenLabs/poly-commit", branch = "dev_serializations" }
-#algebra = { path = "../../ginger-lib/algebra" }
-#primitives = { path = "../../ginger-lib/primitives", features = ["smt", "tweedle"] }
+algebra = { git = "https://github.com/HorizenOfficial/ginger-lib", branch = "import_canonical_serialize_deserialize", features = ["parallel", "tweedle"] }
+bench-utils = { git = "https://github.com/HorizenOfficial/ginger-lib.git", branch = "import_canonical_serialize_deserialize" }
+primitives = { git = "https://github.com/HorizenOfficial/ginger-lib.git", branch = "import_canonical_serialize_deserialize", features = ["merkle_tree", "tweedle"]}
+proof-systems = { git = "https://github.com/HorizenOfficial/ginger-lib.git", branch = "import_canonical_serialize_deserialize", features = ["darlin"]}
+
+marlin = { git = "https://github.com/HorizenLabs/marlin", branch = "darlin_serializations" }
+poly-commit = { git = "https://github.com/HorizenLabs/poly-commit", branch = "darlin_serializations" }
+
 rand = { version = "0.7" }
 byteorder = "1.4.2"
 lazy_static = "1.4.0"
@@ -19,4 +22,5 @@ bit-vec = "0.6"
 bzip2 = "0.4.2"
 flate2 = "1.0.20"
 
-
+[features]
+asm = ["algebra/llvm_asm"]

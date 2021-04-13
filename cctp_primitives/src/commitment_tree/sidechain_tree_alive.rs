@@ -1,5 +1,5 @@
 use algebra::Field;
-use crate::commitment_tree::{FieldElement, FieldElementsMT};
+use crate::type_mapping::{FieldElement, GingerMHT};
 use crate::commitment_tree::utils::{hash_vec, pow2, new_mt, add_leaf, Error};
 use std::borrow::BorrowMut;
 use primitives::FieldBasedMerkleTree;
@@ -22,9 +22,9 @@ pub struct SidechainTreeAlive {
     sc_id:    FieldElement,    // ID of a sidechain for which SidechainTreeAlive is created
     scc:      FieldElement,    // Sidechain Creation Transaction hash
 
-    fwt_smt:  FieldElementsMT, // SMT for Forward Transfer Transactions
-    bwtr_smt: FieldElementsMT, // SMT for Backward Transfers Requests Transactions
-    cert_smt: FieldElementsMT, // SMT for Certificates
+    fwt_smt:  GingerMHT, // SMT for Forward Transfer Transactions
+    bwtr_smt: GingerMHT, // SMT for Backward Transfers Requests Transactions
+    cert_smt: GingerMHT, // SMT for Certificates
 
     fwt_num:  usize,           // Number of contained Forward Transfers Transactions
     bwtr_num: usize,           // Number of contained Backward Transfers Requests Transactions
@@ -110,7 +110,7 @@ impl SidechainTreeAlive {
 
 #[cfg(test)]
 mod test {
-    use crate::commitment_tree::FieldElement;
+    use crate::type_mapping::FieldElement;
     use algebra::Field;
     use crate::commitment_tree::sidechain_tree_alive::SidechainTreeAlive;
 

@@ -3,36 +3,12 @@
 //! `merkle_tree` exposes functions to compute a bit vector Merkle tree.
 
 use super::compression;
+use crate::type_mapping::*;
 
-use algebra::{
-    fields::tweedle::Fr as TweedleFr, ToConstraintField
-};
-
-use primitives::{
-    crh::poseidon::parameters::tweedle::{TweedleFrPoseidonHash, TweedleFrBatchPoseidonHash},
-    merkle_tree::field_based_mht::{
-        FieldBasedMerkleTreeParameters, FieldBasedMerkleTreePrecomputedEmptyConstants,
-        BatchFieldBasedMerkleTreeParameters, FieldBasedOptimizedMHT, FieldBasedMerkleTree,
-        parameters::tweedle_fr::TWEEDLE_MHT_POSEIDON_PARAMETERS
-    }
-};
+use algebra::ToConstraintField;
+use primitives::merkle_tree::field_based_mht::FieldBasedMerkleTree;
 
 use bit_vec::BitVec;
-
-#[derive(Clone, Debug)]
-struct TweedleFieldBasedMerkleTreeParams;
-impl FieldBasedMerkleTreeParameters for TweedleFieldBasedMerkleTreeParams {
-    type Data = TweedleFr;
-    type H = TweedleFrPoseidonHash;
-    const MERKLE_ARITY: usize = 2;
-    const EMPTY_HASH_CST: Option<FieldBasedMerkleTreePrecomputedEmptyConstants<'static, Self::H>> = Some(TWEEDLE_MHT_POSEIDON_PARAMETERS);
-}
-
-impl BatchFieldBasedMerkleTreeParameters for TweedleFieldBasedMerkleTreeParams {
-    type BH = TweedleFrBatchPoseidonHash;
-}
-
-type TweedlePoseidonMHT = FieldBasedOptimizedMHT<TweedleFieldBasedMerkleTreeParams>;
 
 type Error = Box<dyn std::error::Error>;
 
@@ -59,7 +35,7 @@ pub fn merkle_root_from_bytes(uncompressed_bit_vector: &[u8]) -> Result<algebra:
     let bool_vector: Vec<bool> = bv.into_iter().map(|x| x).collect();
 
     let num_leaves = 1 << MERKLE_TREE_HEIGHT;
-    let mut mt = TweedlePoseidonMHT::init(
+    let mut mt = GingerMHT::init(
         MERKLE_TREE_HEIGHT,
         num_leaves,
     );
@@ -109,8 +85,6 @@ mod test {
     use compression::{CompressionAlgorithm, compress_bit_vector};
 
     use std::fmt::Write;
-    
-    use algebra::{ToBytes, to_bytes, fields::{models::Fp256, tweedle::fr::FrParameters}};
 
     #[test]
     fn expected_size() {
@@ -150,7 +124,9 @@ mod test {
         println!("Compressed root hash: {}", compressed_root_hash);
     }
 
-    fn field_element_to_hex_string(field_element: Fp256<FrParameters>) -> String {
+    fn field_element_to_hex_string(field_element: FieldElement) -> String {
+        use algebra::{ToBytes, to_bytes};
+
         let mut hex_string = String::from("0x");
         let field_element_bytes = to_bytes!(field_element).unwrap();
 

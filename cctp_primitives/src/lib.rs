@@ -33,6 +33,9 @@ unsafe_code
 )]
 #![forbid(unsafe_code)]
 
+pub mod type_mapping;
+pub use self::type_mapping::*;
+
 pub mod commitment_tree;
 pub mod bit_vector;
 pub mod utils;

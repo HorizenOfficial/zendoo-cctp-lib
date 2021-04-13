@@ -1,5 +1,5 @@
 use primitives::{FieldBasedHash, FieldBasedMerkleTree};
-use crate::commitment_tree::{FieldElement, FieldHash, FieldElementsMT};
+use crate::type_mapping::{FieldElement, FieldHash, GingerMHT};
 use rand::Rng;
 use algebra::{ToBytes, FromBytes};
 
@@ -8,9 +8,9 @@ pub type Error = Box<dyn std::error::Error>;
 pub const fn pow2(power: usize) -> usize { 1 << power }
 
 // Creates new FieldElement-based MT
-pub fn new_mt(height: usize) -> Result<FieldElementsMT, Error> {
+pub fn new_mt(height: usize) -> Result<GingerMHT, Error> {
     let processing_step = 2usize.pow(height as u32);
-    Ok(FieldElementsMT::init(
+    Ok(GingerMHT::init(
         height,
         processing_step
     ))
@@ -18,7 +18,7 @@ pub fn new_mt(height: usize) -> Result<FieldElementsMT, Error> {
 
 // Sequentially inserts leafs into an MT by using a specified position which is incremented afterwards
 // Returns false if there is no more place to insert a leaf
-pub fn add_leaf(tree: &mut FieldElementsMT, leaf: &FieldElement, pos: &mut usize, capacity: usize) -> bool {
+pub fn add_leaf(tree: &mut GingerMHT, leaf: &FieldElement, pos: &mut usize, capacity: usize) -> bool {
     if *pos < capacity {
         tree.append(*leaf); *pos += 1;
         true

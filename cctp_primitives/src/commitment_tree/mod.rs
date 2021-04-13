@@ -1,4 +1,5 @@
-use primitives::{merkle_tree::field_based_mht::FieldBasedMerkleTreeParameters, FieldBasedMerkleTreePrecomputedEmptyConstants, FieldBasedMerkleTreePath, FieldBasedOptimizedMHT, BatchFieldBasedMerkleTreeParameters, FieldBasedMerkleTree, FieldBasedMHTPath};
+use primitives::{FieldBasedMerkleTreePath, FieldBasedMerkleTree, FieldBasedMHTPath};
+use crate::type_mapping::*;
 use crate::commitment_tree::sidechain_tree_alive::{SidechainTreeAlive, SidechainAliveSubtreeType};
 use crate::commitment_tree::sidechain_tree_ceased::SidechainTreeCeased;
 use crate::commitment_tree::hashers::{hash_fwt, hash_bwtr, hash_scc, hash_cert, hash_csw};
@@ -10,37 +11,6 @@ pub mod utils;
 pub mod hashers;
 
 //--------------------------------------------------------------------------------------------------
-// Underlying FieldElement, FieldHash, FieldBatchHash and field-related MHT-parameters
-//--------------------------------------------------------------------------------------------------
-use algebra::fields::tweedle::Fr as FieldElement;
-use primitives::{
-    TweedleFrPoseidonHash as FieldHash,
-    TweedleFrBatchPoseidonHash as FieldBatchHash,
-    merkle_tree::field_based_mht::parameters::tweedle_fr::TWEEDLE_MHT_POSEIDON_PARAMETERS as MHT_PARAMETERS
-};
-
-//--------------------------------------------------------------------------------------------------
-// Parameters for a Field-based Merkle Tree
-//--------------------------------------------------------------------------------------------------
-#[derive(Debug, Clone)]
-pub struct GingerMerkleTreeParameters;
-
-// Parameters of an underlying FieldElement-based Sparse Merkle Tree
-impl FieldBasedMerkleTreeParameters for GingerMerkleTreeParameters {
-    type Data = FieldElement;
-    type H = FieldHash;
-    const MERKLE_ARITY: usize = 2;
-    const EMPTY_HASH_CST: Option<FieldBasedMerkleTreePrecomputedEmptyConstants<'static, Self::H>> =
-        Some(MHT_PARAMETERS);
-}
-
-impl BatchFieldBasedMerkleTreeParameters for GingerMerkleTreeParameters {
-    type BH = FieldBatchHash;
-}
-
-// FieldElement-based Merkle Tree
-pub type FieldElementsMT = FieldBasedOptimizedMHT<GingerMerkleTreeParameters>;
-//--------------------------------------------------------------------------------------------------
 // Commitment Tree
 //--------------------------------------------------------------------------------------------------
 // Tunable parameters
@@ -50,19 +20,19 @@ const CMT_SMT_CAPACITY:   usize = pow2(CMT_SMT_HEIGHT);
 // Proof of existence of some SidechainTreeAlive/SidechainTreeCeased inside of a CommitmentTree;
 // Actually it is a Merkle Path of SidechainTreeAlive/SidechainTreeCeased in a CommitmentTree
 pub struct ScExistenceProof{
-    mpath: FieldBasedMHTPath<GingerMerkleTreeParameters>
+    mpath: FieldBasedMHTPath<GingerMHTParams>
 }
 // Proof of absence of some Sidechain-ID inside of a CommitmentTree;
 // Contains one or two neighbours of an absent ID
 pub struct ScAbsenceProof{
-    left:  Option<(FieldElement, FieldBasedMHTPath<GingerMerkleTreeParameters>)>, // a smaller ID of an existing SC together with Merkle Path of its SC-commitment
-    right: Option<(FieldElement, FieldBasedMHTPath<GingerMerkleTreeParameters>)>  // a bigger ID of an existing SC together with Merkle Path of its SC-commitment
+    left:  Option<(FieldElement, FieldBasedMHTPath<GingerMHTParams>)>, // a smaller ID of an existing SC together with Merkle Path of its SC-commitment
+    right: Option<(FieldElement, FieldBasedMHTPath<GingerMHTParams>)>  // a bigger ID of an existing SC together with Merkle Path of its SC-commitment
 }
 
 pub struct CommitmentTree {
     alive_sc_trees:   Vec<SidechainTreeAlive>,   // list of Alive Sidechain Trees
     ceased_sc_trees:  Vec<SidechainTreeCeased>,  // list of Ceased Sidechain Trees
-    commitments_tree: Option<FieldElementsMT>,   // cached Commitment-MT, which is recomputed in case of some changes in underlying Alive/Ceased Sidechain Trees
+    commitments_tree: Option<GingerMHT>,   // cached Commitment-MT, which is recomputed in case of some changes in underlying Alive/Ceased Sidechain Trees
 }
 
 impl CommitmentTree {
@@ -586,7 +556,7 @@ impl CommitmentTree {
     }
 
     // Build SMT with ID-ordered SC-commitments as its leafs
-    fn build_commitments_tree(&mut self) -> Option<FieldElementsMT> {
+    fn build_commitments_tree(&mut self) -> Option<GingerMHT> {
         if let Ok(mut cmt) = new_mt(CMT_SMT_HEIGHT){
             let ids = self.get_indexed_sc_ids().into_iter().map(|s| *s.1).collect::<Vec<FieldElement>>();
             for id in ids {
@@ -612,7 +582,7 @@ impl CommitmentTree {
 
     // Gets a mutable reference ot a current sc-commitments tree
     // Builds sc-commitments tree in case of its absence
-    fn get_commitments_tree(&mut self) -> Option<&mut FieldElementsMT> {
+    fn get_commitments_tree(&mut self) -> Option<&mut GingerMHT> {
         // build or rebuild a sidechain-commitments tree if there were updates of sc-subtrees
         if self.commitments_tree.is_none() {
             self.commitments_tree = self.build_commitments_tree()
@@ -658,7 +628,8 @@ impl CommitmentTree {
 #[cfg(test)]
 mod test {
     use algebra::{Field, UniformRand};
-    use crate::commitment_tree::{FieldElement, CommitmentTree};
+    use crate::type_mapping::FieldElement;
+    use crate::commitment_tree::CommitmentTree;
     use crate::commitment_tree::utils::{rand_vec, fe_to_bytes};
     use rand::Rng;
     use std::convert::TryFrom;
