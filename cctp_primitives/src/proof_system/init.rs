@@ -20,18 +20,18 @@ use blake2::Blake2s;
 use rand::thread_rng;
 
 lazy_static! {
-    static ref G1_COMMITTER_KEY: Mutex<CommitterKey<G1Affine>> = Mutex::new(CommitterKey::<G1Affine>::default());
+    static ref G1_COMMITTER_KEY: Mutex<Option<CommitterKey<G1Affine>>> = Mutex::new(None);
 }
 
 lazy_static! {
-    static ref G2_COMMITTER_KEY: Mutex<CommitterKey<G2Affine>> = Mutex::new(CommitterKey::<G2Affine>::default());
+    static ref G2_COMMITTER_KEY: Mutex<Option<CommitterKey<G2Affine>>> = Mutex::new(None);
 }
 
 pub fn load_g1_commiter_key(max_degree: usize, file_path: &str) -> IoResult<()> {
 
     match load_generators::<G1Affine>(max_degree, file_path) {
         Ok(loaded_key) => {
-            G1_COMMITTER_KEY.lock().as_mut().unwrap().clone_from(&loaded_key);
+            G1_COMMITTER_KEY.lock().as_mut().unwrap().replace(loaded_key);
             Ok(())
         },
         Err(e) => Err(e)
@@ -42,7 +42,7 @@ pub fn load_g2_commiter_key(max_degree: usize, file_path: &str) -> IoResult<()> 
 
     match load_generators::<G2Affine>(max_degree, file_path) {
         Ok(loaded_key) => {
-            G2_COMMITTER_KEY.lock().as_mut().unwrap().clone_from(&loaded_key);
+            G2_COMMITTER_KEY.lock().as_mut().unwrap().replace(loaded_key);
             Ok(())
         },
         Err(e) => Err(e)
@@ -51,27 +51,30 @@ pub fn load_g2_commiter_key(max_degree: usize, file_path: &str) -> IoResult<()> 
 
 fn load_generators<G: AffineCurve>(max_degree: usize, file_path: &str) -> IoResult<CommitterKey<G>> {
 
-    let pk;
+    let mut pk;
 
     if Path::new(file_path).exists() {
         let fs = File::open(file_path)?;
         pk = CommitterKey::<G>::read(&fs)?;
-    } else {
-        let pp = match InnerProductArgPC::<G, Blake2s>::setup(max_degree, &mut thread_rng()) {
-            Ok(pp) => pp,
-            Err(e) => {
-                return Err(IoError::new(IoErrorKind::Other, e));
-            }
-        };
-        pk = match InnerProductArgPC::<G, Blake2s>::trim(&pp, max_degree, 0, None) {
-            Ok((pk, _)) => pk,
-            Err(e) => {
-                return Err(IoError::new(IoErrorKind::Other, e));
-            }
-        };
-        let fs = File::create(file_path)?;
-        pk.write(&fs)?;
+        if pk.max_degree == max_degree {
+            return Ok(pk);
+        }
     }
+
+    let pp = match InnerProductArgPC::<G, Blake2s>::setup(max_degree, &mut thread_rng()) {
+        Ok(pp) => pp,
+        Err(e) => {
+            return Err(IoError::new(IoErrorKind::Other, e));
+        }
+    };
+    pk = match InnerProductArgPC::<G, Blake2s>::trim(&pp, max_degree, 0, None) {
+        Ok((pk, _)) => pk,
+        Err(e) => {
+            return Err(IoError::new(IoErrorKind::Other, e));
+        }
+    };
+    let fs = File::create(file_path)?;
+    pk.write(&fs)?;
 
     Ok(pk)
 }
@@ -108,6 +111,10 @@ mod test {
 
         let ck = G1_COMMITTER_KEY.lock().unwrap();
 
+        assert!(ck.is_some());
+
+        let ck = ck.as_ref().unwrap();
+
         assert_eq!(pk.comm_key, ck.comm_key);
         assert_eq!(pk.h, ck.h);
         assert_eq!(pk.s, ck.s);
@@ -130,6 +137,10 @@ mod test {
         load_g2_commiter_key(max_degree, file_path).unwrap();
 
         let ck = G2_COMMITTER_KEY.lock().unwrap();
+
+        assert!(ck.is_some());
+
+        let ck = ck.as_ref().unwrap();
 
         assert_eq!(pk.comm_key, ck.comm_key);
         assert_eq!(pk.h, ck.h);
