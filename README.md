@@ -3,7 +3,7 @@
 ## Basic facts, shaping design decisions
 * Both certificate proofs and csw proofs can be batched altogether.
 * Upon batch verification failure, mainchain does not necessarily need to re-verify. E.g. in block connection a batched failure is enough drop the block without need to find the offending proofs; on the contrary on txes/certs mempool processing mainchain needs to find exactly the offending and the valid txes/certs.
-* Upon batch verification failure, prover can provide some best-effort information, but won't be necessarily able to indicate the offending proofs in the batch.
+* Upon batch verification failure, prover can provide some best-effort diagnostic, but won't be necessarily able to indicate the offending proofs in the batch.
 * The whole verification process will be made of three steps:
   - Load phase, where all proofs inputs from several certificates/transactions are collected and stored.
   - BatchVerify phase, where data collected are verified. Mainchain is allowed to run this phase as many times as needed, on any subset of loaded inputs.
@@ -40,7 +40,7 @@ LoadCswData(Key csw_key,          CTxCeasedSidechainWithdrawalInput cswInput,
                                   CScVKey ceasedVk,
                                   CFieldElement certDataHash)   --> bool
 
-ClearData()                                                    --> void /*drop all data loaded before*/
+ClearData()                                                     --> void /*drop all data loaded before*/
 
 BatchVerify()         --> bool True/False if batch verification works correctly or not. In case of failure some diagnostic may be retrieved via <TO BE CONFIRMED>
 BatchVerify(vec<Key>) --> bool True/False if batch verification works correctly ON THE VALUES CORRESPONDING ON SPECIFIED KEYS ONLY or not. In case of failure some diagnostic may be retrieved via <TO BE CONFIRMED>
