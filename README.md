@@ -13,8 +13,14 @@
 
 
 ## Tentative Interface
-Mainchain should be provided with the folliwing interface \[CURRENTLY PSEUDOCODE, TO BE SPECIFIED\]:
+zendoo_mc_cryptolib library will expose the following interface to mainchain.
 ```
+enum ProvingSystem
+{
+   Darling,
+   Marling
+};
+
 struct BufferWithSize
 {
     const unsigned char* data;
@@ -27,7 +33,8 @@ struct Key
     int inputPos;               /*-1 for certs; csw input position for csws*/
 };
 
-LoadCertificateData(Key cert_key, const BufferWithSize* endEpochBlockHash,
+LoadCertificateData(Key cert_key, ProvingSystem prov_system,
+                                  const BufferWithSize* endEpochBlockHash,
                                   const BufferWithSize* prevEndEpochBlockHash,
                                   const backward_transfer_t* bt_list, size_t bt_list_len,
                                   uint64_t quality,
@@ -36,7 +43,8 @@ LoadCertificateData(Key cert_key, const BufferWithSize* endEpochBlockHash,
                                   CScProof certProof,
                                   CScVKey CertVk) --> bool
 
-LoadCswData(Key csw_key,          CTxCeasedSidechainWithdrawalInput cswInput,
+LoadCswData(Key csw_key,          ProvingSystem prov_system,
+                                  CTxCeasedSidechainWithdrawalInput cswInput,
                                   CScVKey ceasedVk,
                                   CFieldElement certDataHash)   --> bool
 
@@ -44,10 +52,8 @@ ClearData()                                                     --> void /*drop 
 
 BatchVerify()         --> bool True/False if batch verification works correctly or not. In case of failure some diagnostic may be retrieved via <TO BE CONFIRMED>
 BatchVerify(vec<Key>) --> bool True/False if batch verification works correctly ON THE VALUES CORRESPONDING ON SPECIFIED KEYS ONLY or not. In case of failure some diagnostic may be retrieved via <TO BE CONFIRMED>
-
 ```
+Note: it is up to zendoo-mc-cryptolib to map types above into field elements (where necessary) and pass these field elements to zendoo-cctp-lib
 
 ## Open points
-* Establish the layout for CertificateProofInputsStruct and CswProofInputsStruct. Maybe they do not even exist and we will pass each proof input as parameter, similarly to what we did for scTxCommitmentTree
-* Establish which layer will be responsible of mapping CertificateProofInputsStruct and CswProofInputsStruct to field elements
 * Handle edge cases like calls to BatchVerify() without loaded data or re-insertions of data 
