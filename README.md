@@ -11,7 +11,7 @@
 *  It's up to Mainchain to specify what txes/certs among the loaded ones will be batched verified. In other word, it is up to Mainchain to decide if a re-validation should be attempted and which exact txes/certs will participate the re-validation.
 
 
-## Todo Interface
+## Tentative Interface
 Mainchain should be provided with the folliwing interface \[CURRENTLY PSEUDOCODE, TO BE SPECIFIED\]:
 ```
 LoadCertificateData(/*key*/certHash, /*value*/ CertificateProofInputsStruct) --> bool
@@ -23,3 +23,8 @@ BatchVerify()            --> bool True/False if batch verification works correct
 BatchVerify(tuple<Keys>) --> bool True/False if batch verification works correctly ON THE VALUES CORRESPONDING ON SPECIFIED KEYS ONLY or not. In case of failure some diagnostic may be retrieved via <TO BE CONFIRMED>
 
 ```
+
+## Open points
+* Establish the layout for CertificateProofInputsStruct and CswProofInputsStruct. Maybe they do not even exist and we will pass each proof input as parameter, similarly to what we did for scTxCommitmentTree
+* Establish which layer will be responsible of mapping CertificateProofInputsStruct and CswProofInputsStruct to field elements
+* Handle edge cases like calls to BatchVerify() without loaded data or re-insertions of data 
