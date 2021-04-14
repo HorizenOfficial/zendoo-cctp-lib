@@ -28,16 +28,17 @@ struct Key
 };
 
 LoadCertificateData(Key cert_key, const BufferWithSize* endEpochBlockHash,
-                                   const BufferWithSize* prevEndEpochBlockHash,
-                                   const backward_transfer_t* bt_list, size_t bt_list_len,
-                                   uint64_t quality,
-                                   CFieldElement constant,
-                                   CFieldElement proofdata,
-                                   CScProof certProof,
-                                   CScVKey CertVk) --> bool
-LoadCswData(Key csw_key,         CTxCeasedSidechainWithdrawalInput cswInput,
-                                 CScVKey ceasedVk,
-                                 CFieldElement certDataHash)   --> bool
+                                  const BufferWithSize* prevEndEpochBlockHash,
+                                  const backward_transfer_t* bt_list, size_t bt_list_len,
+                                  uint64_t quality,
+                                  CFieldElement constant,
+                                  CFieldElement proofdata,
+                                  CScProof certProof,
+                                  CScVKey CertVk) --> bool
+
+LoadCswData(Key csw_key,          CTxCeasedSidechainWithdrawalInput cswInput,
+                                  CScVKey ceasedVk,
+                                  CFieldElement certDataHash)   --> bool
 
 ClearData()                                                    --> void /*drop all data loaded before*/
 
