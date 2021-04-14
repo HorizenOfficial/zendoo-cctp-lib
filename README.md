@@ -21,14 +21,20 @@ struct BufferWithSize
     size_t len;
 };
 
-LoadCertificateData(const BufferWithSize* cert_hash, const BufferWithSize* endEpochBlockHash,
-                                                     const BufferWithSize* prevEndEpochBlockHash,
-                                                     const backward_transfer_t* bt_list, size_t bt_list_len,
-                                                     uint64_t quality;
-                                                     CFieldElement constant;
-                                                     CFieldElement proofdata;
-                                                     CScProof certProof;
-                                                     CScVKey CertVk;) --> bool
+struct Key
+{
+    const BufferWithSize* hash; /*cert or tx hash*/
+    int inputPos;               /*-1 for certs; csw input position for csws*/
+};
+
+LoadCertificateData(Key cert_hash, const BufferWithSize* endEpochBlockHash,
+                                   const BufferWithSize* prevEndEpochBlockHash,
+                                   const backward_transfer_t* bt_list, size_t bt_list_len,
+                                   uint64_t quality,
+                                   CFieldElement constant,
+                                   CFieldElement proofdata,
+                                   CScProof certProof,
+                                   CScVKey CertVk) --> bool
 LoadCswData(/*key*/pair<txHash, inputPos>, /*value*/ CswProofInputsStruct)   --> bool
 /*Note: Unlike certs, csw have one proof per input, hence the key is a TxHash,inputPos pair*/
 ClearData()                                                                  --> void /*drop all data loaded before*/
