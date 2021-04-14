@@ -1,4 +1,4 @@
-# zendoo-cctp-lib
+# zendoo-cctp-lib: Batch Verifier Interface
 
 ## Basic facts, shaping design decisions
 * Both certificate proofs and csw proofs can be batched altogether.
