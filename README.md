@@ -27,7 +27,7 @@ struct Key
     int inputPos;               /*-1 for certs; csw input position for csws*/
 };
 
-LoadCertificateData(Key cert_hash, const BufferWithSize* endEpochBlockHash,
+LoadCertificateData(Key cert_key, const BufferWithSize* endEpochBlockHash,
                                    const BufferWithSize* prevEndEpochBlockHash,
                                    const backward_transfer_t* bt_list, size_t bt_list_len,
                                    uint64_t quality,
@@ -35,12 +35,14 @@ LoadCertificateData(Key cert_hash, const BufferWithSize* endEpochBlockHash,
                                    CFieldElement proofdata,
                                    CScProof certProof,
                                    CScVKey CertVk) --> bool
-LoadCswData(/*key*/pair<txHash, inputPos>, /*value*/ CswProofInputsStruct)   --> bool
-/*Note: Unlike certs, csw have one proof per input, hence the key is a TxHash,inputPos pair*/
-ClearData()                                                                  --> void /*drop all data loaded before*/
+LoadCswData(Key csw_key,         CTxCeasedSidechainWithdrawalInput cswInput,
+                                 CScVKey ceasedVk,
+                                 CFieldElement certDataHash)   --> bool
 
-BatchVerify()            --> bool True/False if batch verification works correctly or not. In case of failure some diagnostic may be retrieved via <TO BE CONFIRMED>
-BatchVerify(tuple<Keys>) --> bool True/False if batch verification works correctly ON THE VALUES CORRESPONDING ON SPECIFIED KEYS ONLY or not. In case of failure some diagnostic may be retrieved via <TO BE CONFIRMED>
+ClearData()                                                    --> void /*drop all data loaded before*/
+
+BatchVerify()         --> bool True/False if batch verification works correctly or not. In case of failure some diagnostic may be retrieved via <TO BE CONFIRMED>
+BatchVerify(vec<Key>) --> bool True/False if batch verification works correctly ON THE VALUES CORRESPONDING ON SPECIFIED KEYS ONLY or not. In case of failure some diagnostic may be retrieved via <TO BE CONFIRMED>
 
 ```
 
