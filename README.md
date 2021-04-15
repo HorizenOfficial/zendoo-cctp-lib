@@ -41,9 +41,9 @@ LoadCertificateData(Key cert_key, ProvingSystem prov_system,
                                   CFieldElement constant,
                                   CFieldElement proofdata,
                                   CScProof certProof,
-                                  CScVKey CertVk) --> bool
+                                  CScVKey CertVk)               --> bool
 
-LoadCswData(Key csw_key,          ProvingSystem prov_system,
+LoadCswData(        Key csw_key,  ProvingSystem prov_system,
                                   CTxCeasedSidechainWithdrawalInput cswInput,
                                   CScVKey ceasedVk,
                                   CFieldElement certDataHash)   --> bool
