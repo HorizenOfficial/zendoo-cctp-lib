@@ -6,9 +6,14 @@ use crate::{
     type_mapping::{
         CoboundaryMarlin, CoboundaryMarlinProverKey, CoboundaryMarlinVerifierKey, CoboundaryMarlinProof,
         Darlin, DarlinProverKey, DarlinVerifierKey, DarlinProof,
-        FieldElement, Error
+        FieldElement,
     },
-    proving_system::init::{G1_COMMITTER_KEY, G2_COMMITTER_KEY},
+    proving_system::{
+        init::{
+            get_g1_committer_key, get_g2_committer_key,
+        },
+        error::ProvingSystemError,
+    },
     utils::{
         serialization::SerializationUtils,
         proof_system::ProvingSystemUtils,
@@ -28,10 +33,14 @@ impl ProvingSystemUtils<FieldElement> for CoboundaryMarlin {
     type ProverKey = CoboundaryMarlinProverKey;
     type VerifierKey = CoboundaryMarlinVerifierKey;
 
-    fn setup<C: ConstraintSynthesizer<FieldElement>>(circuit: C) -> Result<(Self::ProverKey, Self::VerifierKey), Error>
+    fn setup<C: ConstraintSynthesizer<FieldElement>>(
+        circuit: C
+    ) -> Result<(Self::ProverKey, Self::VerifierKey), ProvingSystemError>
     {
-        let ck = G1_COMMITTER_KEY.lock().unwrap();
-        let (pk, vk) = CoboundaryMarlin::index(&ck, circuit)?;
+        let ck = get_g1_committer_key()?;
+
+        let (pk, vk) = CoboundaryMarlin::index(ck.as_ref().unwrap(), circuit)
+            .map_err(|e| ProvingSystemError::SetupFailed(format!("{:?}", e)))?;
         Ok((pk, vk))
     }
 
@@ -40,11 +49,14 @@ impl ProvingSystemUtils<FieldElement> for CoboundaryMarlin {
         pk: &Self::ProverKey,
         zk: bool,
         zk_rng: Option<&mut dyn RngCore>
-    ) -> Result<Self::Proof, Error>
+    ) -> Result<Self::Proof, ProvingSystemError>
     {
-        let ck = G1_COMMITTER_KEY.lock().unwrap();
+        let ck = get_g1_committer_key()?;
 
-        let proof = CoboundaryMarlin::prove(pk, &ck, circuit, zk, zk_rng)?;
+        let proof = CoboundaryMarlin::prove(
+            pk, ck.as_ref().unwrap(),
+            circuit, zk, zk_rng
+        ).map_err(|e| ProvingSystemError::ProofCreationFailed(format!("{:?}", e)))?;
 
         Ok(proof)
     }
@@ -54,10 +66,14 @@ impl ProvingSystemUtils<FieldElement> for CoboundaryMarlin {
         vk: &Self::VerifierKey,
         public_inputs: Vec<FieldElement>,
         _rng: Option<&mut R>,
-    ) -> Result<bool, Error> {
-        let ck = G1_COMMITTER_KEY.lock().unwrap();
+    ) -> Result<bool, ProvingSystemError> {
 
-        let result = CoboundaryMarlin::verify(vk, &ck, public_inputs.as_slice(), proof)?;
+        let ck = get_g1_committer_key()?;
+
+        let result = CoboundaryMarlin::verify(
+            vk, ck.as_ref().unwrap(),
+            public_inputs.as_slice(), proof
+        ).map_err(|e| ProvingSystemError::ProofVerificationFailed(format!("{:?}", e)))?;
 
         Ok(result)
     }
@@ -72,7 +88,9 @@ impl ProvingSystemUtils<FieldElement> for Darlin<'_> {
     type VerifierKey = DarlinVerifierKey;
 
     /// We still don't have recursion, therefore we are not able to create Darlin proving key and verification key.
-    fn setup<C: ConstraintSynthesizer<FieldElement>>(circuit: C) -> Result<(Self::ProverKey, Self::VerifierKey), Error>
+    fn setup<C: ConstraintSynthesizer<FieldElement>>(
+        _circuit: C
+    ) -> Result<(Self::ProverKey, Self::VerifierKey), ProvingSystemError>
     { unimplemented!() }
 
     /// We still don't have recursion, therefore we are not able to create Darlin proofs
@@ -81,7 +99,7 @@ impl ProvingSystemUtils<FieldElement> for Darlin<'_> {
         _pk: &Self::ProverKey,
         _zk: bool,
         _zk_rng: Option<&mut dyn RngCore>
-    ) -> Result<Self::Proof, Error>
+    ) -> Result<Self::Proof, ProvingSystemError>
     { unimplemented!() }
 
     /// The verification process given a FinalDarlinProof, instead, it's clear
@@ -90,16 +108,17 @@ impl ProvingSystemUtils<FieldElement> for Darlin<'_> {
         vk: &Self::VerifierKey,
         public_inputs: Vec<FieldElement>,
         rng: Option<&mut R>,
-    ) -> Result<bool, Error>
+    ) -> Result<bool, ProvingSystemError>
     {
-        let ck_g1 = G1_COMMITTER_KEY.lock().unwrap();
-        let ck_g2 = G2_COMMITTER_KEY.lock().unwrap();
+        let ck_g1 = get_g1_committer_key()?;
+        let ck_g2 = get_g2_committer_key()?;
 
         let rng = rng.unwrap();
 
         let result = Darlin::verify(
-            vk, &ck_g1, &ck_g2, public_inputs.as_slice(), proof, rng
-        )?;
+            vk, ck_g1.as_ref().unwrap(), ck_g2.as_ref().unwrap(),
+            public_inputs.as_slice(), proof, rng
+        ).map_err(|e| ProvingSystemError::ProofVerificationFailed(format!("{:?}", e)))?;
 
         Ok(result)
     }

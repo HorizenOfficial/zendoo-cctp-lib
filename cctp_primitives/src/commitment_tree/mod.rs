@@ -647,7 +647,7 @@ mod test {
 
     // Generates a random FieldElement and serializes it into a byte-array
     fn rand_fe_bytes() -> Vec<u8>{
-        SerializationUtils::as_bytes(&FieldElement::rand(&mut rand::thread_rng()))
+        SerializationUtils::as_bytes(&FieldElement::rand(&mut rand::thread_rng())).unwrap()
     }
 
     // Creates a sequence of FieldElements with values [0, 1, 2, 3, 4]
@@ -665,8 +665,12 @@ mod test {
         let mut cmt = CommitmentTree::create();
         let fe = get_fe_0_4();
         // Initial order of IDs is reversed, i.e. vec![3, 2, 1, 0] to test SCIDs-ordering functionality
-        let sc_ids: Vec<Vec<u8>> = fe.iter().take(4).rev().map(SerializationUtils::as_bytes).collect();
-        let non_existing_sc_id = SerializationUtils::as_bytes(&fe[4]);
+        let sc_ids: Vec<Vec<u8>> = fe.iter().take(4).rev().map(
+            |elem| SerializationUtils::as_bytes(elem).unwrap()
+        ).collect();
+        let non_existing_sc_id = SerializationUtils::as_bytes(&fe[4]).unwrap();
+
+        sc_ids.iter().for_each(|fe| println!("{:?}", <FieldElement as SerializationUtils>::from_bytes(fe).unwrap()));
 
         // Initial commitment_tree value of an empty CMT
         let empty_comm = cmt.get_commitment().unwrap();
@@ -749,7 +753,9 @@ mod test {
 
     #[test]
     fn sc_absence_proofs_tests(){
-        let sc_id: Vec<Vec<u8>> = get_fe_0_4().iter().map(SerializationUtils::as_bytes).collect();
+        let sc_id: Vec<Vec<u8>> = get_fe_0_4().iter().map(|elem|
+            SerializationUtils::as_bytes(elem).unwrap()
+        ).collect();
         let leaf = FieldElement::one();
 
         let mut cmt = CommitmentTree::create();

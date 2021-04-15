@@ -63,10 +63,10 @@ impl VerifierData {
         let res = match self {
             VerifierData::CoboundaryMarlin(proof, vk, usr_ins) =>
                 CoboundaryMarlin::verify_proof(&proof, &vk, usr_ins, rng)
-                    .map_err(|e| ProvingSystemError::Other(format!("{:?}", e)))?,
+                    .map_err(|e| ProvingSystemError::ProofVerificationFailed(format!("{:?}", e)))?,
             VerifierData::Darlin(proof, vk, usr_ins) =>
                 Darlin::verify_proof(&proof, &vk, usr_ins, rng)
-                    .map_err(|e| ProvingSystemError::Other(format!("{:?}", e)))?,
+                    .map_err(|e| ProvingSystemError::ProofVerificationFailed(format!("{:?}", e)))?,
         };
 
         Ok(res)

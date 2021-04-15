@@ -1,7 +1,9 @@
 use crate::{
     type_mapping::*,
     proving_system::{
-        init::{G1_COMMITTER_KEY, G2_COMMITTER_KEY},
+        init::{
+            get_g1_committer_key, get_g2_committer_key
+        },
         verifier::*,
         error::ProvingSystemError,
     },
@@ -53,6 +55,8 @@ impl ZendooBatchVerifier {
     /// to None.
     fn batch_verify_proofs<R: RngCore>(
         proofs_vks_ins:  Vec<VerifierData>,
+        g1_ck:           &CommitterKeyG1,
+        g2_ck:           &CommitterKeyG2,
         rng:             &mut R,
     ) -> Result<bool, Option<usize>>
     {
@@ -80,13 +84,9 @@ impl ZendooBatchVerifier {
             vks.push(vk);
         });
 
-        // Retrieve committer keys
-        let g1_ck = G1_COMMITTER_KEY.lock().unwrap();
-        let g2_ck = G2_COMMITTER_KEY.lock().unwrap();
-
         // Perform batch_verification
         let result = proof_systems::darlin::proof_aggregator::batch_verify_proofs(
-            pcds.as_slice(), vks.as_slice(), &g1_ck, &g2_ck, rng
+            pcds.as_slice(), vks.as_slice(), g1_ck, g2_ck, rng
         )?;
 
         Ok(result)
@@ -101,6 +101,10 @@ impl ZendooBatchVerifier {
         rng: &mut R,
     ) -> Result<bool, ProvingSystemError>
     {
+        // Retrieve committer keys
+        let g1_ck = get_g1_committer_key()?;
+        let g2_ck = get_g2_committer_key()?;
+
         if ids.len() == 0 {
             Err(ProvingSystemError::NoProofsToVerify)
         } else {
@@ -112,7 +116,10 @@ impl ZendooBatchVerifier {
             }).collect::<Result<Vec<_>, ProvingSystemError>>()?;
 
             // Perform batch verifications of the requested proofs
-            let res = Self::batch_verify_proofs(to_verify, rng);
+            let res = Self::batch_verify_proofs(
+                to_verify, g1_ck.as_ref().unwrap(),
+                g2_ck.as_ref().unwrap(), rng
+            );
 
             // Return the id of the first failing proof if it's possible to determine it
             if res.is_err() {

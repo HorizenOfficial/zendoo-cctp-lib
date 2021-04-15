@@ -5,6 +5,10 @@ use std::{
 
 #[derive(Debug)]
 pub enum ProvingSystemError {
+    CommitterKeyNotInitialized,
+    SetupFailed(String),
+    ProofCreationFailed(String),
+    ProofVerificationFailed(String),
     FailedBatchVerification(Option<String>),
     NoProofsToVerify,
     ProofAlreadyExists(String),
@@ -15,6 +19,10 @@ pub enum ProvingSystemError {
 impl Display for ProvingSystemError {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         match self {
+            ProvingSystemError::CommitterKeyNotInitialized => write!(f, "Committer Key has not been loaded"),
+            ProvingSystemError::SetupFailed(err) => write!(f, "Failed to generate pk and vk {}", err),
+            ProvingSystemError::ProofCreationFailed(err) => write!(f, "Failed to create proof {}", err),
+            ProvingSystemError::ProofVerificationFailed(err) => write!(f, "Failed to verify proof {}", err),
             ProvingSystemError::FailedBatchVerification(maybe_id) => {
                 match maybe_id {
                     Some(id) => write!(f, "Batch verification failed due to proof with id: {}", id),

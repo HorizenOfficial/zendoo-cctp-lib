@@ -5,6 +5,7 @@ use crate::{
         FieldElement, Error, GingerMHT,
     },
     utils::serialization::SerializationUtils,
+    proving_system::error::ProvingSystemError,
 };
 use primitives::merkle_tree::field_based_mht::{
     FieldBasedMerkleTree,
@@ -20,7 +21,9 @@ pub trait ProvingSystemUtils<F: Field> {
 
     /// Create the proving key and verification key, for the implementer's proving system,
     /// for a specific R1CS circuit `circuit`.
-    fn setup<C: ConstraintSynthesizer<F>>(circuit: C) -> Result<(Self::ProverKey, Self::VerifierKey), Error>;
+    fn setup<C: ConstraintSynthesizer<F>>(
+        circuit: C
+    ) -> Result<(Self::ProverKey, Self::VerifierKey), ProvingSystemError>;
 
     /// Create a proof for the implementer's proving system, given a R1CS circuit `circuit`
     /// and the corresponding prover key `pk`. If `zk` is requested, then `zk_rng` must be
@@ -30,7 +33,7 @@ pub trait ProvingSystemUtils<F: Field> {
         pk: &Self::ProverKey,
         zk: bool,
         zk_rng: Option<&mut dyn RngCore>
-    ) -> Result<Self::Proof, Error>;
+    ) -> Result<Self::Proof, ProvingSystemError>;
 
     /// Verify a proof for the implementer's proving system, given the proof `proof`, the
     /// corresponding verifier key `vk`, and the `public_inputs` against which the proof
@@ -41,7 +44,7 @@ pub trait ProvingSystemUtils<F: Field> {
         vk: &Self::VerifierKey,
         public_inputs: Vec<F>,
         rng: Option<&mut R>,
-    ) -> Result<bool, Error>;
+    ) -> Result<bool, ProvingSystemError>;
 }
 
 const BT_MERKLE_TREE_HEIGHT: usize = 12;
