@@ -1,14 +1,16 @@
 use algebra::Field;
 use r1cs_core::ConstraintSynthesizer;
 use crate::{
-    type_mapping::Error, SerializationUtils
+    type_mapping::{
+        FieldElement, Error, GingerMHT,
+    },
+    utils::serialization_utils::SerializationUtils,
+};
+use primitives::merkle_tree::field_based_mht::{
+    FieldBasedMerkleTree,
+    tweedle_fr::TWEEDLE_MHT_POSEIDON_PARAMETERS
 };
 use rand::RngCore;
-
-pub mod init;
-pub mod coboundary_marlin;
-pub mod final_darlin;
-pub mod batch;
 
 /// Defines common interfaces for calling the prover/verifier of a given proving system
 pub trait ProvingSystemUtils<F: Field> {
@@ -36,4 +38,23 @@ pub trait ProvingSystemUtils<F: Field> {
         public_inputs: Vec<F>,
         rng: Option<&mut R>,
     ) -> Result<bool, Error>;
+}
+
+const BT_MERKLE_TREE_HEIGHT: usize = 12;
+
+pub fn get_bt_merkle_root(bt_list: Vec<FieldElement>) -> Result<FieldElement, Error>
+{
+    if bt_list.len() > 0 {
+        let mut bt_mt =
+            GingerMHT::init(BT_MERKLE_TREE_HEIGHT, 2usize.pow(BT_MERKLE_TREE_HEIGHT as u32));
+        for fe in bt_list.into_iter(){
+            bt_mt.append(fe);
+        }
+        bt_mt.finalize_in_place();
+        bt_mt.root().ok_or(Error::from("Failed to compute BT Merkle Tree root"))
+
+    } else {
+        // TODO: Replace with Tweedle Phantom Merkle Root
+        Ok(TWEEDLE_MHT_POSEIDON_PARAMETERS.nodes[BT_MERKLE_TREE_HEIGHT])
+    }
 }

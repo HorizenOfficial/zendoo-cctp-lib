@@ -9,7 +9,10 @@ use std::io::{Read, Write};
 use bzip2::read::{BzEncoder, BzDecoder};
 use flate2::{Compression as GzipCompression, write::GzEncoder, read::GzDecoder};
 
-use crate::{ printdbg, printlndbg, type_mapping::Error };
+use crate::{
+    printdbg, printlndbg,
+    type_mapping::Error,
+};
 
 
 /// Available compression algorithms.

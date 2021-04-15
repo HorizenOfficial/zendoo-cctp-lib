@@ -1,13 +1,19 @@
 use primitives::{FieldBasedMerkleTreePath, FieldBasedMerkleTree, FieldBasedMHTPath};
-use crate::type_mapping::*;
-use crate::commitment_tree::sidechain_tree_alive::{SidechainTreeAlive, SidechainAliveSubtreeType};
-use crate::commitment_tree::sidechain_tree_ceased::SidechainTreeCeased;
-use crate::commitment_tree::hashers::{hash_fwt, hash_bwtr, hash_scc, hash_cert, hash_csw};
-use crate::commitment_tree::utils::{pow2, new_mt, fe_from_bytes};
+use crate::{
+    type_mapping::*,
+    commitment_tree::{
+        sidechain_tree_alive::{SidechainTreeAlive, SidechainAliveSubtreeType},
+        sidechain_tree_ceased::SidechainTreeCeased,
+        hashers::{hash_fwt, hash_bwtr, hash_scc, hash_cert, hash_csw}
+    },
+    utils::{
+        commitment_tree_utils::{pow2, new_mt},
+        serialization_utils::SerializationUtils
+    },
+};
 
 pub mod sidechain_tree_alive;
 pub mod sidechain_tree_ceased;
-pub mod utils;
 pub mod hashers;
 
 //--------------------------------------------------------------------------------------------------
@@ -229,7 +235,7 @@ impl CommitmentTree {
     // Gets commitment of a specified SidechainTreeAlive/SidechainTreeCeased
     // Returns None if SidechainTreeAlive/SidechainTreeCeased with a specified ID doesn't exist in a current CommitmentTree
     pub fn get_sc_commitment(&mut self, sc_id_bytes: &[u8]) -> Option<FieldElement> {
-        self.get_sc_commitment_internal(&fe_from_bytes(sc_id_bytes).ok()?)
+        self.get_sc_commitment_internal(&SerializationUtils::from_bytes(sc_id_bytes).ok()?)
     }
 
     // Gets commitment for a CommitmentTree
@@ -246,7 +252,7 @@ impl CommitmentTree {
     // Gets a proof of inclusion of a sidechain with specified ID into a current CommitmentTree
     // Returns None if sidechain with a specified ID is absent in a current CommitmentTree
     pub fn get_sc_existence_proof(&mut self, sc_id_bytes: &[u8]) -> Option<ScExistenceProof> {
-        let sc_id = fe_from_bytes(sc_id_bytes).ok()?;
+        let sc_id = SerializationUtils::from_bytes(sc_id_bytes).ok()?;
         if let Some(index) = self.sc_id_to_index(&sc_id){
             if let Some(tree) = self.get_commitments_tree(){
                 Some(ScExistenceProof{mpath: tree.finalize().get_merkle_path(index).unwrap()})
@@ -261,7 +267,7 @@ impl CommitmentTree {
     // Gets a proof of non-inclusion of a sidechain with specified ID into a current CommitmentTree
     // Returns None if get_neighbours didn't return any neighbour for a specified ID
     pub fn get_sc_absence_proof(&mut self, absent_id_bytes: &[u8]) -> Option<ScAbsenceProof> {
-        let absent_id = fe_from_bytes(absent_id_bytes).ok()?;
+        let absent_id = SerializationUtils::from_bytes(absent_id_bytes).ok()?;
         let (left, right) = self.get_neighbours_for_absent(&absent_id);
         if left.is_some() || right.is_some(){
             if let Some(tree) = self.get_commitments_tree(){
@@ -306,7 +312,7 @@ impl CommitmentTree {
     // Takes sidechain ID, sidechain absence proof and a root of CommitmentTree - CMT-commitment
     // Returns true if proof is correct, false otherwise
     pub fn verify_sc_absence(&mut self, absent_id_bytes: &[u8], proof: &ScAbsenceProof, commitment: &FieldElement) -> bool {
-        if let Ok(absent_id) = fe_from_bytes(absent_id_bytes){
+        if let Ok(absent_id) = SerializationUtils::from_bytes(absent_id_bytes){
             if proof.left.is_some() && proof.right.is_some(){
                 let (left_id, left_mpath) = proof.left.as_ref().unwrap();
                 let (right_id, right_mpath) = proof.right.as_ref().unwrap();
@@ -440,7 +446,7 @@ impl CommitmentTree {
     // Adds leaf to a subtree of a specified type in a specified SidechainTreeAlive
     // Returns false if there is SidechainTreeCeased with the same ID or if get_sct_mut couldn't get SidechainTreeAlive with a specified ID
     fn scta_add_subtree_leaf(&mut self, sc_id_bytes: &[u8], leaf: &FieldElement, subtree_type: SidechainAliveSubtreeType) -> bool {
-        if let Ok(sc_id) = fe_from_bytes(sc_id_bytes){
+        if let Ok(sc_id) = SerializationUtils::from_bytes(sc_id_bytes){
             if !self.is_present_sctc(&sc_id) { // there shouldn't be SCTC with the same ID
                 if let Some(sct) = self.get_add_scta_mut(&sc_id){
                     let result = match subtree_type {
@@ -466,7 +472,7 @@ impl CommitmentTree {
     // Adds leaf to a CSW-subtree of a specified SidechainTreeCeased
     // Returns false if there is SidechainTreeAlive with the same ID or if get_sctc_mut couldn't get SidechainTreeCeased with a specified ID
     fn sctc_add_subtree_leaf(&mut self, sc_id_bytes: &[u8], leaf: &FieldElement) -> bool {
-        if let Ok(sc_id) = fe_from_bytes(sc_id_bytes){
+        if let Ok(sc_id) = SerializationUtils::from_bytes(sc_id_bytes){
             if !self.is_present_scta(&sc_id) { // there shouldn't be SCTA with the same ID
                 if let Some(sctc) = self.get_add_sctc_mut(&sc_id){
                     let result = sctc.add_csw(leaf);
@@ -487,7 +493,7 @@ impl CommitmentTree {
     // Gets commitment i.e. root of a subtree of a specified type in a specified SidechainTreeAlive
     // Returns None if get_sctc couldn't get SidechainTreeCeased with a specified ID
     fn scta_get_subtree_commitment(&mut self, sc_id_bytes: &[u8], subtree_type: SidechainAliveSubtreeType) -> Option<FieldElement> {
-        let sc_id = fe_from_bytes(sc_id_bytes).ok()?;
+        let sc_id = SerializationUtils::from_bytes(sc_id_bytes).ok()?;
         if let Some(sc_tree) = self.get_scta_mut(&sc_id){
             Some(
                 match subtree_type {
@@ -505,7 +511,7 @@ impl CommitmentTree {
     // Gets commitment i.e. root of a subtree of a specified type in a specified SidechainTreeCeased
     // Returns None if get_sctc couldn't get SidechainTreeCeased with a specified ID
     fn sctc_get_subtree_commitment(&mut self, sc_id_bytes: &[u8]) -> Option<FieldElement> {
-        let sc_id = fe_from_bytes(sc_id_bytes).ok()?;
+        let sc_id = SerializationUtils::from_bytes(sc_id_bytes).ok()?;
         if let Some(sctc) = self.get_sctc_mut(&sc_id){
             Some(sctc.get_csw_commitment())
         } else {
@@ -516,7 +522,7 @@ impl CommitmentTree {
     // Gets all leaves of a subtree of a specified type in a specified SidechainTreeAlive
     // Returns None if there is no SidechainTreeAlive with a specified ID
     fn scta_get_subtree_leaves(&mut self, sc_id_bytes: &[u8], subtree_type: SidechainAliveSubtreeType) -> Option<Vec<FieldElement>> {
-        let sc_id = fe_from_bytes(sc_id_bytes).ok()?;
+        let sc_id = SerializationUtils::from_bytes(sc_id_bytes).ok()?;
         if let Some(sc_tree) = self.get_scta_mut(&sc_id){
             Some(
                 match subtree_type {
@@ -628,15 +634,20 @@ impl CommitmentTree {
 #[cfg(test)]
 mod test {
     use algebra::{Field, UniformRand};
-    use crate::type_mapping::FieldElement;
-    use crate::commitment_tree::CommitmentTree;
-    use crate::commitment_tree::utils::{rand_vec, fe_to_bytes};
+    use crate::{
+        type_mapping::FieldElement,
+        commitment_tree::CommitmentTree,
+        utils::{
+            commitment_tree_utils::rand_vec,
+            serialization_utils::SerializationUtils,
+        },
+    };
     use rand::Rng;
     use std::convert::TryFrom;
 
     // Generates a random FieldElement and serializes it into a byte-array
     fn rand_fe_bytes() -> Vec<u8>{
-        fe_to_bytes(&FieldElement::rand(&mut rand::thread_rng()))
+        SerializationUtils::as_bytes(&FieldElement::rand(&mut rand::thread_rng()))
     }
 
     // Creates a sequence of FieldElements with values [0, 1, 2, 3, 4]
@@ -654,8 +665,8 @@ mod test {
         let mut cmt = CommitmentTree::create();
         let fe = get_fe_0_4();
         // Initial order of IDs is reversed, i.e. vec![3, 2, 1, 0] to test SCIDs-ordering functionality
-        let sc_ids: Vec<Vec<u8>> = fe.iter().take(4).rev().map(fe_to_bytes).collect();
-        let non_existing_sc_id = fe_to_bytes(&fe[4]);
+        let sc_ids: Vec<Vec<u8>> = fe.iter().take(4).rev().map(SerializationUtils::as_bytes).collect();
+        let non_existing_sc_id = SerializationUtils::as_bytes(&fe[4]);
 
         // Initial commitment_tree value of an empty CMT
         let empty_comm = cmt.get_commitment().unwrap();
@@ -738,7 +749,7 @@ mod test {
 
     #[test]
     fn sc_absence_proofs_tests(){
-        let sc_id: Vec<Vec<u8>> = get_fe_0_4().iter().map(fe_to_bytes).collect();
+        let sc_id: Vec<Vec<u8>> = get_fe_0_4().iter().map(SerializationUtils::as_bytes).collect();
         let leaf = FieldElement::one();
 
         let mut cmt = CommitmentTree::create();

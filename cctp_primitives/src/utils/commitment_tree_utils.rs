@@ -1,7 +1,6 @@
 use primitives::{FieldBasedHash, FieldBasedMerkleTree};
 use crate::type_mapping::{FieldElement, FieldHash, GingerMHT, Error};
 use rand::Rng;
-use algebra::{ToBytes, FromBytes};
 
 pub const fn pow2(power: usize) -> usize { 1 << power }
 
@@ -38,21 +37,4 @@ pub fn hash_vec(data: &Vec<FieldElement>) -> FieldElement {
 pub fn rand_vec(len: usize) -> Vec<u8> {
     let mut rng = rand::thread_rng();
     (0.. len).map(|_|rng.gen()).collect()
-}
-
-// Serializes FieldElement into a byte-array
-pub fn fe_to_bytes(fe: &FieldElement) -> Vec<u8>{
-    let mut bytes = Vec::new();
-    fe.write(&mut bytes).unwrap();
-    bytes
-}
-
-// Returns FieldElement corresponding to the given bytes
-// NOTE: The given byte-array should be a serialized FieldElement
-pub fn fe_from_bytes(bytes: &[u8]) -> Result<FieldElement, Error>{
-    if let Ok(fe) = FieldElement::read(bytes){
-        Ok(fe)
-    } else {
-        Err("Couldn't parse the input bytes".into())
-    }
 }

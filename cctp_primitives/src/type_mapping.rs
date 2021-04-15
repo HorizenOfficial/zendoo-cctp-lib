@@ -11,6 +11,7 @@ use blake2::Blake2s;
 
 // Basic algebraic types
 pub type FieldElement = Fr;
+pub const FIELD_SIZE: usize = 32;
 pub type G1 = dee::Affine;
 pub type G2 = dum::Affine;
 
