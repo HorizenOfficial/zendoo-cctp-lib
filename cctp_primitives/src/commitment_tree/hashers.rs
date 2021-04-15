@@ -1,6 +1,6 @@
 use algebra::ToConstraintField;
 use crate::type_mapping::{FieldElement, Error};
-use crate::utils::commitment_tree_utils::hash_vec;
+use crate::utils::commitment_tree::hash_vec;
 use primitives::bytes_to_bits;
 use byteorder;
 use byteorder::{WriteBytesExt, BigEndian};
@@ -137,7 +137,7 @@ mod test {
     use crate::commitment_tree::hashers::{hash_fwt, hash_bwtr, hash_scc, hash_cert, bt_list_to_bytes, hash_csw};
     use rand::Rng;
     use std::convert::TryFrom;
-    use crate::utils::commitment_tree_utils::rand_vec;
+    use crate::utils::commitment_tree::rand_vec;
 
     #[test]
     fn test_bt_list_to_bytes(){

@@ -1,4 +1,4 @@
-pub mod commitment_tree_utils;
-pub mod debug_utils;
-pub mod proof_system_utils;
-pub mod serialization_utils;
+pub mod commitment_tree;
+pub mod debug;
+pub mod proof_system;
+pub mod serialization;

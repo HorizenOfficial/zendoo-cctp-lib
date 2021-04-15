@@ -7,8 +7,8 @@ use crate::{
         hashers::{hash_fwt, hash_bwtr, hash_scc, hash_cert, hash_csw}
     },
     utils::{
-        commitment_tree_utils::{pow2, new_mt},
-        serialization_utils::SerializationUtils
+        commitment_tree::{pow2, new_mt},
+        serialization::SerializationUtils
     },
 };
 
@@ -638,8 +638,8 @@ mod test {
         type_mapping::FieldElement,
         commitment_tree::CommitmentTree,
         utils::{
-            commitment_tree_utils::rand_vec,
-            serialization_utils::SerializationUtils,
+            commitment_tree::rand_vec,
+            serialization::SerializationUtils,
         },
     };
     use rand::Rng;

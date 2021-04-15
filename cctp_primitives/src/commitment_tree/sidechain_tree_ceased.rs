@@ -1,5 +1,5 @@
 use crate::type_mapping::{FieldElement, GingerMHT, Error};
-use crate::utils::commitment_tree_utils::{pow2, hash_vec, new_mt, add_leaf};
+use crate::utils::commitment_tree::{pow2, hash_vec, new_mt, add_leaf};
 use std::borrow::BorrowMut;
 use primitives::FieldBasedMerkleTree;
 

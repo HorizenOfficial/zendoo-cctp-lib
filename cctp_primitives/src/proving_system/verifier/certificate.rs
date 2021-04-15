@@ -5,8 +5,8 @@ use crate::{
         error::ProvingSystemError,
     },
     utils::{
-        proof_system_utils::get_bt_merkle_root,
-        serialization_utils::SerializationUtils,
+        proof_system::get_bt_merkle_root,
+        serialization::SerializationUtils,
     }
 };
 use primitives::FieldBasedHash;

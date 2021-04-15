@@ -1,7 +1,7 @@
 use algebra::Field;
 use crate::{
     type_mapping::{FieldElement, GingerMHT, Error},
-    utils::commitment_tree_utils::{hash_vec, pow2, new_mt, add_leaf}
+    utils::commitment_tree::{hash_vec, pow2, new_mt, add_leaf}
 };
 use std::borrow::BorrowMut;
 use primitives::FieldBasedMerkleTree;

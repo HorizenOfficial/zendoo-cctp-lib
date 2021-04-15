@@ -10,8 +10,8 @@ use crate::{
     },
     proving_system::init::{G1_COMMITTER_KEY, G2_COMMITTER_KEY},
     utils::{
-        serialization_utils::SerializationUtils,
-        proof_system_utils::ProvingSystemUtils,
+        serialization::SerializationUtils,
+        proof_system::ProvingSystemUtils,
     },
 };
 use r1cs_core::ConstraintSynthesizer;
@@ -27,6 +27,13 @@ impl ProvingSystemUtils<FieldElement> for CoboundaryMarlin {
     type Proof = CoboundaryMarlinProof;
     type ProverKey = CoboundaryMarlinProverKey;
     type VerifierKey = CoboundaryMarlinVerifierKey;
+
+    fn setup<C: ConstraintSynthesizer<FieldElement>>(circuit: C) -> Result<(Self::ProverKey, Self::VerifierKey), Error>
+    {
+        let ck = G1_COMMITTER_KEY.lock().unwrap();
+        let (pk, vk) = CoboundaryMarlin::index(&ck, circuit)?;
+        Ok((pk, vk))
+    }
 
     fn create_proof<C: ConstraintSynthesizer<FieldElement>>(
         circuit: C,
@@ -64,6 +71,10 @@ impl ProvingSystemUtils<FieldElement> for Darlin<'_> {
     type ProverKey = DarlinProverKey;
     type VerifierKey = DarlinVerifierKey;
 
+    /// We still don't have recursion, therefore we are not able to create Darlin proving key and verification key.
+    fn setup<C: ConstraintSynthesizer<FieldElement>>(circuit: C) -> Result<(Self::ProverKey, Self::VerifierKey), Error>
+    { unimplemented!() }
+
     /// We still don't have recursion, therefore we are not able to create Darlin proofs
     fn create_proof<C: ConstraintSynthesizer<FieldElement>>(
         _circuit: C,
@@ -71,9 +82,7 @@ impl ProvingSystemUtils<FieldElement> for Darlin<'_> {
         _zk: bool,
         _zk_rng: Option<&mut dyn RngCore>
     ) -> Result<Self::Proof, Error>
-    {
-        unimplemented!()
-    }
+    { unimplemented!() }
 
     /// The verification process given a FinalDarlinProof, instead, it's clear
     fn verify_proof<R: RngCore>(

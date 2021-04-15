@@ -4,7 +4,7 @@ use crate::{
     type_mapping::{
         FieldElement, Error, GingerMHT,
     },
-    utils::serialization_utils::SerializationUtils,
+    utils::serialization::SerializationUtils,
 };
 use primitives::merkle_tree::field_based_mht::{
     FieldBasedMerkleTree,
@@ -17,6 +17,10 @@ pub trait ProvingSystemUtils<F: Field> {
     type Proof: SerializationUtils;
     type ProverKey: SerializationUtils;
     type VerifierKey: SerializationUtils;
+
+    /// Create the proving key and verification key, for the implementer's proving system,
+    /// for a specific R1CS circuit `circuit`.
+    fn setup<C: ConstraintSynthesizer<F>>(circuit: C) -> Result<(Self::ProverKey, Self::VerifierKey), Error>;
 
     /// Create a proof for the implementer's proving system, given a R1CS circuit `circuit`
     /// and the corresponding prover key `pk`. If `zk` is requested, then `zk_rng` must be

@@ -3,8 +3,8 @@ use crate::{
     type_mapping::*,
     proving_system::error::ProvingSystemError,
     utils::{
-        serialization_utils::SerializationUtils,
-        proof_system_utils::ProvingSystemUtils,
+        serialization::SerializationUtils,
+        proof_system::ProvingSystemUtils,
     },
 };
 use rand::RngCore;
