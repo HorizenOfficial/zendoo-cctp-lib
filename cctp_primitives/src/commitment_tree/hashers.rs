@@ -1,6 +1,6 @@
 use algebra::ToConstraintField;
-use crate::type_mapping::{FieldElement, Error};
-use crate::utils::commitment_tree::hash_vec;
+use crate::type_mapping::FieldElement;
+use crate::utils::commitment_tree::{hash_vec_constant_length, hash_vec_variable_length, Error};
 use primitives::bytes_to_bits;
 use byteorder;
 use byteorder::{WriteBytesExt, BigEndian};
@@ -10,7 +10,7 @@ pub fn hash_fwt(amount: i64,
                 pub_key: &[u8],
                 tx_hash: &[u8],
                 out_idx: u32)
-    -> Result<FieldElement, Error> {
+                -> Result<FieldElement, Error> {
     let mut bytes = Vec::<u8>::new();
 
     bytes.write_i64::<BigEndian>(amount)?;
@@ -18,7 +18,7 @@ pub fn hash_fwt(amount: i64,
     bytes.extend(&tx_hash.to_vec());
     bytes.write_u32::<BigEndian>(out_idx)?;
 
-    hash_bytes(&bytes)
+    hash_bytes_constant_length(&bytes)
 }
 
 // Computes FieldElement-based hash on the given Backward Transfer Request Transaction data
@@ -27,7 +27,7 @@ pub fn hash_bwtr(sc_fee:  i64,
                  pk_hash: &[u8],
                  tx_hash: &[u8],
                  out_idx: u32)
-    -> Result<FieldElement, Error> {
+                 -> Result<FieldElement, Error> {
     let mut bytes = Vec::<u8>::new();
 
     bytes.write_i64::<BigEndian>(sc_fee)?;
@@ -36,7 +36,7 @@ pub fn hash_bwtr(sc_fee:  i64,
     bytes.extend(&tx_hash.to_vec());
     bytes.write_u32::<BigEndian>(out_idx)?;
 
-    hash_bytes(&bytes)
+    hash_bytes_variable_length(&bytes)
 }
 
 // Computes FieldElement-based hash on the given Certificate data
@@ -46,7 +46,7 @@ pub fn hash_cert(epoch_number: u32,
                  bt_list: &[(i64,[u8; 20])],
                  custom_fields_merkle_root: &[u8],
                  end_cumulative_sc_tx_commitment_tree_root: &[u8])
-    -> Result<FieldElement, Error> {
+                 -> Result<FieldElement, Error> {
     let mut bytes = Vec::<u8>::new();
 
     bytes.write_u32::<BigEndian>(epoch_number)?;
@@ -56,7 +56,7 @@ pub fn hash_cert(epoch_number: u32,
     bytes.extend(&custom_fields_merkle_root.to_vec());
     bytes.extend(&end_cumulative_sc_tx_commitment_tree_root.to_vec());
 
-    hash_bytes(&bytes)
+    hash_bytes_variable_length(&bytes)
 }
 
 // Computes FieldElement-based hash on the given Sidechain Creation Transaction data
@@ -70,7 +70,7 @@ pub fn hash_scc(amount: i64,
                 csw_verification_key: Option<&[u8]>,
                 tx_hash: &[u8],
                 out_idx: u32)
-    -> Result<FieldElement, Error> {
+                -> Result<FieldElement, Error> {
     let mut bytes = Vec::<u8>::new();
 
     bytes.write_i64::<BigEndian>(amount)?;
@@ -90,7 +90,7 @@ pub fn hash_scc(amount: i64,
     bytes.extend(&tx_hash.to_vec());
     bytes.write_u32::<BigEndian>(out_idx)?;
 
-    hash_bytes(&bytes)
+    hash_bytes_variable_length(&bytes)
 }
 
 // Computes FieldElement-based hash on the given Ceased Sidechain Withdrawal data
@@ -98,7 +98,7 @@ pub fn hash_csw(amount: i64,
                 nullifier: &[u8],
                 pk_hash: &[u8],
                 active_cert_data_hash: &[u8])
-    -> Result<FieldElement, Error> {
+                -> Result<FieldElement, Error> {
     let mut bytes = Vec::<u8>::new();
 
     bytes.write_i64::<BigEndian>(amount)?;
@@ -106,11 +106,8 @@ pub fn hash_csw(amount: i64,
     bytes.extend(&pk_hash.to_vec());
     bytes.extend(&active_cert_data_hash.to_vec());
 
-    hash_bytes(&bytes)
+    hash_bytes_constant_length(&bytes)
 }
-
-// Computes FieldElement-based hash on the given ID bytes
-pub fn hash_id(sc_id: &[u8]) -> FieldElement { hash_bytes(sc_id).unwrap() }
 
 // Converts list of BTs to byte-array
 fn bt_list_to_bytes(bt_list: &[(i64,[u8; 20])]) -> Result<Vec<u8>, Error>{
@@ -123,8 +120,13 @@ fn bt_list_to_bytes(bt_list: &[(i64,[u8; 20])]) -> Result<Vec<u8>, Error>{
 }
 
 // Computes FieldElement-based hash on the given byte-array
-pub fn hash_bytes(bytes: &[u8]) -> Result<FieldElement, Error> {
-    Ok(hash_vec(&bytes_to_field_elements(bytes)?))
+pub fn hash_bytes_constant_length(bytes: &[u8]) -> Result<FieldElement, Error> {
+    let fes = bytes_to_field_elements(bytes)?;
+    hash_vec_constant_length(&fes, fes.len())
+}
+
+pub fn hash_bytes_variable_length(bytes: &[u8]) -> Result<FieldElement, Error> {
+    hash_vec_variable_length(&bytes_to_field_elements(bytes)?, false)
 }
 
 // Converts byte-array into a sequence of FieldElements

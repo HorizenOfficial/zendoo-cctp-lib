@@ -9,7 +9,7 @@ use crate::{
 };
 use primitives::merkle_tree::field_based_mht::{
     FieldBasedMerkleTree,
-    tweedle_fr::TWEEDLE_MHT_POSEIDON_PARAMETERS
+    tweedle_dee::TWEEDLE_DEE_MHT_POSEIDON_PARAMETERS
 };
 use rand::RngCore;
 
@@ -61,7 +61,6 @@ pub fn get_bt_merkle_root(bt_list: Vec<FieldElement>) -> Result<FieldElement, Er
         bt_mt.root().ok_or(Error::from("Failed to compute BT Merkle Tree root"))
 
     } else {
-        // TODO: Replace with Tweedle Phantom Merkle Root
-        Ok(TWEEDLE_MHT_POSEIDON_PARAMETERS.nodes[BT_MERKLE_TREE_HEIGHT])
+        Ok(TWEEDLE_DEE_MHT_POSEIDON_PARAMETERS.nodes[BT_MERKLE_TREE_HEIGHT])
     }
 }

@@ -51,15 +51,15 @@ impl UserInputs for CertificateProofUserInputs<'_> {
 
         // Compute WCertSysDataHash
         let wcert_sysdata_hash = {
-            let mut digest = FieldHash::init(None);
+            let mut digest = FieldHash::init_constant_length(6, None);
             digest.update(quality_fe).update(bt_root);
             prev_end_epoch_mc_b_hash_fes.into_iter().for_each(|fe| {digest.update(fe);});
             end_epoch_mc_b_hash_fes.into_iter().for_each(|fe| {digest.update(fe);});
-            digest.finalize()
+            digest.finalize().unwrap()
         };
 
         // Compute aggregated input
-        let mut digest = FieldHash::init(None);
+        let mut digest = FieldHash::init_variable_length(false, None);
 
         if self.constant.is_some(){
             digest.update(
@@ -77,7 +77,7 @@ impl UserInputs for CertificateProofUserInputs<'_> {
 
         digest.update(wcert_sysdata_hash);
 
-        Ok(vec![digest.finalize()])
+        Ok(vec![digest.finalize().unwrap()])
     }
 }
 

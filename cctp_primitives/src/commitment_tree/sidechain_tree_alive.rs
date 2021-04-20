@@ -1,19 +1,17 @@
 use algebra::Field;
-use crate::{
-    type_mapping::{FieldElement, GingerMHT, Error},
-    utils::commitment_tree::{hash_vec, pow2, new_mt, add_leaf}
-};
+use crate::type_mapping::{FieldElement, GingerMHT};
+use crate::utils::commitment_tree::{pow2, new_mt, add_leaf, Error, hash_vec_constant_length};
 use std::borrow::BorrowMut;
 use primitives::FieldBasedMerkleTree;
 
 // Tunable parameters
-pub const FWT_SMT_HEIGHT:  usize = 12;
-pub const BWTR_SMT_HEIGHT: usize = 12;
-pub const CERT_SMT_HEIGHT: usize = 12;
+pub const FWT_MT_HEIGHT:  usize = 12;
+pub const BWTR_MT_HEIGHT: usize = 12;
+pub const CERT_MT_HEIGHT: usize = 12;
 
-const FWT_SMT_CAPACITY:  usize = pow2(FWT_SMT_HEIGHT);
-const BWTR_SMT_CAPACITY: usize = pow2(BWTR_SMT_HEIGHT);
-const CERT_SMT_CAPACITY: usize = pow2(CERT_SMT_HEIGHT);
+const FWT_MT_CAPACITY:  usize = pow2(FWT_MT_HEIGHT);
+const BWTR_MT_CAPACITY: usize = pow2(BWTR_MT_HEIGHT);
+const CERT_MT_CAPACITY: usize = pow2(CERT_MT_HEIGHT);
 
 // Types of contained subtrees
 pub enum SidechainAliveSubtreeType {
@@ -24,9 +22,9 @@ pub struct SidechainTreeAlive {
     sc_id:    FieldElement,    // ID of a sidechain for which SidechainTreeAlive is created
     scc:      FieldElement,    // Sidechain Creation Transaction hash
 
-    fwt_smt:  GingerMHT, // SMT for Forward Transfer Transactions
-    bwtr_smt: GingerMHT, // SMT for Backward Transfers Requests Transactions
-    cert_smt: GingerMHT, // SMT for Certificates
+    fwt_mt:  GingerMHT,  // MT for Forward Transfer Transactions
+    bwtr_mt: GingerMHT,  // MT for Backward Transfers Requests Transactions
+    cert_mt: GingerMHT,  // MT for Certificates
 
     fwt_num:  usize,           // Number of contained Forward Transfers Transactions
     bwtr_num: usize,           // Number of contained Backward Transfers Requests Transactions
@@ -36,15 +34,18 @@ pub struct SidechainTreeAlive {
 impl SidechainTreeAlive {
 
     // Creates a new instance of SidechainTreeAlive with a specified ID
-    pub fn create(sc_id: &FieldElement) -> Result<SidechainTreeAlive, Error> {
+    pub fn create(sc_id: &FieldElement) -> Result<Self, Error> {
         Ok(
-            SidechainTreeAlive {
+            Self{
                 sc_id:    (*sc_id).clone(),
+
+                // Default SCC value for an empty SidechainTreeAlive; Probability of collision with a real SCC value considering it is a random FieldElement is negligible
                 scc:      FieldElement::zero(),
 
-                fwt_smt:  new_mt(FWT_SMT_HEIGHT)?,
-                bwtr_smt: new_mt(BWTR_SMT_HEIGHT)?,
-                cert_smt: new_mt(CERT_SMT_HEIGHT)?,
+                // Default leaves values of an empty GingerMHT are also FieldElement::zero(); They are specified in MHT_PARAMETERS as 0-level nodes
+                fwt_mt:  new_mt(FWT_MT_HEIGHT)?,
+                bwtr_mt: new_mt(BWTR_MT_HEIGHT)?,
+                cert_mt: new_mt(CERT_MT_HEIGHT)?,
 
                 fwt_num:  0,
                 bwtr_num: 0,
@@ -56,19 +57,19 @@ impl SidechainTreeAlive {
     // Gets ID of a SidechainTreeAlive
     pub fn id(&self) -> &FieldElement { &self.sc_id }
 
-    // Sequentially adds leafs to the FWT SMT
+    // Sequentially adds leafs to the FWT MT
     pub fn add_fwt(&mut self, fwt: &FieldElement) -> bool {
-        add_leaf(&mut self.fwt_smt, fwt, &mut self.fwt_num, FWT_SMT_CAPACITY)
+        add_leaf(&mut self.fwt_mt, fwt, &mut self.fwt_num, FWT_MT_CAPACITY)
     }
 
-    // Sequentially adds leafs to the BWTR SMT
+    // Sequentially adds leafs to the BWTR MT
     pub fn add_bwtr(&mut self, bwtr: &FieldElement) -> bool {
-        add_leaf(&mut self.bwtr_smt, bwtr, &mut self.bwtr_num, BWTR_SMT_CAPACITY)
+        add_leaf(&mut self.bwtr_mt, bwtr, &mut self.bwtr_num, BWTR_MT_CAPACITY)
     }
 
-    // Sequentially adds leafs to the CERT SMT
+    // Sequentially adds leafs to the CERT MT
     pub fn add_cert(&mut self, cert: &FieldElement) -> bool {
-        add_leaf(&mut self.cert_smt, cert, &mut self.cert_num, CERT_SMT_CAPACITY)
+        add_leaf(&mut self.cert_mt, cert, &mut self.cert_num, CERT_MT_CAPACITY)
     }
 
     // Sets SCC value
@@ -77,36 +78,46 @@ impl SidechainTreeAlive {
     // Gets SCC value
     pub fn get_scc(&self) -> FieldElement{ self.scc }
 
-    // Gets all leaves of the FWT SMT
+    // Gets all leaves of the FWT MT
     pub fn get_fwt_leaves(&self) -> Vec<FieldElement> {
-        self.fwt_smt.get_leaves().to_vec()
+        self.fwt_mt.get_leaves().to_vec()
     }
-    // Gets all leaves of the BWTR SMT
+    // Gets all leaves of the BWTR MT
     pub fn get_bwtr_leaves(&self) -> Vec<FieldElement> {
-        self.bwtr_smt.get_leaves().to_vec()
+        self.bwtr_mt.get_leaves().to_vec()
     }
-    // Gets all leaves of the CERT SMT
+    // Gets all leaves of the CERT MT
     pub fn get_cert_leaves(&self) -> Vec<FieldElement> {
-        self.cert_smt.get_leaves().to_vec()
+        self.cert_mt.get_leaves().to_vec()
     }
 
-    // Gets commitment_tree of the Forward Transfer Transactions tree
-    pub fn get_fwt_commitment(&mut self)  -> FieldElement { self.fwt_smt.borrow_mut().finalize().root().unwrap() }
+    // Gets commitment (root) of the Forward Transfer Transactions tree
+    pub fn get_fwt_commitment(&mut self)  -> FieldElement { self.fwt_mt.borrow_mut().finalize().root().unwrap() }
 
-    // Gets commitment_tree of the Backward Transfer Requests Transactions tree
-    pub fn get_bwtr_commitment(&mut self) -> FieldElement { self.bwtr_smt.borrow_mut().finalize().root().unwrap() }
+    // Gets commitment (root) of the Backward Transfer Requests Transactions tree
+    pub fn get_bwtr_commitment(&mut self) -> FieldElement { self.bwtr_mt.borrow_mut().finalize().root().unwrap() }
 
-    // Gets commitment_tree of the Certificates tree
-    pub fn get_cert_commitment(&mut self) -> FieldElement { self.cert_smt.borrow_mut().finalize().root().unwrap() }
+    // Gets commitment (root) of the Certificates tree
+    pub fn get_cert_commitment(&mut self) -> FieldElement { self.cert_mt.borrow_mut().finalize().root().unwrap() }
 
-    // Gets commitment_tree of a SidechainTreeAlive
-    // Commitment = hash( fwt_root | bwtr_root | cert_root | SCC | SC_ID )
+    // Gets commitment of a SidechainTreeAlive
     pub fn get_commitment(&mut self) -> FieldElement {
-        let fwt_mr  = self.get_fwt_commitment();
-        let bwtr_mr = self.get_bwtr_commitment();
-        let cert_mr = self.get_cert_commitment();
+        SidechainTreeAlive::build_commitment(
+            self.sc_id,
+            self.get_fwt_commitment(),
+            self.get_bwtr_commitment(),
+            self.get_cert_commitment(),
+            self.scc
+        )
+    }
 
-        hash_vec(&vec![fwt_mr, bwtr_mr, cert_mr, self.scc, self.sc_id])
+    // Builds Commitment for SidechainTreeAlive as: hash( fwt_root | bwtr_root | cert_root | SCC | SC_ID )
+    pub fn build_commitment(sc_id: FieldElement,
+                            fwt_mr: FieldElement,
+                            bwtr_mr: FieldElement,
+                            cert_mr: FieldElement,
+                            scc: FieldElement) -> FieldElement {
+        hash_vec_constant_length(&vec![fwt_mr, bwtr_mr, cert_mr, scc, sc_id], 5).unwrap()
     }
 }
 
@@ -122,14 +133,14 @@ mod test {
 
         let mut sct = SidechainTreeAlive::create(&sc_id).unwrap();
 
-        // Initial commitment_tree values of empty subtrees before updating them
+        // Initial commitment values of empty subtrees before updating them
         let empty_fwt  = sct.get_fwt_commitment ();
         let empty_bwtr = sct.get_bwtr_commitment();
         let empty_cert = sct.get_cert_commitment();
-        // Initial commitment_tree value of an empty SCT
+        // Initial commitment value of an empty SCT
         let empty_comm = sct.get_commitment();
 
-        // All subtrees have the same initial commitment_tree value
+        // All subtrees have the same initial commitment value
         assert_eq!(empty_fwt, empty_bwtr);
         assert_eq!(empty_bwtr, empty_cert);
 
@@ -144,17 +155,25 @@ mod test {
         assert_eq!(sct.get_bwtr_leaves(), vec![fe]);
         assert_eq!(sct.get_cert_leaves(), vec![fe]);
 
-        // All updated subtrees should have non-empty commitment_tree values
-        assert_ne!(empty_fwt,  sct.get_fwt_commitment ());
-        assert_ne!(empty_bwtr, sct.get_bwtr_commitment());
-        assert_ne!(empty_cert, sct.get_cert_commitment());
+        let updated_fwt = sct.get_fwt_commitment();
+        let updated_bwtr = sct.get_bwtr_commitment();
+        let updated_cert = sct.get_cert_commitment();
+
+        // All updated subtrees should have non-empty commitment values
+        assert_ne!(empty_fwt,  updated_fwt);
+        assert_ne!(empty_bwtr, updated_bwtr);
+        assert_ne!(empty_cert, updated_cert);
+
+        // All updated subtrees should have the same non-empty commitment value
+        assert_eq!(updated_fwt, updated_bwtr);
+        assert_eq!(updated_bwtr, updated_cert);
 
         // Updating SCC
         sct.set_scc(&fe);
         // Check that CSW is correctly updated
         assert_eq!(sct.get_scc(), fe);
 
-        // SCT commitment_tree has non-empty value
+        // SCT commitment has non-empty value
         assert_ne!(empty_comm, sct.get_commitment());
     }
 }

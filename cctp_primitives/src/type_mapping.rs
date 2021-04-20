@@ -2,7 +2,11 @@ use algebra::{
     fields::tweedle::*,
     curves::tweedle::*
 };
-use primitives::{crh::*, merkle_tree::*};
+use primitives::{
+    crh::*,
+    merkle_tree::*,
+};
+pub use primitives::merkle_tree::tweedle_dee::TWEEDLE_DEE_MHT_POSEIDON_PARAMETERS as GINGER_MHT_POSEIDON_PARAMETERS;
 use proof_systems::darlin::{
     *, data_structures::*
 };
@@ -26,8 +30,8 @@ impl FieldBasedMerkleTreeParameters for GingerMHTParams {
     type Data = FieldElement;
     type H = FieldHash;
     const MERKLE_ARITY: usize = 2;
-    const EMPTY_HASH_CST: Option<FieldBasedMerkleTreePrecomputedEmptyConstants<'static, Self::H>> =
-        Some(tweedle_fr::TWEEDLE_MHT_POSEIDON_PARAMETERS);
+    const EMPTY_NODE_CST: Option<FieldBasedMerkleTreePrecomputedZeroConstants<'static, Self::H>> =
+        Some(GINGER_MHT_POSEIDON_PARAMETERS);
 }
 
 impl BatchFieldBasedMerkleTreeParameters for GingerMHTParams {
@@ -35,6 +39,7 @@ impl BatchFieldBasedMerkleTreeParameters for GingerMHTParams {
 }
 
 pub type GingerMHT = FieldBasedOptimizedMHT<GingerMHTParams>;
+pub type GingerMHTPath = FieldBasedMHTPath<GingerMHTParams>;
 
 // Polynomial Commitment instantiations
 pub type Digest = Blake2s;
