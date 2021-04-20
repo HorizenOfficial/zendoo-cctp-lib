@@ -109,9 +109,6 @@ pub fn hash_csw(amount: i64,
     hash_bytes(&bytes)
 }
 
-// Computes FieldElement-based hash on the given ID bytes
-pub fn hash_id(sc_id: &[u8]) -> FieldElement { hash_bytes(sc_id).unwrap() }
-
 // Converts list of BTs to byte-array
 fn bt_list_to_bytes(bt_list: &[(i64,[u8; 20])]) -> Result<Vec<u8>, Error>{
     let mut bytes = Vec::<u8>::new();
