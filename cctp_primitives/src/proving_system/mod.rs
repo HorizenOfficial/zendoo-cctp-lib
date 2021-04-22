@@ -1,3 +1,4 @@
+// WARNING: Tests on this crate shall be execute on a single-threaded environment
 pub mod init;
 pub mod verifier;
 pub mod error;
