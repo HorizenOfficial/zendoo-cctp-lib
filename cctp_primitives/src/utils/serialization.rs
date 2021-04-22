@@ -12,7 +12,7 @@ pub trait SerializationUtils: CanonicalSerialize + CanonicalDeserialize {
 
     /// Serialize `self` to a byte array, returning a `SerializationError` if the operation fails.
     fn as_bytes(&self) -> Result<Vec<u8>, SerializationError> {
-        let mut buffer = vec![];
+        let mut buffer = Vec::with_capacity(self.get_size());
         CanonicalSerialize::serialize(self, &mut buffer)?;
         Ok(buffer)
     }
