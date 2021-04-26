@@ -1,6 +1,4 @@
 use algebra::serialize::*;
-use crate::type_mapping::FieldElement;
-
 
 /// Defines common interfaces useful to serialize/deserialize structs.
 pub trait SerializationUtils: CanonicalSerialize + CanonicalDeserialize {
@@ -24,4 +22,11 @@ pub trait SerializationUtils: CanonicalSerialize + CanonicalDeserialize {
     }
 }
 
+// Various impls
+use crate::type_mapping::{FieldElement, GingerMHTPath, ScalarFieldElement, Affine, Projective};
+
 impl SerializationUtils for FieldElement {}
+impl SerializationUtils for GingerMHTPath {}
+impl SerializationUtils for ScalarFieldElement {}
+impl SerializationUtils for Affine {}
+impl SerializationUtils for Projective {}

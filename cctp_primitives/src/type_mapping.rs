@@ -1,6 +1,7 @@
 use algebra::{
     fields::tweedle::*,
-    curves::tweedle::*
+    curves::tweedle::*,
+    biginteger::BigInteger256
 };
 use primitives::{
     crh::*,
@@ -14,10 +15,19 @@ use poly_commit::ipa_pc::*;
 use blake2::Blake2s;
 
 // Basic algebraic types
+pub const FIELD_SIZE: usize = 32; //Field size in bytes
+pub const SCALAR_FIELD_SIZE: usize = FIELD_SIZE;
+pub const GROUP_SIZE: usize = 2 * FIELD_SIZE + 1;
+pub const GROUP_COMPRESSED_SIZE: usize = FIELD_SIZE + 1;
+
 pub type FieldElement = Fr;
-pub const FIELD_SIZE: usize = 32;
 pub type G1 = dee::Affine;
 pub type G2 = dum::Affine;
+
+pub type FieldBigInteger = BigInteger256;
+pub type ScalarFieldElement = Fq;
+pub type Affine = dum::Affine;
+pub type Projective = dum::Projective;
 
 // Crypto primitives instantiations
 pub type FieldHash = TweedleFrPoseidonHash;
@@ -46,6 +56,11 @@ pub type Digest = Blake2s;
 pub type IPAPC = InnerProductArgPC<G1, Digest>;
 pub type CommitterKeyG1 = CommitterKey<G1>;
 pub type CommitterKeyG2 = CommitterKey<G2>;
+
+pub enum ProvingSystem {
+    CoboundaryMarlin,
+    Darlin
+}
 
 // Coboundary Marlin instantiations
 pub type CoboundaryMarlin = marlin::Marlin<FieldElement, IPAPC, Digest>;

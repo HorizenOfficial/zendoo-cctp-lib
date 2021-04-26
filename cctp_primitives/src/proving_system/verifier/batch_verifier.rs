@@ -34,12 +34,14 @@ impl ZendooBatchVerifier {
         &mut self,
         id:                         String,
         inputs:                     V::Inputs,
-        proof_and_vk:               RawVerifierData
+        proof_and_vk:               RawVerifierData,
+        check_proof:                bool,
+        check_vk:                   bool,
     ) -> Result<(), ProvingSystemError> {
         let usr_ins = inputs.get_circuit_inputs()?;
 
         // Deserialize and save proof, vk and public inputs
-        let verifier_data = VerifierData::from_raw(proof_and_vk, usr_ins)
+        let verifier_data = VerifierData::from_raw(proof_and_vk, check_proof, check_vk, usr_ins)
             .map_err(|e| ProvingSystemError::Other(format!("{:?}", e)))?;
 
         self.verifier_data.insert(id, verifier_data);
@@ -293,6 +295,8 @@ mod test {
             assert!(TestCircuitVerifier::verify_proof(
                 &usr_ins,
                 verifier_data.clone(),
+                false,
+                false,
                 Some(generation_rng)
             ).unwrap());
 
@@ -305,6 +309,8 @@ mod test {
             let res = TestCircuitVerifier::verify_proof(
                 &wrong_usr_ins,
                 verifier_data,
+                false,
+                false,
                 Some(generation_rng)
             );
             assert!(res.is_err() || !res.unwrap());
@@ -386,7 +392,9 @@ mod test {
             batch_verifier.add_zendoo_proof_verifier_data::<TestCircuitVerifier>(
                 format!("Proof_{}", i),
                 usr_ins,
-                verifier_data
+                verifier_data,
+                false,
+                false,
             ).unwrap();
         }
 

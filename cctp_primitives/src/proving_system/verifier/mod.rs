@@ -1,4 +1,6 @@
-use algebra::SerializationError;
+use algebra::{
+    SerializationError, SemanticallyValid,
+};
 use crate::{
     type_mapping::*,
     proving_system::error::ProvingSystemError,
@@ -34,20 +36,46 @@ pub enum VerifierData {
 impl VerifierData {
     /// Deserialize the content of `RawVerifierData` to get a Self instance
     /// (adding also the `usr_ins`)
-    pub(crate) fn from_raw(
-        raw: RawVerifierData,
-        usr_ins: Vec<FieldElement>
+    pub fn from_raw(
+        raw:            RawVerifierData,
+        check_proof:    bool,
+        check_vk:       bool,
+        usr_ins:        Vec<FieldElement>
     ) -> Result<Self, SerializationError>
     {
         match raw {
+
             RawVerifierData::CoboundaryMarlin { proof, vk } => {
                 let proof = CoboundaryMarlinProof::from_bytes(&proof)?;
                 let vk = CoboundaryMarlinVerifierKey::from_bytes(&vk)?;
+
+                // Check proof if requested
+                if check_proof && !proof.is_valid() {
+                    return Err(SerializationError::InvalidData)
+                }
+
+                // Check vk if requested
+                if check_vk && !vk.is_valid() {
+                    return Err(SerializationError::InvalidData)
+                }
+
                 Ok(VerifierData::CoboundaryMarlin(proof, vk, usr_ins))
             },
+
             RawVerifierData::Darlin { proof, vk } => {
                 let proof = DarlinProof::from_bytes(&proof)?;
                 let vk = DarlinVerifierKey::from_bytes(&vk)?;
+
+                // Check proof if requested
+                if check_proof && !proof.is_valid() {
+                    return Err(SerializationError::InvalidData)
+                }
+
+                // Check vk if requested
+                if check_vk && !vk.is_valid() {
+                    return Err(SerializationError::InvalidData)
+                }
+
                 Ok(VerifierData::Darlin(proof, vk, usr_ins))
             },
         }
@@ -85,13 +113,15 @@ pub trait ZendooVerifier {
     type Inputs: UserInputs;
 
     fn verify_proof<R: RngCore>(
-        inputs:       &Self::Inputs,
-        proof_and_vk: RawVerifierData,
-        rng:          Option<&mut R>,
+        inputs:         &Self::Inputs,
+        proof_and_vk:   RawVerifierData,
+        check_proof:    bool,
+        check_vk:       bool,
+        rng:            Option<&mut R>,
     ) -> Result<bool, ProvingSystemError>
     {
         let usr_ins = inputs.get_circuit_inputs()?;
-        let verifier_data = VerifierData::from_raw(proof_and_vk, usr_ins)
+        let verifier_data = VerifierData::from_raw(proof_and_vk, check_proof, check_vk, usr_ins)
             .map_err(|e| ProvingSystemError::Other(format!("{:?}", e)))?;
         verifier_data.verify(rng)
     }
