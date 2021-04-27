@@ -9,7 +9,7 @@ use primitives::{
 };
 pub use primitives::merkle_tree::tweedle_dee::TWEEDLE_DEE_MHT_POSEIDON_PARAMETERS as GINGER_MHT_POSEIDON_PARAMETERS;
 use proof_systems::darlin::{
-    *, data_structures::*
+    *, data_structures::*, pcd::simple_marlin::MarlinProof
 };
 use poly_commit::ipa_pc::*;
 use blake2::Blake2s;
@@ -64,7 +64,7 @@ pub enum ProvingSystem {
 
 // Coboundary Marlin instantiations
 pub type CoboundaryMarlin = marlin::Marlin<FieldElement, IPAPC, Digest>;
-pub type CoboundaryMarlinProof = marlin::Proof<FieldElement, IPAPC>;
+pub type CoboundaryMarlinProof = MarlinProof<G1, Digest>;
 pub type CoboundaryMarlinProverKey = marlin::ProverKey<FieldElement, IPAPC>;
 pub type CoboundaryMarlinVerifierKey = marlin::VerifierKey<FieldElement, IPAPC>;
 

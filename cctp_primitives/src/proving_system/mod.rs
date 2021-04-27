@@ -21,6 +21,7 @@ use crate::{
 };
 use r1cs_core::ConstraintSynthesizer;
 use rand::RngCore;
+use proof_systems::darlin::pcd::simple_marlin::MarlinProof;
 
 // *************************COBOUNDARY MARLIN********************************
 
@@ -58,7 +59,7 @@ impl ProvingSystemUtils<FieldElement> for CoboundaryMarlin {
             circuit, zk, zk_rng
         ).map_err(|e| ProvingSystemError::ProofCreationFailed(format!("{:?}", e)))?;
 
-        Ok(proof)
+        Ok(MarlinProof(proof))
     }
 
     fn verify_proof<R: RngCore>(
