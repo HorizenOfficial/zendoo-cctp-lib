@@ -7,7 +7,7 @@ use poly_commit::ipa_pc::{CommitterKey, InnerProductArgPC};
 
 use lazy_static::lazy_static;
 
-use std::sync::Mutex;
+use std::sync::RwLock;
 use std::fs::File;
 use std::path::Path;
 use std::io::{
@@ -20,18 +20,18 @@ use blake2::Blake2s;
 use rand::thread_rng;
 
 lazy_static! {
-    static ref G1_COMMITTER_KEY: Mutex<Option<CommitterKey<G1Affine>>> = Mutex::new(None);
+    static ref G1_COMMITTER_KEY: RwLock<Option<CommitterKey<G1Affine>>> = RwLock::new(None);
 }
 
 lazy_static! {
-    static ref G2_COMMITTER_KEY: Mutex<Option<CommitterKey<G2Affine>>> = Mutex::new(None);
+    static ref G2_COMMITTER_KEY: RwLock<Option<CommitterKey<G2Affine>>> = RwLock::new(None);
 }
 
 pub fn load_g1_commiter_key(max_degree: usize, file_path: &str) -> IoResult<()> {
 
     match load_generators::<G1Affine>(max_degree, file_path) {
         Ok(loaded_key) => {
-            G1_COMMITTER_KEY.lock().as_mut().unwrap().replace(loaded_key);
+            G1_COMMITTER_KEY.write().as_mut().unwrap().replace(loaded_key);
             Ok(())
         },
         Err(e) => Err(e)
@@ -42,7 +42,7 @@ pub fn load_g2_commiter_key(max_degree: usize, file_path: &str) -> IoResult<()> 
 
     match load_generators::<G2Affine>(max_degree, file_path) {
         Ok(loaded_key) => {
-            G2_COMMITTER_KEY.lock().as_mut().unwrap().replace(loaded_key);
+            G2_COMMITTER_KEY.write().as_mut().unwrap().replace(loaded_key);
             Ok(())
         },
         Err(e) => Err(e)
@@ -109,7 +109,7 @@ mod test {
 
         load_g1_commiter_key(max_degree, file_path).unwrap();
 
-        let ck = G1_COMMITTER_KEY.lock().unwrap();
+        let ck = G1_COMMITTER_KEY.read().unwrap();
 
         assert!(ck.is_some());
 
@@ -136,7 +136,7 @@ mod test {
 
         load_g2_commiter_key(max_degree, file_path).unwrap();
 
-        let ck = G2_COMMITTER_KEY.lock().unwrap();
+        let ck = G2_COMMITTER_KEY.read().unwrap();
 
         assert!(ck.is_some());
 
