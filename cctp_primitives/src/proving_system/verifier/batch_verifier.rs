@@ -166,6 +166,7 @@ mod test {
     };
     use poly_commit::ipa_pc::UniversalParams;
     use rand::{thread_rng, Rng};
+    use serial_test::serial;
 
     struct TestCircuitInputs {
         c: FieldElement,
@@ -206,7 +207,6 @@ mod test {
             comm_key: committer_key_g1.comm_key.clone(),
             h: committer_key_g1.h.clone(),
             s: committer_key_g1.s.clone(),
-            hash: committer_key_g1.hash.clone()
         };
 
         let g2_ck_path = "./ck_g2";
@@ -219,13 +219,13 @@ mod test {
             comm_key: committer_key_g2.comm_key.clone(),
             h: committer_key_g2.h.clone(),
             s: committer_key_g2.s.clone(),
-            hash: committer_key_g2.hash.clone()
         };
 
         (params_g1, params_g2, max_pow, segment_size, g1_ck_path.to_owned(), g2_ck_path.to_owned())
     }
 
     #[test]
+    #[serial]
     fn random_single_verifier_test() {
 
         let num_proofs = 100;
@@ -322,6 +322,7 @@ mod test {
     }
 
     #[test]
+    #[serial]
     fn random_batch_verifier_test() {
 
         let num_proofs = 100;

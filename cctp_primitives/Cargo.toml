@@ -23,5 +23,8 @@ bit-vec = "0.6"
 bzip2 = "0.4.2"
 flate2 = "1.0.20"
 
+[dev-dependencies]
+serial_test = "*"
+
 [features]
 asm = ["algebra/llvm_asm"]

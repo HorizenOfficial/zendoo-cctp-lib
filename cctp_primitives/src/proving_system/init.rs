@@ -10,7 +10,7 @@ use crate::proving_system::error::ProvingSystemError;
 use lazy_static::lazy_static;
 
 use std::sync::{
-    Mutex, MutexGuard
+    RwLock, RwLockReadGuard
 };
 use std::fs::File;
 use std::path::Path;
@@ -19,14 +19,14 @@ use std::path::Path;
 // To avoid the usage of unsafe code blocks (required when mutating a static variable)
 // we use a lazy_static; however, the lazy_static requires its argument to be thread-safe
 // (even if the variable is accessed in a single-threaded environment): that's why we
-// additionally wrapped the committer key in a Mutex.
+// additionally wrapped the committer key in a RwLock.
 
 lazy_static! {
-    pub static ref G1_COMMITTER_KEY: Mutex<Option<CommitterKeyG1>> = Mutex::new(None);
+    pub static ref G1_COMMITTER_KEY: RwLock<Option<CommitterKeyG1>> = RwLock::new(None);
 }
 
 lazy_static! {
-    pub static ref G2_COMMITTER_KEY: Mutex<Option<CommitterKeyG2>> = Mutex::new(None);
+    pub static ref G2_COMMITTER_KEY: RwLock<Option<CommitterKeyG2>> = RwLock::new(None);
 }
 
 /// Load G1CommitterKey of degree `max_degree` from `file_path` if it exists, otherwise create it,
@@ -36,7 +36,7 @@ pub fn load_g1_committer_key(max_degree: usize, file_path: &str) -> Result<(), S
     match load_generators::<G1>(max_degree, file_path) {
         // Generation/Loading successfull, assign the key to the lazy_static
         Ok(loaded_key) => {
-            G1_COMMITTER_KEY.lock().as_mut().unwrap().replace(loaded_key);
+            G1_COMMITTER_KEY.write().as_mut().unwrap().replace(loaded_key);
             Ok(())
         },
         // Error while generating/reading file/writing file
@@ -51,7 +51,7 @@ pub fn load_g2_committer_key(max_degree: usize, file_path: &str) -> Result<(), S
     match load_generators::<G2>(max_degree, file_path) {
         // Generation/Loading successfull, assign the key to the lazy_static
         Ok(loaded_key) => {
-            G2_COMMITTER_KEY.lock().as_mut().unwrap().replace(loaded_key);
+            G2_COMMITTER_KEY.write().as_mut().unwrap().replace(loaded_key);
             Ok(())
         },
         // Error while generating/reading file/writing file
@@ -59,10 +59,10 @@ pub fn load_g2_committer_key(max_degree: usize, file_path: &str) -> Result<(), S
     }
 }
 
-/// Return a MutexGuard containing the G1CommitterKey, if G1CommitterKey has been initialized,
+/// Return a RwLockGuard containing the G1CommitterKey, if G1CommitterKey has been initialized,
 /// otherwise return Error.
-pub fn get_g1_committer_key<'a>() -> Result<MutexGuard<'a, Option<CommitterKeyG1>>, ProvingSystemError> {
-    let ck_g1_guard = G1_COMMITTER_KEY.lock().unwrap();
+pub fn get_g1_committer_key<'a>() -> Result<RwLockReadGuard<'a, Option<CommitterKeyG1>>, ProvingSystemError> {
+    let ck_g1_guard = G1_COMMITTER_KEY.read().unwrap();
     if ck_g1_guard.is_some() {
         Ok(ck_g1_guard)
     } else {
@@ -70,10 +70,10 @@ pub fn get_g1_committer_key<'a>() -> Result<MutexGuard<'a, Option<CommitterKeyG1
     }
 }
 
-/// Return a MutexGuard containing the G2CommitterKey, if G2CommitterKey has been initialized,
+/// Return a RwLockGuard containing the G2CommitterKey, if G2CommitterKey has been initialized,
 /// otherwise return Error.
-pub fn get_g2_committer_key<'a>() -> Result<MutexGuard<'a, Option<CommitterKeyG2>>, ProvingSystemError> {
-    let ck_g1_guard = G2_COMMITTER_KEY.lock().unwrap();
+pub fn get_g2_committer_key<'a>() -> Result<RwLockReadGuard<'a, Option<CommitterKeyG2>>, ProvingSystemError> {
+    let ck_g1_guard = G2_COMMITTER_KEY.read().unwrap();
     if ck_g1_guard.is_some() {
         Ok(ck_g1_guard)
     } else {
@@ -116,8 +116,10 @@ mod test {
     use poly_commit::PolynomialCommitment;
 
     use std::fs::{File, remove_file};
+    use serial_test::serial;
 
     #[test]
+    #[serial]
     fn check_load_g1_committer_key() {
         let max_degree = 1 << 10;
         let file_path = "sample_pk_g1";
@@ -130,7 +132,7 @@ mod test {
 
         load_g1_committer_key(max_degree, file_path).unwrap();
 
-        let ck = G1_COMMITTER_KEY.lock().unwrap();
+        let ck = get_g1_committer_key().unwrap();
 
         assert!(ck.is_some());
 
@@ -145,6 +147,7 @@ mod test {
     }
 
     #[test]
+    #[serial]
     fn check_load_g2_committer_key() {
         let max_degree = 1 << 10;
         let file_path = "sample_pk_g2";
@@ -157,7 +160,7 @@ mod test {
 
         load_g2_committer_key(max_degree, file_path).unwrap();
 
-        let ck = G2_COMMITTER_KEY.lock().unwrap();
+        let ck = get_g2_committer_key().unwrap();
 
         assert!(ck.is_some());
 
