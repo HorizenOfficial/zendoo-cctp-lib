@@ -73,7 +73,10 @@ pub fn hash_bytes(bytes: Vec<u8>) -> Result<FieldElement, Error> {
 
 // Converts byte-array into a sequence of FieldElements
 pub fn bytes_to_field_elements<T: ToBytes>(bytes: Vec<T>) -> Result<Vec<FieldElement>, Error> {
-    primitives::bytes_to_bits(&to_bytes!(bytes)?).to_field_elements()
+    let mut bits = primitives::bytes_to_bits(&to_bytes!(bytes)?);
+    // byte serialization is in little endian, but bit serialization is in big endian: we need to reverse.
+    bits.reverse();
+    bits.to_field_elements()
 }
 
 //--------------------------------------------------------------------------------------------------
