@@ -1,19 +1,20 @@
 use algebra::ToConstraintField;
-use crate::commitment_tree::FieldElement;
+use crate::commitment_tree::{FieldElement, FieldElementsMT};
 use crate::commitment_tree::utils::{hash_vec, Error};
 use primitives::bytes_to_bits;
 use byteorder;
 use byteorder::{WriteBytesExt, BigEndian};
 
 // Computes FieldElement-based hash on the given Forward Transfer Transaction data
-pub fn hash_fwt(amount: i64,
-                pub_key: &[u8],
-                tx_hash: &[u8],
+pub fn hash_fwt(amount: u64,
+                pub_key: &[u8; 32],
+                tx_hash: &[u8; 32],
                 out_idx: u32)
     -> Result<FieldElement, Error> {
+    // ceil(256 + 256 + 96/254) = ceil(608/254) = 3 fes
     let mut bytes = Vec::<u8>::new();
 
-    bytes.write_i64::<BigEndian>(amount)?;
+    bytes.write_u64::<BigEndian>(amount)?;
     bytes.extend(&pub_key.to_vec());
     bytes.extend(&tx_hash.to_vec());
     bytes.write_u32::<BigEndian>(out_idx)?;
@@ -22,56 +23,107 @@ pub fn hash_fwt(amount: i64,
 }
 
 // Computes FieldElement-based hash on the given Backward Transfer Request Transaction data
-pub fn hash_bwtr(sc_fee:  i64,
-                 sc_request_data: &[u8],
-                 pk_hash: &[u8],
-                 tx_hash: &[u8],
+pub fn hash_bwtr(sc_fee:  u64,
+                 sc_request_data: &[FieldElement], // We are sure that these are field elements
+                 mc_destination_address: &[u8; 20],
+                 tx_hash: &[u8; 32],
                  out_idx: u32)
     -> Result<FieldElement, Error> {
+    // ceil(256 + 160 + 96/254) = ceil(512/254) = 3 fes
     let mut bytes = Vec::<u8>::new();
-
-    bytes.write_i64::<BigEndian>(sc_fee)?;
-    bytes.extend(&sc_request_data.to_vec());
-    bytes.extend(&pk_hash.to_vec());
+    bytes.write_u64::<BigEndian>(sc_fee)?;
+    bytes.extend(&mc_destination_address.to_vec());
     bytes.extend(&tx_hash.to_vec());
     bytes.write_u32::<BigEndian>(out_idx)?;
+    let mut fes = bytes.to_field_elements()?;
 
-    hash_bytes(&bytes)
+    // These are already field elements
+    fes.extend_from_slice(sc_request_data_fes);
+
+    compute_constant_length_poseidon_hash(fes.len(), fes)
 }
 
-// Computes FieldElement-based hash on the given Certificate data
-pub fn hash_cert(epoch_number: u32,
-                 quality: u64,
-                 cert_data_hash: &[u8],
-                 bt_list: &[(i64,[u8; 20])],
-                 custom_fields_merkle_root: &[u8],
-                 end_cumulative_sc_tx_commitment_tree_root: &[u8])
-    -> Result<FieldElement, Error> {
-    let mut bytes = Vec::<u8>::new();
+pub fn get_cert_data_hash(
+    constant: FieldElement,
+    epoch_number: u32,
+    quality: u64,
+    bt_list: &[(u64,[u8; 20])],
+    custom_fields: &[FieldElement], //aka proof_data - includes custom_field_elements and bit_vectors merkle roots
+    end_cumulative_sc_tx_commitment_tree_root: &[FieldElement],
+    btr_fee: u64,
+    ft_min_fee: u64
+) -> Result<FieldElement, Error>
+{
+    fees_field_element = pack(btr_fee, ft_min_fee);
+    sys_cert_data_hash = hash(epoch_number, quality, fees_field_element, merkle_root(bt_list));
+
+    custom_fields_data_hash = hash(custom_fields);
+
+    //constant and custom_fields can be optional and then not part of the cert_data_hash
+    hash(constant, sys_cert_data_hash, custom_fields_data_hash)
+
+    /*let mut bytes = Vec::<u8>::new();
 
     bytes.write_u32::<BigEndian>(epoch_number)?;
     bytes.write_u64::<BigEndian>(quality)?;
     bytes.extend(&cert_data_hash.to_vec());
-    bytes.extend(&bt_list_to_bytes(bt_list)?);
+    bytes.extend(&bt_list_to_bytes(bt_list)?); // TODO: We need to hash the merkle root not the whole list
     bytes.extend(&custom_fields_merkle_root.to_vec());
     bytes.extend(&end_cumulative_sc_tx_commitment_tree_root.to_vec());
 
-    hash_bytes(&bytes)
+    hash_bytes(&bytes)*/
+}
+
+// Computes FieldElement-based hash on the given Certificate data
+//TODO: Maybe we will put additional data ? I hope not :)
+pub fn hash_cert(
+    constant: FieldElement,
+    epoch_number: u32,
+    quality: u64,
+    bt_list: &[(u64,[u8; 20])],
+    custom_fields: &[FieldElement], //includes custom_field_elements and bit_vectors merkle roots
+    end_cumulative_sc_tx_commitment_tree_root: &[FieldElement],
+    btr_fee: u64,
+    ft_min_fee: u64
+) -> Result<FieldElement, Error> {
+    get_cert_data_hash(...)
 }
 
 // Computes FieldElement-based hash on the given Sidechain Creation Transaction data
-pub fn hash_scc(amount: i64,
-                pub_key: &[u8],
+pub fn hash_scc(amount: u64,
+                pub_key: &[u8;32],
+                tx_hash: &[u8;32],
+                out_idx: u32,
+
                 withdrawal_epoch_length: u32,
-                custom_data: &[u8],
-                constant: Option<&[u8]>,
-                cert_verification_key: &[u8],
-                btr_verification_key: Option<&[u8]>,
-                csw_verification_key: Option<&[u8]>,
-                tx_hash: &[u8],
-                out_idx: u32)
+                cert_proving_system: u8,
+                csw_proving_system: u8,
+                mc_btr_request_data_length: u8,
+
+                custom_field_elements_configs: &[u8],
+                custom_bitvector_elements_configs: &[(u32,u32)],
+
+                btr_fee: u64,
+                ft_min_fee: u64,
+
+                custom_creation_data_hash: FieldElement, //verify if it's enough to add to the comm_tree just the Poseidonhash of the custom_creation_data (Oleksandr)
+                constant: Option<FieldElement>,
+                cert_verification_key_hash: FieldElement,
+                csw_verification_key_hash: Option<FieldElement>
+
+)
     -> Result<FieldElement, Error> {
-    let mut bytes = Vec::<u8>::new();
+
+    let tx_fes = pack(amount, pub_key, tx_hash, out_idx);
+    let sc_base_conf_fes= pack(withdrawal_epoch_length, cert_proving_system, csw_proving_system, mc_btr_request_data_length);
+
+    let custom_config_hash = hash(custom_field_elements_configs, custom_bitvector_elements_configs);
+
+    let fees_fes = pack(btr_fee, ft_min_fee);
+
+    hash(tx_fes, sc_base_conf_fes, custom_config_hash, fees_fes, custom_creation_data_hash, constant, cert_verification_key_hash, csw_verification_key_hash);
+
+   /* let mut bytes = Vec::<u8>::new();
 
     bytes.write_i64::<BigEndian>(amount)?;
     bytes.extend(&pub_key.to_vec());
@@ -90,23 +142,26 @@ pub fn hash_scc(amount: i64,
     bytes.extend(&tx_hash.to_vec());
     bytes.write_u32::<BigEndian>(out_idx)?;
 
-    hash_bytes(&bytes)
+    hash_bytes(&bytes)*/
 }
 
 // Computes FieldElement-based hash on the given Ceased Sidechain Withdrawal data
-pub fn hash_csw(amount: i64,
-                nullifier: &[u8],
-                pk_hash: &[u8],
-                active_cert_data_hash: &[u8])
+pub fn hash_csw(amount: u64,
+                nullifier: FieldElement,
+                pk_hash: &[u8;20],
+                )
     -> Result<FieldElement, Error> {
-    let mut bytes = Vec::<u8>::new();
+    hash(pack(amount, pk_hash), nullifier);
+    //TODO verify with Oleksandr if we need to add the redeemScript (signature?)
+
+    /*let mut bytes = Vec::<u8>::new();
 
     bytes.write_i64::<BigEndian>(amount)?;
     bytes.extend(&nullifier.to_vec());
     bytes.extend(&pk_hash.to_vec());
     bytes.extend(&active_cert_data_hash.to_vec());
 
-    hash_bytes(&bytes)
+    hash_bytes(&bytes)*/
 }
 
 // Converts list of BTs to byte-array
