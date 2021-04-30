@@ -1,8 +1,8 @@
 use crate::commitment_tree::sidechain_tree_alive::SidechainTreeAlive;
 use crate::commitment_tree::sidechain_tree_ceased::SidechainTreeCeased;
 use crate::commitment_tree::{FieldElement, MerklePath};
-use crate::commitment_tree::utils::{mpath_to_bytes, mpath_from_bytes, fe_to_bytes, fe_from_bytes, write_value, read_value, write_empty_value, Error};
-use std::io::Cursor;
+use std::io::{Read, Write, Result as IoResult};
+use algebra::{ToBytes, FromBytes};
 
 //--------------------------------------------------------------------------------------------------
 #[derive(PartialEq, Debug)]
@@ -13,46 +13,50 @@ struct ScAliveCommitmentData {
     scc: FieldElement
 }
 
-impl ScAliveCommitmentData {
-    fn to_bytes(&self) -> Vec<u8> {
-        let mut bytes = Vec::<u8>::new();
-        write_value(&mut bytes, &fe_to_bytes(&self.fwt_mr));
-        write_value(&mut bytes, &fe_to_bytes(&self.bwtr_mr));
-        write_value(&mut bytes, &fe_to_bytes(&self.cert_mr));
-        write_value(&mut bytes, &fe_to_bytes(&self.scc));
-        bytes
-    }
-
-    fn from_bytes(bytes: &[u8]) -> Result<Self, Error>{
-        let mut stream = Cursor::new(bytes);
-        Ok(
-            Self{
-                fwt_mr:  fe_from_bytes(read_value(&mut stream)?.as_slice())?,
-                bwtr_mr: fe_from_bytes(read_value(&mut stream)?.as_slice())?,
-                cert_mr: fe_from_bytes(read_value(&mut stream)?.as_slice())?,
-                scc:     fe_from_bytes(read_value(&mut stream)?.as_slice())?
-            }
-        )
+impl ToBytes for ScAliveCommitmentData {
+    fn write<W: Write>(&self, mut writer: W) -> IoResult<()>
+    {
+        self.fwt_mr.write(&mut writer)?;
+        self.bwtr_mr.write(&mut writer)?;
+        self.cert_mr.write(&mut writer)?;
+        self.scc.write(writer)
     }
 }
+
+impl FromBytes for ScAliveCommitmentData {
+    fn read<R: Read>(mut reader: R) -> IoResult<Self> {
+        let fwt_mr = FieldElement::read(&mut reader)?;
+        let bwtr_mr = FieldElement::read(&mut reader)?;
+        let cert_mr = FieldElement::read(&mut reader)?;
+        let scc = FieldElement::read(reader)?;
+
+        Ok(Self {
+            fwt_mr,
+            bwtr_mr,
+            cert_mr,
+            scc
+        })
+    }
+}
+
 //--------------------------------------------------------------------------------------------------
 #[derive(PartialEq, Debug)]
 struct ScCeasedCommitmentData {
     csw_mr: FieldElement
 }
 
-impl ScCeasedCommitmentData {
-    fn to_bytes(&self) -> Vec<u8> {
-        // Not using LV-encoding here due to here is just a single FieldElement value
-        fe_to_bytes(&self.csw_mr)
+impl ToBytes for ScCeasedCommitmentData {
+    fn write<W: Write>(&self, writer: W) -> IoResult<()>
+    {
+        self.csw_mr.write(writer)
     }
+}
 
-    fn from_bytes(bytes: &[u8]) -> Result<Self, Error>{
-        Ok(
-            Self{
-                csw_mr: fe_from_bytes(bytes)?
-            }
-        )
+impl FromBytes for ScCeasedCommitmentData {
+    fn read<R: Read>(reader: R) -> IoResult<Self> {
+        let csw_mr = FieldElement::read(reader)?;
+
+        Ok(Self { csw_mr })
     }
 }
 //--------------------------------------------------------------------------------------------------
@@ -93,40 +97,25 @@ impl ScCommitmentData {
             None // there is no data for commitment building
         }
     }
+}
 
-    fn to_bytes(&self) -> Vec<u8> {
-        let mut bytes = Vec::<u8>::new();
-        if let Some(sc_alive) = self.sc_alive.as_ref(){
-            write_value(&mut bytes, &sc_alive.to_bytes());
-        } else {
-            write_empty_value(&mut bytes);
-        }
-        if let Some(sc_ceased) = self.sc_ceased.as_ref(){
-            write_value(&mut bytes, &sc_ceased.to_bytes());
-        } else {
-            write_empty_value(&mut bytes);
-        }
-        bytes
-    }
-
-    fn from_bytes(bytes: &[u8]) -> Result<Self, Error>{
-        let mut stream = Cursor::new(bytes);
-        Ok(
-            Self{
-                sc_alive: if let Ok(sc_alive_bytes) = read_value(&mut stream){
-                    Some(ScAliveCommitmentData::from_bytes(&sc_alive_bytes)?)
-                } else {
-                    None
-                },
-                sc_ceased: if let Ok(sc_ceased_bytes) = read_value(&mut stream){
-                    Some(ScCeasedCommitmentData::from_bytes(&sc_ceased_bytes)?)
-                } else {
-                    None
-                }
-            }
-        )
+impl ToBytes for ScCommitmentData {
+    fn write<W: Write>(&self, mut writer: W) -> IoResult<()>
+    {
+        self.sc_alive.write(&mut writer)?;
+        self.sc_ceased.write(&mut writer)
     }
 }
+
+impl FromBytes for ScCommitmentData {
+    fn read<R: Read>(mut reader: R) -> IoResult<Self> {
+        let sc_alive = Option::<ScAliveCommitmentData>::read(&mut reader)?;
+        let sc_ceased = Option::<ScCeasedCommitmentData>::read(reader)?;
+
+        Ok(Self { sc_alive, sc_ceased })
+    }
+}
+
 //--------------------------------------------------------------------------------------------------
 #[derive(PartialEq, Debug)]
 pub struct ScNeighbour{
@@ -140,26 +129,27 @@ impl ScNeighbour {
                          mpath:   MerklePath,
                          sc_data: ScCommitmentData) -> Self { Self{id, mpath, sc_data} }
 
-    fn to_bytes(&self) -> Vec<u8> {
-        let mut bytes = Vec::<u8>::new();
-        write_value(&mut bytes, &fe_to_bytes(&self.id));
-        write_value(&mut bytes, &mpath_to_bytes(&self.mpath));
-        write_value(&mut bytes, &self.sc_data.to_bytes());
-        bytes
-    }
-
-    fn from_bytes(bytes: &[u8]) -> Result<Self, Error>{
-        let mut stream = Cursor::new(bytes);
-        Ok(
-            Self{
-                id: fe_from_bytes(read_value(&mut stream)?.as_slice())?,
-                mpath: mpath_from_bytes(read_value(&mut stream)?.as_slice())?,
-                sc_data: ScCommitmentData::from_bytes(read_value(&mut stream)?.as_slice())?
-            }
-        )
-    }
-
 }
+
+impl ToBytes for ScNeighbour {
+    fn write<W: Write>(&self, mut writer: W) -> IoResult<()>
+    {
+        self.id.write(&mut writer)?;
+        self.mpath.write(&mut writer)?;
+        self.sc_data.write(writer)
+    }
+}
+
+impl FromBytes for ScNeighbour {
+    fn read<R: Read>(mut reader: R) -> IoResult<Self> {
+        let id = FieldElement::read(&mut reader)?;
+        let mpath = MerklePath::read(&mut reader)?;
+        let sc_data = ScCommitmentData::read(&mut reader)?;
+
+        Ok(Self { id, mpath, sc_data })
+    }
+}
+
 //--------------------------------------------------------------------------------------------------
 // Proof of absence of some Sidechain-ID inside of a CommitmentTree
 // Contains 0 or 1 or 2 neighbours of an absent ID
@@ -173,38 +163,22 @@ impl ScAbsenceProof {
     pub(crate) fn create(left:  Option<ScNeighbour>, right: Option<ScNeighbour>) -> Self {
         Self{left, right}
     }
+}
 
-    pub fn to_bytes(&self) -> Vec<u8> {
-        let mut bytes = Vec::<u8>::new();
-        if let Some(left) = self.left.as_ref(){
-            write_value(&mut bytes, &left.to_bytes());
-        } else {
-            write_empty_value(&mut bytes);
-        }
-        if let Some(right) = self.right.as_ref(){
-            write_value(&mut bytes, &right.to_bytes());
-        } else {
-            write_empty_value(&mut bytes);
-        }
-        bytes
+impl ToBytes for ScAbsenceProof {
+    fn write<W: Write>(&self, mut writer: W) -> IoResult<()>
+    {
+        self.left.write(&mut writer)?;
+        self.right.write(&mut writer)
     }
+}
 
-    pub fn from_bytes(bytes: &[u8]) -> Result<Self, Error>{
-        let mut stream = Cursor::new(bytes);
-        Ok(
-            Self{
-                left: if let Ok(left_bytes) = read_value(&mut stream){
-                    Some(ScNeighbour::from_bytes(&left_bytes)?)
-                } else {
-                    None
-                },
-                right: if let Ok(right_bytes) = read_value(&mut stream){
-                    Some(ScNeighbour::from_bytes(&right_bytes)?)
-                } else {
-                    None
-                }
-            }
-        )
+impl FromBytes for ScAbsenceProof {
+    fn read<R: Read>(mut reader: R) -> IoResult<Self> {
+        let left = Option::<ScNeighbour>::read(&mut reader)?;
+        let right = Option::<ScNeighbour>::read(reader)?;
+
+        Ok(Self { left, right })
     }
 }
 //--------------------------------------------------------------------------------------------------
@@ -217,29 +191,32 @@ pub struct ScExistenceProof{
 
 impl ScExistenceProof {
     pub(crate) fn create(mpath: MerklePath) -> Self {
-        Self{mpath}
-    }
-
-    pub fn to_bytes(&self) -> Vec<u8> {
-        // Not using LV-encoding here due to here is just a single MerklePath value
-        mpath_to_bytes(&self.mpath)
-    }
-
-    pub fn from_bytes(bytes: &[u8]) -> Result<Self, Error> {
-        if let Ok(mpath) = mpath_from_bytes(bytes){
-            Ok(Self::create(mpath))
-        } else {
-            Err("Couldn't parse the input bytes".into())
-        }
+        Self{ mpath }
     }
 }
+
+impl ToBytes for ScExistenceProof {
+    fn write<W: Write>(&self, mut writer: W) -> IoResult<()>
+    {
+        self.mpath.write(&mut writer)
+    }
+}
+
+impl FromBytes for ScExistenceProof {
+    fn read<R: Read>(mut reader: R) -> IoResult<Self> {
+        let mpath = MerklePath::read(&mut reader)?;
+
+        Ok(Self { mpath })
+    }
+}
+
 //--------------------------------------------------------------------------------------------------
 
 #[cfg(test)]
 mod test {
     use crate::commitment_tree::proofs::{ScAliveCommitmentData, ScCeasedCommitmentData, ScCommitmentData, ScNeighbour};
     use crate::commitment_tree::{FieldElement, CMT_MT_HEIGHT};
-    use algebra::UniformRand;
+    use algebra::{ToBytes, to_bytes, FromBytes, UniformRand};
     use crate::commitment_tree::utils::new_mt;
     use primitives::FieldBasedMerkleTree;
 
@@ -255,7 +232,7 @@ mod test {
             cert_mr: FieldElement::rand(&mut rng),
             scc: FieldElement::rand(&mut rng)
         };
-        let data_result = ScAliveCommitmentData::from_bytes(&data_initial.to_bytes());
+        let data_result = ScAliveCommitmentData::read(to_bytes!(data_initial).unwrap().as_slice());
 
         assert!(data_result.is_ok());
         assert_eq!(&data_initial, data_result.as_ref().unwrap());
@@ -268,7 +245,7 @@ mod test {
         let data_initial = ScCeasedCommitmentData{
             csw_mr: FieldElement::rand(&mut rng)
         };
-        let data_result = ScCeasedCommitmentData::from_bytes(&data_initial.to_bytes());
+        let data_result = ScCeasedCommitmentData::read(to_bytes!(data_initial).unwrap().as_slice());
 
         assert!(data_result.is_ok());
         assert_eq!(&data_initial, data_result.as_ref().unwrap());
@@ -284,7 +261,7 @@ mod test {
             FieldElement::rand(&mut rng),
             FieldElement::rand(&mut rng)
         );
-        let data_result_alive = ScCommitmentData::from_bytes(&data_initial_alive.to_bytes());
+        let data_result_alive = ScCommitmentData::read(to_bytes!(data_initial_alive).unwrap().as_slice());
 
         assert!(data_result_alive.is_ok());
         assert_eq!(&data_initial_alive, data_result_alive.as_ref().unwrap());
@@ -292,7 +269,7 @@ mod test {
         let data_initial_ceased = ScCommitmentData::create_ceased(
             FieldElement::rand(&mut rng)
         );
-        let data_result_ceased = ScCommitmentData::from_bytes(&data_initial_ceased.to_bytes());
+        let data_result_ceased = ScCommitmentData::read(to_bytes!(data_initial_ceased).unwrap().as_slice());
 
         assert!(data_result_ceased.is_ok());
         assert_eq!(&data_initial_ceased, data_result_ceased.as_ref().unwrap());
@@ -312,7 +289,7 @@ mod test {
         );
 
         let scn_initial = ScNeighbour::create(id, mpath, sc_data);
-        let scn_result = ScNeighbour::from_bytes(&scn_initial.to_bytes());
+        let scn_result = ScNeighbour::read(to_bytes!(scn_initial).unwrap().as_slice());
 
         assert!(scn_result.is_ok());
         assert_eq!(&scn_initial, scn_result.as_ref().unwrap());

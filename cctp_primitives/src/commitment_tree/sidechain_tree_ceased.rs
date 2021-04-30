@@ -50,7 +50,7 @@ impl SidechainTreeCeased{
     // Builds commitment for SidechainTreeCeased as: hash( csw_root | SC_ID )
     pub fn build_commitment(sc_id: FieldElement,
                             csw_mr: FieldElement) -> FieldElement {
-        hash_vec(&vec![csw_mr, sc_id])
+        hash_vec(vec![csw_mr, sc_id])
     }
 }
 

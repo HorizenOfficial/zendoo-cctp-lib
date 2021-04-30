@@ -5,10 +5,8 @@ authors = [""]
 edition = "2018"
 
 [dependencies]
-algebra = {version = "0.1.0", git = "https://github.com/HorizenOfficial/ginger-lib.git", branch = "algebra_ocl"}
-primitives = {version = "0.1.0", features = ["merkle_tree", "tweedle"], git = "https://github.com/HorizenOfficial/ginger-lib.git", branch = "algebra_ocl"}
-#algebra = { path = "../../ginger-lib/algebra" }
-#primitives = { path = "../../ginger-lib/primitives", features = ["merkle_tree", "tweedle"] }
+algebra = {version = "0.1.0", git = "https://github.com/HorizenOfficial/ginger-lib.git", branch = "algebra_ocl_serializations"}
+primitives = {version = "0.1.0", features = ["merkle_tree", "tweedle"], git = "https://github.com/HorizenOfficial/ginger-lib.git", branch = "algebra_ocl_serializations"}
 rand = { version = "0.7" }
 byteorder = "1.4.2"
 
