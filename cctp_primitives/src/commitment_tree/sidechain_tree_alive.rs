@@ -1,6 +1,6 @@
 use algebra::Field;
-use crate::type_mapping::{FieldElement, GingerMHT};
-use crate::utils::commitment_tree::{pow2, new_mt, add_leaf, Error, hash_vec_constant_length};
+use crate::type_mapping::{FieldElement, GingerMHT, Error};
+use crate::utils::commitment_tree::{pow2, new_mt, add_leaf, hash_vec};
 use std::borrow::BorrowMut;
 use primitives::FieldBasedMerkleTree;
 
@@ -117,7 +117,7 @@ impl SidechainTreeAlive {
                             bwtr_mr: FieldElement,
                             cert_mr: FieldElement,
                             scc: FieldElement) -> FieldElement {
-        hash_vec_constant_length(&vec![fwt_mr, bwtr_mr, cert_mr, scc, sc_id], 5).unwrap()
+        hash_vec(vec![fwt_mr, bwtr_mr, cert_mr, scc, sc_id]).unwrap()
     }
 }
 

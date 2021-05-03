@@ -1,5 +1,5 @@
-use crate::type_mapping::{FieldElement, GingerMHT};
-use crate::utils::commitment_tree::{pow2, new_mt, add_leaf, Error, hash_vec_constant_length};
+use crate::type_mapping::{FieldElement, GingerMHT, Error};
+use crate::utils::commitment_tree::{pow2, new_mt, add_leaf, hash_vec};
 use std::borrow::BorrowMut;
 use primitives::FieldBasedMerkleTree;
 
@@ -50,7 +50,7 @@ impl SidechainTreeCeased {
     // Builds commitment for SidechainTreeCeased as: hash( csw_root | SC_ID )
     pub fn build_commitment(sc_id: FieldElement,
                             csw_mr: FieldElement) -> FieldElement {
-        hash_vec_constant_length(&vec![csw_mr, sc_id], 2).unwrap()
+        hash_vec(vec![csw_mr, sc_id]).unwrap()
     }
 }
 

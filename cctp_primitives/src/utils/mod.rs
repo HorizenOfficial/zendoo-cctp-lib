@@ -1,9 +1,12 @@
-use algebra::{ToBytes, ToConstraintField};
+use algebra::ToBytes;
 use crate::{
-    utils::serialization::SerializationUtils,
-    type_mapping::{FieldElement, GINGER_MHT_POSEIDON_PARAMETERS, GingerMHT, Error, FIELD_SIZE, FieldHash}
+    utils::{
+        serialization::SerializationUtils,
+        commitment_tree::{bytes_to_field_elements, hash_vec},
+    },
+    type_mapping::{FieldElement, GINGER_MHT_POSEIDON_PARAMETERS, GingerMHT, Error, FIELD_SIZE}
 };
-use primitives::{FieldBasedHash, FieldBasedMerkleTree};
+use primitives::FieldBasedMerkleTree;
 
 pub mod commitment_tree;
 pub mod debug;
@@ -32,60 +35,68 @@ pub fn get_bt_merkle_root(bt_list: Vec<FieldElement>) -> Result<FieldElement, Er
     _get_root_from_field_vec(bt_list, 12)
 }
 
-/// Compute H(epoch_number, curr_cumulative_sc_tx_comm_tree_root, MR(bt_list), quality, H(custom_fields))
-pub fn get_wcert_sysdata_hash(
-    curr_cumulative_sc_tx_comm_tree_root: &[u8; FIELD_SIZE],
-    custom_fields:                        &[[u8; FIELD_SIZE]],
-    epoch_number:                         u32,
-    bt_list:                              &[(u64,[u8; 20])],
-    quality:                              u64,
+/// Compute H(
+pub fn get_cert_data_hash(
+    constant: Option<&[u8; FIELD_SIZE]>,
+    epoch_number: u32,
+    quality: u64,
+    bt_list: &[(u64, [u8; 20])],
+    custom_fields: Option<&[[u8; FIELD_SIZE]]>, //aka proof_data - includes custom_field_elements and bit_vectors merkle roots
+    end_cumulative_sc_tx_commitment_tree_root: &[u8; FIELD_SIZE],
+    btr_fee: u64,
+    ft_min_fee: u64
 ) -> Result<FieldElement, Error>
 {
-    // Deserialize epoch number
+    // Pack btr_fee and ft_min_fee into a single field element
+    let fees_field_elements = {
+        let fes = bytes_to_field_elements(vec![btr_fee, ft_min_fee])?;
+        assert_eq!(fes.len(), 1);
+        fes[0]
+    };
+
+    // Pack epoch_number and quality into separate field elements (for simplicity of treatment in
+    // the circuit)
     let epoch_number_fe = FieldElement::from(epoch_number);
-
-    // Deserialize curr_cumulative_sc_tx_comm_tree_root
-    let curr_cumulative_sc_tx_comm_tree_root_fe = FieldElement::from_bytes(curr_cumulative_sc_tx_comm_tree_root)?;
-
-    // Deserialize Backward Transfers and compute bt root
-    let mut bt_fes_vec = Vec::with_capacity(bt_list.len());
-    for bt in bt_list.iter() {
-        let mut buffer = vec![];
-        bt.0.write(&mut buffer)?;
-        bt.1.write(&mut buffer)?;
-        bt_fes_vec.append(&mut buffer.to_field_elements().unwrap())
-    }
-    let bt_root = get_bt_merkle_root(bt_fes_vec)?;
-
-    // Deserialize quality as field element
     let quality_fe = FieldElement::from(quality);
 
-    // Deserialize custom fields hash
-    let custom_field_hash_fe = {
-
-        let mut custom_fields_digest = FieldHash::init_constant_length(
-            custom_fields.len(), None
-        );
-
-        for custom_field in custom_fields.iter() {
-            let custom_field_fe = FieldElement::from_bytes(custom_field)?;
-            custom_fields_digest.update(custom_field_fe);
+    // Compute bt_list merkle root
+    let bt_root = {
+        let mut buffer = Vec::new();
+        for (amount, pk) in bt_list.iter() {
+            amount.write(&mut buffer)?;
+            pk.write(&mut buffer)?;
         }
-
-        custom_fields_digest.finalize()
+        get_bt_merkle_root(bytes_to_field_elements(buffer)?)
     }?;
 
-    // Compute WCertSysDataHash
-    let wcert_sysdata_hash = {
-        let mut digest = FieldHash::init_constant_length(5, None);
-        digest
-            .update(epoch_number_fe)
-            .update(curr_cumulative_sc_tx_comm_tree_root_fe)
-            .update(bt_root)
-            .update(quality_fe)
-            .update(custom_field_hash_fe)
-            .finalize()
-    }?;
+    // Read end_cumulative_sc_tx_commitment_tree_root as field element
+    let end_cumulative_sc_tx_commitment_tree_root_fe = FieldElement::from_bytes(&end_cumulative_sc_tx_commitment_tree_root[..])?;
 
-    Ok(wcert_sysdata_hash)
+    // Compute cert sysdata hash
+    let cert_sysdata_hash = hash_vec(
+        vec![epoch_number_fe, bt_root, quality_fe, end_cumulative_sc_tx_commitment_tree_root_fe, fees_field_elements]
+    )?;
+
+    // Final field elements to hash
+    let mut fes = Vec::new();
+
+    // Read constant (if present) as FieldElement and add it to fes
+    if constant.is_some() {
+        fes.push(FieldElement::from_bytes(&constant.unwrap()[..])?)
+    }
+
+    // Compute linear hash of custom fields (if present) and add the digest to fes
+    if custom_fields.is_some() {
+        let custom_fes = custom_fields
+            .unwrap()
+            .iter()
+            .map(|custom_field_bytes| FieldElement::from_bytes(&custom_field_bytes[..]))
+            .collect::<Result<Vec<_>, _>>()?;
+        fes.push(hash_vec(custom_fes)?)
+    }
+
+    // Put cert_sysdata_hash
+    fes.push(cert_sysdata_hash);
+
+    hash_vec(fes)
 }

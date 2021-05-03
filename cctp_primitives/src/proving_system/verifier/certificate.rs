@@ -1,45 +1,32 @@
 use crate::{
-    type_mapping::{FIELD_SIZE, FieldElement, FieldHash},
+    type_mapping::{FIELD_SIZE, FieldElement},
     proving_system::{
         verifier::{UserInputs, ZendooVerifier},
         error::ProvingSystemError,
     },
-    utils::serialization::SerializationUtils
 };
-use primitives::FieldBasedHash;
-use crate::utils::get_wcert_sysdata_hash;
+use crate::utils::get_cert_data_hash;
 
 /// All the data needed to reconstruct the aggregated input for the NaiveThresholdSignatureCircuit
 /// included in the Certificate.
 pub struct CertificateProofUserInputs<'a> {
-    curr_cumulative_sc_tx_comm_tree_root: &'a [u8; FIELD_SIZE],
-    custom_fields:                        &'a [[u8; FIELD_SIZE]],
-    epoch_number:                         u32,
-    bt_list:                              &'a [(u64,[u8; 20])],
-    quality:                              u64,
-    constant:                             &'a [u8; FIELD_SIZE],
+    constant:                                   Option<&'a [u8; FIELD_SIZE]>,
+    epoch_number:                               u32,
+    quality:                                    u64,
+    bt_list:                                    &'a [(u64,[u8; 20])],
+    custom_fields:                              Option<&'a [[u8; FIELD_SIZE]]>,
+    end_cumulative_sc_tx_commitment_tree_root:  &'a [u8; FIELD_SIZE],
+    btr_fee:                                    u64,
+    ft_min_fee:                                 u64
 }
 
 impl UserInputs for CertificateProofUserInputs<'_> {
     fn get_circuit_inputs(&self) -> Result<Vec<FieldElement>, ProvingSystemError> {
 
-        let wcert_sysdata_hash = get_wcert_sysdata_hash(
-            self.curr_cumulative_sc_tx_comm_tree_root, self.custom_fields,
-            self.epoch_number, self.bt_list, self.quality
+        let aggregated_input = get_cert_data_hash(
+            self.constant, self.epoch_number, self.quality, self.bt_list, self.custom_fields,
+            self.end_cumulative_sc_tx_commitment_tree_root, self.btr_fee, self.ft_min_fee
         ).map_err(|e| ProvingSystemError::Other(format!("{:?}", e)))?;
-
-        // Compute aggregated input
-        let aggregated_input = {
-            let mut digest = FieldHash::init_constant_length(2, None);
-            digest
-                .update(
-                FieldElement::from_bytes(self.constant)
-                    .map_err(|e| ProvingSystemError::Other(format!("{:?}", e)))?
-                )
-                .update(wcert_sysdata_hash)
-                .finalize()
-                .unwrap()
-        };
 
         Ok(vec![aggregated_input])
     }

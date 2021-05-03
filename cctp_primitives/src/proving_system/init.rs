@@ -62,7 +62,8 @@ pub fn load_g2_committer_key(max_degree: usize, file_path: &str) -> Result<(), S
 /// Return a RwLockGuard containing the G1CommitterKey, if G1CommitterKey has been initialized,
 /// otherwise return Error.
 pub fn get_g1_committer_key<'a>() -> Result<RwLockReadGuard<'a, Option<CommitterKeyG1>>, ProvingSystemError> {
-    let ck_g1_guard = G1_COMMITTER_KEY.read().unwrap();
+    let ck_g1_guard = G1_COMMITTER_KEY.read()
+        .map_err(|_| ProvingSystemError::Other("Failed to acquire lock for G1 Committer Key".to_owned()))?;
     if ck_g1_guard.is_some() {
         Ok(ck_g1_guard)
     } else {
@@ -73,9 +74,10 @@ pub fn get_g1_committer_key<'a>() -> Result<RwLockReadGuard<'a, Option<Committer
 /// Return a RwLockGuard containing the G2CommitterKey, if G2CommitterKey has been initialized,
 /// otherwise return Error.
 pub fn get_g2_committer_key<'a>() -> Result<RwLockReadGuard<'a, Option<CommitterKeyG2>>, ProvingSystemError> {
-    let ck_g1_guard = G2_COMMITTER_KEY.read().unwrap();
-    if ck_g1_guard.is_some() {
-        Ok(ck_g1_guard)
+    let ck_g2_guard = G2_COMMITTER_KEY.read()
+        .map_err(|_| ProvingSystemError::Other("Failed to acquire lock for G2 Committer Key".to_owned()))?;
+    if ck_g2_guard.is_some() {
+        Ok(ck_g2_guard)
     } else {
         Err(ProvingSystemError::CommitterKeyNotInitialized)
     }

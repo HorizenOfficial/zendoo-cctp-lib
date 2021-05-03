@@ -5,7 +5,7 @@ authors = [""]
 edition = "2018"
 
 [dependencies]
-algebra = { git = "https://github.com/HorizenOfficial/ginger-lib", branch = "import_canonical_serialize_deserialize", features = ["parallel", "tweedle"] }
+algebra = { git = "https://github.com/HorizenOfficial/ginger-lib", branch = "import_canonical_serialize_deserialize", features = ["parallel", "tweedle", "derive"] }
 bench-utils = { git = "https://github.com/HorizenOfficial/ginger-lib.git", branch = "import_canonical_serialize_deserialize" }
 primitives = { git = "https://github.com/HorizenOfficial/ginger-lib.git", branch = "import_canonical_serialize_deserialize", features = ["merkle_tree", "tweedle"]}
 proof-systems = { git = "https://github.com/HorizenOfficial/ginger-lib.git", branch = "import_canonical_serialize_deserialize", features = ["darlin"]}
