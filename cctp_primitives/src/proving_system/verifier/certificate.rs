@@ -10,14 +10,14 @@ use crate::utils::get_cert_data_hash;
 /// All the data needed to reconstruct the aggregated input for the NaiveThresholdSignatureCircuit
 /// included in the Certificate.
 pub struct CertificateProofUserInputs<'a> {
-    constant:                                   Option<&'a [u8; FIELD_SIZE]>,
-    epoch_number:                               u32,
-    quality:                                    u64,
-    bt_list:                                    &'a [(u64,[u8; 20])],
-    custom_fields:                              Option<&'a [[u8; FIELD_SIZE]]>,
-    end_cumulative_sc_tx_commitment_tree_root:  &'a [u8; FIELD_SIZE],
-    btr_fee:                                    u64,
-    ft_min_fee:                                 u64
+    pub constant:                                   Option<&'a [u8; FIELD_SIZE]>,
+    pub epoch_number:                               u32,
+    pub quality:                                    u64,
+    pub bt_list:                                    &'a [(u64,[u8; 20])],
+    pub custom_fields:                              Option<&'a [[u8; FIELD_SIZE]]>,
+    pub end_cumulative_sc_tx_commitment_tree_root:  &'a [u8; FIELD_SIZE],
+    pub btr_fee:                                    u64,
+    pub ft_min_fee:                                 u64
 }
 
 impl UserInputs for CertificateProofUserInputs<'_> {
