@@ -30,9 +30,14 @@ fn _get_root_from_field_vec(field_vec: Vec<FieldElement>, height: usize) -> Resu
 }
 
 /// Get the Merkle Root of a Binary Merkle Tree of height 12 built from the Backward Transfer list
-pub fn get_bt_merkle_root(bt_list: Vec<FieldElement>) -> Result<FieldElement, Error>
+pub fn get_bt_merkle_root(bt_list: &[(u64, [u8; 20])]) -> Result<FieldElement, Error>
 {
-    _get_root_from_field_vec(bt_list, 12)
+    let mut buffer = Vec::new();
+    for (amount, pk) in bt_list.iter() {
+        amount.write(&mut buffer)?;
+        pk.write(&mut buffer)?;
+    }
+    _get_root_from_field_vec(bytes_to_field_elements(buffer)?, 12)
 }
 
 /// Compute H(
@@ -60,14 +65,7 @@ pub fn get_cert_data_hash(
     let quality_fe = FieldElement::from(quality);
 
     // Compute bt_list merkle root
-    let bt_root = {
-        let mut buffer = Vec::new();
-        for (amount, pk) in bt_list.iter() {
-            amount.write(&mut buffer)?;
-            pk.write(&mut buffer)?;
-        }
-        get_bt_merkle_root(bytes_to_field_elements(buffer)?)
-    }?;
+    let bt_root = get_bt_merkle_root(bt_list)?;
 
     // Read end_cumulative_sc_tx_commitment_tree_root as field element
     let end_cumulative_sc_tx_commitment_tree_root_fe = FieldElement::from_bytes(&end_cumulative_sc_tx_commitment_tree_root[..])?;
