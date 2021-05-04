@@ -1,12 +1,12 @@
 use algebra::ToBytes;
 use crate::{
     utils::{
-        serialization::SerializationUtils,
         commitment_tree::{bytes_to_field_elements, hash_vec},
     },
     type_mapping::{FieldElement, GINGER_MHT_POSEIDON_PARAMETERS, GingerMHT, Error, FIELD_SIZE, MC_PK_SIZE}
 };
 use primitives::FieldBasedMerkleTree;
+use crate::utils::serialization::deserialize_from_buffer;
 
 pub mod commitment_tree;
 pub mod debug;
@@ -68,7 +68,7 @@ pub fn get_cert_data_hash(
     let bt_root = get_bt_merkle_root(bt_list)?;
 
     // Read end_cumulative_sc_tx_commitment_tree_root as field element
-    let end_cumulative_sc_tx_commitment_tree_root_fe = FieldElement::from_bytes(&end_cumulative_sc_tx_commitment_tree_root[..])?;
+    let end_cumulative_sc_tx_commitment_tree_root_fe = deserialize_from_buffer::<FieldElement>(&end_cumulative_sc_tx_commitment_tree_root[..])?;
 
     // Compute cert sysdata hash
     let cert_sysdata_hash = hash_vec(
@@ -80,7 +80,7 @@ pub fn get_cert_data_hash(
 
     // Read constant (if present) as FieldElement and add it to fes
     if constant.is_some() {
-        fes.push(FieldElement::from_bytes(&constant.unwrap()[..])?)
+        fes.push(deserialize_from_buffer::<FieldElement>(&constant.unwrap()[..])?)
     }
 
     // Compute linear hash of custom fields (if present) and add the digest to fes
@@ -88,7 +88,7 @@ pub fn get_cert_data_hash(
         let custom_fes = custom_fields
             .unwrap()
             .iter()
-            .map(|custom_field_bytes| FieldElement::from_bytes(&custom_field_bytes[..]))
+            .map(|custom_field_bytes| deserialize_from_buffer::<FieldElement>(&custom_field_bytes[..]))
             .collect::<Result<Vec<_>, _>>()?;
         fes.push(hash_vec(custom_fes)?)
     }

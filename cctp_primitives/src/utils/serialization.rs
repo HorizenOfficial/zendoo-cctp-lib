@@ -1,32 +1,51 @@
-use algebra::serialize::*;
+use algebra::{serialize::*, SemanticallyValid};
+use std::fs::File;
 
-/// Defines common interfaces useful to serialize/deserialize structs.
-pub trait SerializationUtils: CanonicalSerialize + CanonicalDeserialize {
+// Common functions useful to serialize/deserialize structs
 
-    /// Returns the serialized byte size of `self`.
-    fn get_size(&self) -> usize {
-        self.serialized_size()
-    }
-
-    /// Serialize `self` to a byte array, returning a `SerializationError` if the operation fails.
-    fn as_bytes(&self) -> Result<Vec<u8>, SerializationError> {
-        let mut buffer = Vec::with_capacity(self.get_size());
-        CanonicalSerialize::serialize(self, &mut buffer)?;
-        Ok(buffer)
-    }
-
-    /// Attempts to deserialize a Self instance from `bytes`, returning a `SerializationError`
-    /// if the operation fails.
-    fn from_bytes(bytes: &[u8]) -> Result<Self, SerializationError> {
-        CanonicalDeserialize::deserialize(bytes)
-    }
+pub fn deserialize_from_buffer<T: CanonicalDeserialize>(buffer: &[u8]) ->  Result<T, SerializationError>
+{
+    T::deserialize(buffer)
 }
 
-// Various impls
-use crate::type_mapping::{FieldElement, GingerMHTPath, ScalarFieldElement, Affine, Projective};
+pub fn deserialize_from_buffer_checked<T: CanonicalDeserialize + SemanticallyValid>(buffer: &[u8]) ->  Result<T, SerializationError>
+{
+    let elem = deserialize_from_buffer::<T>(buffer)?;
+    if !elem.is_valid() {
+        return Err(SerializationError::InvalidData)
+    }
+    Ok(elem)
+}
 
-impl SerializationUtils for FieldElement {}
-impl SerializationUtils for GingerMHTPath {}
-impl SerializationUtils for ScalarFieldElement {}
-impl SerializationUtils for Affine {}
-impl SerializationUtils for Projective {}
+pub fn serialize_to_buffer<T: CanonicalSerialize>(to_write: &T) -> Result<Vec<u8>, SerializationError> {
+    let mut buffer = Vec::with_capacity(to_write.serialized_size());
+    CanonicalSerialize::serialize(to_write, &mut buffer)?;
+    Ok(buffer)
+}
+
+pub fn read_from_file<T: CanonicalDeserialize>(file_path: &str) -> Result<T, SerializationError> {
+    let fs = File::open(file_path)
+        .map_err(|e| SerializationError::IoError(e))?;
+    T::deserialize(fs)
+}
+
+pub fn read_from_file_checked<T: CanonicalDeserialize + SemanticallyValid>(file_path: &str) -> Result<T, SerializationError>
+{
+    let elem = read_from_file::<T>(file_path)?;
+    if !elem.is_valid() {
+        return Err(SerializationError::InvalidData)
+    }
+    Ok(elem)
+}
+
+pub fn write_to_file<T: CanonicalSerialize>(to_write: &T, file_path: &str) -> Result<(), SerializationError>
+{
+    let mut fs = File::create(file_path)
+        .map_err(|e| SerializationError::IoError(e))?;
+    CanonicalSerialize::serialize(to_write, &mut fs)?;
+    Ok(())
+}
+
+pub fn is_valid<T: SemanticallyValid>(to_check: &T) -> bool {
+    T::is_valid(to_check)
+}

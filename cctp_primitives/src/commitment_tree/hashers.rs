@@ -1,9 +1,9 @@
 use algebra::ToBytes;
 use crate::utils::{
-    serialization::SerializationUtils,
     commitment_tree::*, get_cert_data_hash
 };
 use crate::type_mapping::*;
+use crate::utils::serialization::deserialize_from_buffer;
 
 // Computes FieldElement-based hash on the given Forward Transfer Transaction data
 pub fn hash_fwt(
@@ -43,7 +43,7 @@ pub fn hash_bwtr(
 
     // sc_request_data elements MUST BE field elements
     for fe in sc_request_data.iter() {
-        fes.push(FieldElement::from_bytes(&fe[..])?);
+        fes.push(deserialize_from_buffer::<FieldElement>(&fe[..])?);
     }
 
     hash_vec(fes)
@@ -139,13 +139,15 @@ pub fn hash_scc(
     fes.append(&mut bytes_to_field_elements(vec![btr_fee, ft_min_fee])?);
 
     // Read the other data as field elements if present and push it to fes
-    fes.push(FieldElement::from_bytes(&custom_creation_data_hash[..])?);
+    fes.push(deserialize_from_buffer::<FieldElement>(&custom_creation_data_hash[..])?);
 
-    if constant.is_some() { fes.push(FieldElement::from_bytes(&constant.unwrap()[..])?); }
+    if constant.is_some() { fes.push(deserialize_from_buffer::<FieldElement>(&constant.unwrap()[..])?); }
 
-    fes.push(FieldElement::from_bytes(&cert_verification_key_hash[..])?);
+    fes.push(deserialize_from_buffer::<FieldElement>(&cert_verification_key_hash[..])?);
 
-    if csw_verification_key_hash.is_some() { fes.push(FieldElement::from_bytes(&csw_verification_key_hash.unwrap()[..])?); }
+    if csw_verification_key_hash.is_some() {
+        fes.push(deserialize_from_buffer::<FieldElement>(&csw_verification_key_hash.unwrap()[..])?);
+    }
 
     // Compute final hash
     hash_vec(fes)
@@ -170,7 +172,7 @@ pub fn hash_csw(
     fes.append(&mut bytes_to_field_elements(buffer)?);
 
     // Push the nullifier to fes
-    fes.push(FieldElement::from_bytes(&nullifier[..])?);
+    fes.push(deserialize_from_buffer::<FieldElement>(&nullifier[..])?);
 
     // Return final hash
     hash_vec(fes)

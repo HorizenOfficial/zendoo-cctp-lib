@@ -14,20 +14,13 @@ use crate::{
         },
         error::ProvingSystemError,
     },
-    utils::{
-        serialization::SerializationUtils,
-        proof_system::ProvingSystemUtils,
-    },
+    utils::proof_system::ProvingSystemUtils,
 };
 use r1cs_core::ConstraintSynthesizer;
 use rand::RngCore;
 use proof_systems::darlin::pcd::simple_marlin::MarlinProof;
 
 // *************************COBOUNDARY MARLIN********************************
-
-impl SerializationUtils for CoboundaryMarlinProof {}
-impl SerializationUtils for CoboundaryMarlinProverKey {}
-impl SerializationUtils for CoboundaryMarlinVerifierKey {}
 
 impl ProvingSystemUtils<FieldElement> for CoboundaryMarlin {
     type Proof = CoboundaryMarlinProof;
@@ -81,7 +74,6 @@ impl ProvingSystemUtils<FieldElement> for CoboundaryMarlin {
 }
 
 // *************************(FINAL) DARLIN********************************
-impl SerializationUtils for DarlinProof {}
 
 impl ProvingSystemUtils<FieldElement> for Darlin<'_> {
     type Proof = DarlinProof;

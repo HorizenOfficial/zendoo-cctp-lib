@@ -162,7 +162,7 @@ mod test {
             verifier::{UserInputs, ZendooVerifier, RawVerifierData},
         },
         type_mapping::{FieldElement, G1, G2},
-        utils::serialization::SerializationUtils
+        utils::serialization::serialize_to_buffer
     };
     use poly_commit::ipa_pc::UniversalParams;
     use rand::{thread_rng, Rng};
@@ -259,8 +259,8 @@ mod test {
                 );
                 (
                     RawVerifierData::CoboundaryMarlin {
-                        proof: iteration_pcds[0].proof.as_bytes().unwrap(),
-                        vk:  iteration_vks[0].as_bytes().unwrap()
+                        proof: serialize_to_buffer::<CoboundaryMarlinProof>(&iteration_pcds[0].proof).unwrap(),
+                        vk:  serialize_to_buffer::<CoboundaryMarlinVerifierKey>(&iteration_vks[0]).unwrap()
                     },
                     TestCircuitInputs {
                         c: iteration_pcds[0].usr_ins[0],
@@ -281,8 +281,8 @@ mod test {
 
                 (
                     RawVerifierData::Darlin {
-                        proof: iteration_pcds[0].final_darlin_proof.as_bytes().unwrap(),
-                        vk:  iteration_vks[0].as_bytes().unwrap()
+                        proof: serialize_to_buffer::<DarlinProof>(&iteration_pcds[0].final_darlin_proof).unwrap(),
+                        vk:  serialize_to_buffer::<DarlinVerifierKey>(&iteration_vks[0]).unwrap()
                     },
                     TestCircuitInputs {
                         c: iteration_pcds[0].usr_ins[0],
@@ -358,8 +358,8 @@ mod test {
                 );
                 (
                     RawVerifierData::CoboundaryMarlin {
-                        proof: iteration_pcds[0].proof.as_bytes().unwrap(),
-                        vk:  iteration_vks[0].as_bytes().unwrap()
+                        proof: serialize_to_buffer::<CoboundaryMarlinProof>(&iteration_pcds[0].proof).unwrap(),
+                        vk:  serialize_to_buffer::<CoboundaryMarlinVerifierKey>(&iteration_vks[0]).unwrap()
                     },
                     TestCircuitInputs {
                         c: iteration_pcds[0].usr_ins[0],
@@ -380,8 +380,8 @@ mod test {
 
                 (
                     RawVerifierData::Darlin {
-                        proof: iteration_pcds[0].final_darlin_proof.as_bytes().unwrap(),
-                        vk:  iteration_vks[0].as_bytes().unwrap()
+                        proof: serialize_to_buffer::<DarlinProof>(&iteration_pcds[0].final_darlin_proof).unwrap(),
+                        vk:  serialize_to_buffer::<DarlinVerifierKey>(&iteration_vks[0]).unwrap()
                     },
                     TestCircuitInputs {
                         c: iteration_pcds[0].usr_ins[0],

@@ -2,7 +2,6 @@ use crate::commitment_tree::sidechain_tree_alive::SidechainTreeAlive;
 use crate::commitment_tree::sidechain_tree_ceased::SidechainTreeCeased;
 use crate::type_mapping::{FieldElement, GingerMHTPath};
 use algebra::serialize::*;
-use crate::utils::serialization::SerializationUtils;
 
 //--------------------------------------------------------------------------------------------------
 #[derive(PartialEq, Debug, CanonicalSerialize, CanonicalDeserialize)]
@@ -13,15 +12,11 @@ struct ScAliveCommitmentData {
     scc: FieldElement
 }
 
-impl SerializationUtils for ScAliveCommitmentData {}
-
 //--------------------------------------------------------------------------------------------------
 #[derive(PartialEq, Debug, CanonicalSerialize, CanonicalDeserialize)]
 struct ScCeasedCommitmentData {
     csw_mr: FieldElement
 }
-
-impl SerializationUtils for ScCeasedCommitmentData {}
 
 //--------------------------------------------------------------------------------------------------
 #[derive(PartialEq, Debug, CanonicalSerialize, CanonicalDeserialize)]
@@ -63,8 +58,6 @@ impl ScCommitmentData {
     }
 }
 
-impl SerializationUtils for ScCommitmentData {}
-
 //--------------------------------------------------------------------------------------------------
 #[derive(PartialEq, Debug, CanonicalSerialize, CanonicalDeserialize)]
 pub struct ScNeighbour{
@@ -79,8 +72,6 @@ impl ScNeighbour {
                          sc_data: ScCommitmentData) -> Self { Self{id, mpath, sc_data} }
 
 }
-
-impl SerializationUtils for ScNeighbour {}
 
 //--------------------------------------------------------------------------------------------------
 // Proof of absence of some Sidechain-ID inside of a CommitmentTree
@@ -97,8 +88,6 @@ impl ScAbsenceProof {
     }
 }
 
-impl SerializationUtils for ScAbsenceProof {}
-
 //--------------------------------------------------------------------------------------------------
 // Proof of existence of some SidechainTreeAlive/SidechainTreeCeased inside of a CommitmentTree;
 // Actually this is a Merkle Path of SidechainTreeAlive/SidechainTreeCeased inside of a CommitmentTree
@@ -113,8 +102,6 @@ impl ScExistenceProof {
     }
 }
 
-impl SerializationUtils for ScExistenceProof {}
-
 //--------------------------------------------------------------------------------------------------
 
 #[cfg(test)]
@@ -122,7 +109,7 @@ mod test {
     use crate::commitment_tree::proofs::{ScAliveCommitmentData, ScCeasedCommitmentData, ScCommitmentData, ScNeighbour};
     use crate::commitment_tree::CMT_MT_HEIGHT;
     use crate::utils::{
-        commitment_tree::new_mt, serialization::SerializationUtils
+        commitment_tree::new_mt, serialization::{deserialize_from_buffer, serialize_to_buffer}
     };
     use crate::type_mapping::FieldElement;
     use algebra::UniformRand;
@@ -140,7 +127,7 @@ mod test {
             cert_mr: FieldElement::rand(&mut rng),
             scc: FieldElement::rand(&mut rng)
         };
-        let data_result = ScAliveCommitmentData::from_bytes(data_initial.as_bytes().unwrap().as_slice());
+        let data_result = deserialize_from_buffer(serialize_to_buffer(&data_initial).unwrap().as_slice());
 
         assert!(data_result.is_ok());
         assert_eq!(&data_initial, data_result.as_ref().unwrap());
@@ -153,7 +140,7 @@ mod test {
         let data_initial = ScCeasedCommitmentData{
             csw_mr: FieldElement::rand(&mut rng)
         };
-        let data_result = ScCeasedCommitmentData::from_bytes(data_initial.as_bytes().unwrap().as_slice());
+        let data_result = deserialize_from_buffer(serialize_to_buffer(&data_initial).unwrap().as_slice());
 
         assert!(data_result.is_ok());
         assert_eq!(&data_initial, data_result.as_ref().unwrap());
@@ -169,7 +156,7 @@ mod test {
             FieldElement::rand(&mut rng),
             FieldElement::rand(&mut rng)
         );
-        let data_result_alive = ScCommitmentData::from_bytes(data_initial_alive.as_bytes().unwrap().as_slice());
+        let data_result_alive = deserialize_from_buffer(serialize_to_buffer(&data_initial_alive).unwrap().as_slice());
 
         assert!(data_result_alive.is_ok());
         assert_eq!(&data_initial_alive, data_result_alive.as_ref().unwrap());
@@ -177,7 +164,7 @@ mod test {
         let data_initial_ceased = ScCommitmentData::create_ceased(
             FieldElement::rand(&mut rng)
         );
-        let data_result_ceased = ScCommitmentData::from_bytes(data_initial_ceased.as_bytes().unwrap().as_slice());
+        let data_result_ceased = deserialize_from_buffer(serialize_to_buffer(&data_initial_ceased).unwrap().as_slice());
 
         assert!(data_result_ceased.is_ok());
         assert_eq!(&data_initial_ceased, data_result_ceased.as_ref().unwrap());
@@ -197,7 +184,7 @@ mod test {
         );
 
         let scn_initial = ScNeighbour::create(id, mpath, sc_data);
-        let scn_result = ScNeighbour::from_bytes(scn_initial.as_bytes().unwrap().as_slice());
+        let scn_result = deserialize_from_buffer(serialize_to_buffer(&scn_initial).unwrap().as_slice());
 
         assert!(scn_result.is_ok());
         assert_eq!(&scn_initial, scn_result.as_ref().unwrap());

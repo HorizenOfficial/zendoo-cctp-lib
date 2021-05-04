@@ -1,16 +1,13 @@
-use algebra::Field;
-use crate::{
-    proving_system::error::ProvingSystemError,
-    utils::serialization::SerializationUtils
-};
+use algebra::{serialize::*, Field};
+use crate::proving_system::error::ProvingSystemError;
 use r1cs_core::ConstraintSynthesizer;
 use rand::RngCore;
 
 /// Defines common interfaces for calling the prover/verifier of a given proving system
 pub trait ProvingSystemUtils<F: Field> {
-    type Proof: SerializationUtils;
-    type ProverKey: SerializationUtils;
-    type VerifierKey: SerializationUtils;
+    type Proof: CanonicalSerialize + CanonicalDeserialize;
+    type ProverKey: CanonicalSerialize + CanonicalDeserialize;
+    type VerifierKey: CanonicalSerialize + CanonicalDeserialize;
 
     /// Create the proving key and verification key, for the implementer's proving system,
     /// for a specific R1CS circuit `circuit`.

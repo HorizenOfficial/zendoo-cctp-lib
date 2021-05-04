@@ -4,12 +4,10 @@ use algebra::{
 use crate::{
     type_mapping::*,
     proving_system::error::ProvingSystemError,
-    utils::{
-        serialization::SerializationUtils,
-        proof_system::ProvingSystemUtils,
-    },
+    utils::proof_system::ProvingSystemUtils,
 };
 use rand::RngCore;
+use crate::utils::serialization::deserialize_from_buffer;
 
 pub mod certificate;
 // To be defined
@@ -46,8 +44,8 @@ impl VerifierData {
         match raw {
 
             RawVerifierData::CoboundaryMarlin { proof, vk } => {
-                let proof = CoboundaryMarlinProof::from_bytes(&proof)?;
-                let vk = CoboundaryMarlinVerifierKey::from_bytes(&vk)?;
+                let proof: CoboundaryMarlinProof = deserialize_from_buffer(&proof)?;
+                let vk: CoboundaryMarlinVerifierKey = deserialize_from_buffer(&vk)?;
 
                 // Check proof if requested
                 if check_proof && !proof.is_valid() {
@@ -63,8 +61,8 @@ impl VerifierData {
             },
 
             RawVerifierData::Darlin { proof, vk } => {
-                let proof = DarlinProof::from_bytes(&proof)?;
-                let vk = DarlinVerifierKey::from_bytes(&vk)?;
+                let proof: DarlinProof = deserialize_from_buffer(&proof)?;
+                let vk: DarlinVerifierKey = deserialize_from_buffer(&vk)?;
 
                 // Check proof if requested
                 if check_proof && !proof.is_valid() {

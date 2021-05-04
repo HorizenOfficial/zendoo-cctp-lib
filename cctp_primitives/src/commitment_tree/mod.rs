@@ -247,7 +247,7 @@ impl CommitmentTree {
     // Gets commitment of a specified SidechainTreeAlive/SidechainTreeCeased
     // Returns None if SidechainTreeAlive/SidechainTreeCeased with a specified ID doesn't exist in a current CommitmentTree
     pub fn get_sc_commitment(&mut self, sc_id_bytes: &[u8]) -> Option<FieldElement> {
-        self.get_sc_commitment_internal(&FieldElement::from_bytes(sc_id_bytes).ok()?)
+        self.get_sc_commitment_internal(&deserialize_from_buffer::<FieldElement>(sc_id_bytes).ok()?)
     }
 
     // Gets commitment for a CommitmentTree
@@ -265,7 +265,7 @@ impl CommitmentTree {
     // Returns None if sidechain with a specified ID is absent in a current CommitmentTree,
     //              if get_commitments_tree or get_merkle_path returned None
     pub fn get_sc_existence_proof(&mut self, sc_id_bytes: &[u8]) -> Option<ScExistenceProof> {
-        let sc_id = FieldElement::from_bytes(sc_id_bytes).ok()?;
+        let sc_id = deserialize_from_buffer::<FieldElement>(sc_id_bytes).ok()?;
         if let Some(index) = self.sc_id_to_index(&sc_id){
             if let Some(tree) = self.get_commitments_tree(){
                 Some(
@@ -286,7 +286,7 @@ impl CommitmentTree {
     //              if absent_id is not really absent,
     //              if some internal error occurred
     pub fn get_sc_absence_proof(&mut self, absent_id_bytes: &[u8]) -> Option<ScAbsenceProof> {
-        let absent_id = FieldElement::from_bytes(absent_id_bytes).ok()?;
+        let absent_id = deserialize_from_buffer::<FieldElement>(absent_id_bytes).ok()?;
         let (left, right) = self.get_neighbours_for_absent(&absent_id)?;
         let tree = self.get_commitments_tree()?.finalize();
 
@@ -326,7 +326,7 @@ impl CommitmentTree {
     // Returns true if proof is correct, false otherwise
     pub fn verify_sc_absence(absent_id_bytes: &[u8], proof: &ScAbsenceProof, commitment: &FieldElement) -> bool {
         // Parsing bytes of absent_id as FieldElement
-        if let Ok(absent_id) = FieldElement::from_bytes(absent_id_bytes){
+        if let Ok(absent_id) = deserialize_from_buffer::<FieldElement>(absent_id_bytes){
             // Checking if left and right neighbours are present
             if let (Some(left), Some(right)) = (
                 proof.left.as_ref(), proof.right.as_ref()
@@ -479,7 +479,7 @@ impl CommitmentTree {
     // Adds leaf to a subtree of a specified type in a specified SidechainTreeAlive
     // Returns false if there is SidechainTreeCeased with the same ID or if get_sct_mut couldn't get SidechainTreeAlive with a specified ID
     fn scta_add_subtree_leaf(&mut self, sc_id_bytes: &[u8], leaf: &FieldElement, subtree_type: SidechainAliveSubtreeType) -> bool {
-        if let Ok(sc_id) = FieldElement::from_bytes(sc_id_bytes){
+        if let Ok(sc_id) = deserialize_from_buffer::<FieldElement>(sc_id_bytes){
             if !self.is_present_sctc(&sc_id) { // there shouldn't be SCTC with the same ID
                 if let Some(sct) = self.get_add_scta_mut(&sc_id){
                     let result = match subtree_type {
@@ -505,7 +505,7 @@ impl CommitmentTree {
     // Adds leaf to a CSW-subtree of a specified SidechainTreeCeased
     // Returns false if there is SidechainTreeAlive with the same ID or if get_sctc_mut couldn't get SidechainTreeCeased with a specified ID
     fn sctc_add_subtree_leaf(&mut self, sc_id_bytes: &[u8], leaf: &FieldElement) -> bool {
-        if let Ok(sc_id) = FieldElement::from_bytes(sc_id_bytes){
+        if let Ok(sc_id) = deserialize_from_buffer::<FieldElement>(sc_id_bytes){
             if !self.is_present_scta(&sc_id) { // there shouldn't be SCTA with the same ID
                 if let Some(sctc) = self.get_add_sctc_mut(&sc_id){
                     let result = sctc.add_csw(leaf);
@@ -526,7 +526,7 @@ impl CommitmentTree {
     // Gets commitment i.e. root of a subtree of a specified type in a specified SidechainTreeAlive
     // Returns None if get_sctc couldn't get SidechainTreeCeased with a specified ID
     fn scta_get_subtree_commitment(&mut self, sc_id_bytes: &[u8], subtree_type: SidechainAliveSubtreeType) -> Option<FieldElement> {
-        let sc_id = FieldElement::from_bytes(sc_id_bytes).ok()?;
+        let sc_id = deserialize_from_buffer::<FieldElement>(sc_id_bytes).ok()?;
         if let Some(sc_tree) = self.get_scta_mut(&sc_id){
             Some(
                 match subtree_type {
@@ -544,7 +544,7 @@ impl CommitmentTree {
     // Gets commitment i.e. root of a subtree of a specified type in a specified SidechainTreeCeased
     // Returns None if get_sctc couldn't get SidechainTreeCeased with a specified ID
     fn sctc_get_subtree_commitment(&mut self, sc_id_bytes: &[u8]) -> Option<FieldElement> {
-        let sc_id = FieldElement::from_bytes(sc_id_bytes).ok()?;
+        let sc_id = deserialize_from_buffer::<FieldElement>(sc_id_bytes).ok()?;
         if let Some(sctc) = self.get_sctc_mut(&sc_id){
             Some(sctc.get_csw_commitment())
         } else {
@@ -555,7 +555,7 @@ impl CommitmentTree {
     // Gets all leaves of a subtree of a specified type in a specified SidechainTreeAlive
     // Returns None if there is no SidechainTreeAlive with a specified ID
     fn scta_get_subtree_leaves(&mut self, sc_id_bytes: &[u8], subtree_type: SidechainAliveSubtreeType) -> Option<Vec<FieldElement>> {
-        let sc_id = FieldElement::from_bytes(sc_id_bytes).ok()?;
+        let sc_id = deserialize_from_buffer::<FieldElement>(sc_id_bytes).ok()?;
         if let Some(sc_tree) = self.get_scta_mut(&sc_id){
             Some(
                 match subtree_type {
@@ -699,13 +699,11 @@ mod test {
     use crate::type_mapping::*;
     use crate::utils::{
         commitment_tree::{rand_vec, rand_fe, rand_fe_vec},
-        serialization::SerializationUtils,
+        serialization::{serialize_to_buffer, deserialize_from_buffer}
     };
     use rand::Rng;
     use std::convert::{TryFrom, TryInto};
-    use crate::commitment_tree::{
-        proofs::{ScExistenceProof, ScAbsenceProof}, CommitmentTree,
-    };
+    use crate::commitment_tree::CommitmentTree;
 
     // Creates a sequence of FieldElements with values [0, 1, 2, 3, 4]
     fn get_fe_0_4() -> Vec<FieldElement>{
@@ -722,8 +720,8 @@ mod test {
         let mut cmt = CommitmentTree::create();
         let fe = get_fe_0_4();
         // Initial order of IDs is reversed, i.e. vec![3, 2, 1, 0] to test SCIDs-ordering functionality
-        let sc_ids: Vec<Vec<u8>> = fe.iter().take(4).rev().map(|fe| fe.as_bytes().unwrap()).collect();
-        let non_existing_sc_id = fe[4].as_bytes().unwrap();
+        let sc_ids: Vec<Vec<u8>> = fe.iter().take(4).rev().map(|fe| serialize_to_buffer(fe).unwrap()).collect();
+        let non_existing_sc_id = serialize_to_buffer(&fe[4]).unwrap();
 
         // Initial commitment_tree value of an empty CMT
         let empty_comm = cmt.get_commitment().unwrap();
@@ -803,8 +801,8 @@ mod test {
 
         // Serializing and deserializing the generated existence proof
         let existence_proof_deserialized =
-            ScExistenceProof::from_bytes(
-                existence_proof.as_ref().unwrap().as_bytes().unwrap().as_slice()
+            deserialize_from_buffer(
+                serialize_to_buffer(existence_proof.as_ref().unwrap()).unwrap().as_slice()
             );
         assert!(existence_proof_deserialized.is_ok());
         assert_eq!(existence_proof.as_ref().unwrap(), existence_proof_deserialized.as_ref().unwrap());
@@ -818,7 +816,7 @@ mod test {
 
     #[test]
     fn sc_absence_proofs_tests(){
-        let sc_id: Vec<Vec<u8>> = get_fe_0_4().iter().map(|fe| fe.as_bytes().unwrap()).collect();
+        let sc_id: Vec<Vec<u8>> = get_fe_0_4().iter().map(|fe| serialize_to_buffer(fe).unwrap()).collect();
         let leaf = FieldElement::one();
 
         let mut cmt = CommitmentTree::create();
@@ -832,8 +830,8 @@ mod test {
 
         // Serializing and deserializing the generated proof
         let proof_empty_deserialized =
-            ScAbsenceProof::from_bytes(
-                proof_empty.as_ref().unwrap().as_bytes().unwrap().as_slice()
+            deserialize_from_buffer(
+                serialize_to_buffer(proof_empty.as_ref().unwrap()).unwrap().as_slice()
             );
         assert_eq!(proof_empty.as_ref().unwrap(), proof_empty_deserialized.as_ref().unwrap());
 
@@ -871,8 +869,8 @@ mod test {
 
         // Serializing and deserializing the generated proof
         let proof_leftmost_deserialized =
-            ScAbsenceProof::from_bytes(
-                proof_leftmost.as_ref().unwrap().as_bytes().unwrap().as_slice()
+            deserialize_from_buffer(
+                serialize_to_buffer(proof_leftmost.as_ref().unwrap()).unwrap().as_slice()
             );
         assert_eq!(proof_leftmost.as_ref().unwrap(), proof_leftmost_deserialized.as_ref().unwrap());
 
@@ -890,8 +888,8 @@ mod test {
 
         // Serializing and deserializing the generated proof
         let proof_midst_deserialized =
-            ScAbsenceProof::from_bytes(
-                proof_midst.as_ref().unwrap().as_bytes().unwrap().as_slice()
+            deserialize_from_buffer(
+                serialize_to_buffer(proof_midst.as_ref().unwrap()).unwrap().as_slice()
             );
         assert_eq!(proof_midst.as_ref().unwrap(), proof_midst_deserialized.as_ref().unwrap());
 
@@ -909,8 +907,8 @@ mod test {
 
         // Serializing and deserializing the generated proof
         let proof_rightmost_deserialized =
-            ScAbsenceProof::from_bytes(
-                proof_rightmost.as_ref().unwrap().as_bytes().unwrap().as_slice()
+            deserialize_from_buffer(
+                serialize_to_buffer(proof_rightmost.as_ref().unwrap()).unwrap().as_slice()
             );
         assert_eq!(proof_rightmost.as_ref().unwrap(), proof_rightmost_deserialized.as_ref().unwrap());
 
