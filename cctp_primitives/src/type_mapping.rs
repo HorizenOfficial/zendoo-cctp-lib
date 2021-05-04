@@ -51,7 +51,7 @@ impl FieldBasedMerkleTreeParameters for GingerMHTParams {
     type Data = FieldElement;
     type H = FieldHash;
     const MERKLE_ARITY: usize = 2;
-    const EMPTY_NODE_CST: Option<FieldBasedMerkleTreePrecomputedZeroConstants<'static, Self::H>> =
+    const ZERO_NODE_CST: Option<FieldBasedMerkleTreePrecomputedZeroConstants<'static, Self::H>> =
         Some(GINGER_MHT_POSEIDON_PARAMETERS);
 }
 
