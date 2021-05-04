@@ -12,6 +12,8 @@ pub mod commitment_tree;
 pub mod debug;
 pub mod proof_system;
 pub mod serialization;
+pub mod poseidon_hash;
+pub mod mht;
 
 fn _get_root_from_field_vec(field_vec: Vec<FieldElement>, height: usize) -> Result<FieldElement, Error> {
     assert!(height <= GINGER_MHT_POSEIDON_PARAMETERS.nodes.len());
