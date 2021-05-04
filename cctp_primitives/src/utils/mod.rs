@@ -4,7 +4,7 @@ use crate::{
         serialization::SerializationUtils,
         commitment_tree::{bytes_to_field_elements, hash_vec},
     },
-    type_mapping::{FieldElement, GINGER_MHT_POSEIDON_PARAMETERS, GingerMHT, Error, FIELD_SIZE}
+    type_mapping::{FieldElement, GINGER_MHT_POSEIDON_PARAMETERS, GingerMHT, Error, FIELD_SIZE, MC_PK_SIZE}
 };
 use primitives::FieldBasedMerkleTree;
 
@@ -30,7 +30,7 @@ fn _get_root_from_field_vec(field_vec: Vec<FieldElement>, height: usize) -> Resu
 }
 
 /// Get the Merkle Root of a Binary Merkle Tree of height 12 built from the Backward Transfer list
-pub fn get_bt_merkle_root(bt_list: &[(u64, [u8; 20])]) -> Result<FieldElement, Error>
+pub fn get_bt_merkle_root(bt_list: &[(u64, [u8; MC_PK_SIZE])]) -> Result<FieldElement, Error>
 {
     let mut buffer = Vec::new();
     for (amount, pk) in bt_list.iter() {
@@ -45,7 +45,7 @@ pub fn get_cert_data_hash(
     constant: Option<&[u8; FIELD_SIZE]>,
     epoch_number: u32,
     quality: u64,
-    bt_list: &[(u64, [u8; 20])],
+    bt_list: &[(u64, [u8; MC_PK_SIZE])],
     custom_fields: Option<&[[u8; FIELD_SIZE]]>, //aka proof_data - includes custom_field_elements and bit_vectors merkle roots
     end_cumulative_sc_tx_commitment_tree_root: &[u8; FIELD_SIZE],
     btr_fee: u64,

@@ -1,7 +1,8 @@
 use algebra::{
     fields::tweedle::*,
     curves::tweedle::*,
-    biginteger::BigInteger256
+    biginteger::BigInteger256,
+    PrimeField, FpParameters
 };
 use primitives::{
     crh::*,
@@ -15,10 +16,6 @@ use poly_commit::ipa_pc::*;
 use blake2::Blake2s;
 
 // Basic algebraic types
-pub const FIELD_SIZE: usize = 32; //Field size in bytes
-pub const SCALAR_FIELD_SIZE: usize = FIELD_SIZE;
-pub const GROUP_SIZE: usize = 2 * FIELD_SIZE + 1;
-pub const GROUP_COMPRESSED_SIZE: usize = FIELD_SIZE + 1;
 
 pub type FieldElement = Fr;
 pub type G1 = dee::Affine;
@@ -28,6 +25,20 @@ pub type FieldBigInteger = BigInteger256;
 pub type ScalarFieldElement = Fq;
 pub type Affine = dum::Affine;
 pub type Projective = dum::Projective;
+
+//Field size in bytes
+pub const FIELD_SIZE: usize = ((
+    <Fr as PrimeField>::Params::MODULUS_BITS +
+        <Fr as PrimeField>::Params::REPR_SHAVE_BITS
+)/8) as usize;
+pub const SCALAR_FIELD_SIZE: usize = ((
+    <Fq as PrimeField>::Params::MODULUS_BITS +
+        <Fq as PrimeField>::Params::REPR_SHAVE_BITS
+)/8) as usize;
+pub const GROUP_SIZE: usize = 2 * FIELD_SIZE + 1;
+pub const GROUP_COMPRESSED_SIZE: usize = FIELD_SIZE + 1;
+
+pub const MC_PK_SIZE: usize = 20;
 
 // Crypto primitives instantiations
 pub type FieldHash = TweedleFrPoseidonHash;

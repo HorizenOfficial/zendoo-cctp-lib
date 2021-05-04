@@ -1,5 +1,5 @@
 use crate::{
-    type_mapping::{FIELD_SIZE, FieldElement},
+    type_mapping::{FIELD_SIZE, FieldElement, MC_PK_SIZE},
     proving_system::{
         verifier::{UserInputs, ZendooVerifier},
         error::ProvingSystemError,
@@ -13,7 +13,7 @@ pub struct CertificateProofUserInputs<'a> {
     pub constant:                                   Option<&'a [u8; FIELD_SIZE]>,
     pub epoch_number:                               u32,
     pub quality:                                    u64,
-    pub bt_list:                                    &'a [(u64,[u8; 20])],
+    pub bt_list:                                    &'a [(u64,[u8; MC_PK_SIZE])],
     pub custom_fields:                              Option<&'a [[u8; FIELD_SIZE]]>,
     pub end_cumulative_sc_tx_commitment_tree_root:  &'a [u8; FIELD_SIZE],
     pub btr_fee:                                    u64,

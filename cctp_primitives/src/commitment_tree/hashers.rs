@@ -27,7 +27,7 @@ pub fn hash_fwt(
 pub fn hash_bwtr(
     sc_fee:  u64,
     sc_request_data: &[[u8; FIELD_SIZE]],
-    mc_destination_address: &[u8; 20],
+    mc_destination_address: &[u8; MC_PK_SIZE],
     tx_hash: &[u8; 32],
     out_idx: u32
 ) -> Result<FieldElement, Error>
@@ -55,7 +55,7 @@ pub fn hash_cert(
     constant: Option<&[u8; FIELD_SIZE]>,
     epoch_number: u32,
     quality: u64,
-    bt_list: &[(u64,[u8; 20])],
+    bt_list: &[(u64,[u8; MC_PK_SIZE])],
     custom_fields: Option<&[[u8; FIELD_SIZE]]>, //aka proof_data - includes custom_field_elements and bit_vectors merkle roots
     end_cumulative_sc_tx_commitment_tree_root: &[u8; FIELD_SIZE],
     btr_fee: u64,
@@ -156,7 +156,7 @@ pub fn hash_scc(
 pub fn hash_csw(
     amount: u64,
     nullifier: &[u8; FIELD_SIZE],
-    mc_pk_hash: &[u8; 20],
+    mc_pk_hash: &[u8; MC_PK_SIZE],
 ) -> Result<FieldElement, Error>
 {
     let mut fes = Vec::new();
@@ -182,6 +182,7 @@ mod test {
     use rand::Rng;
     use std::convert::{TryFrom, TryInto};
     use crate::utils::commitment_tree::{rand_vec, rand_fe, rand_fe_vec};
+    use crate::type_mapping::MC_PK_SIZE;
 
     #[test]
     fn test_hashers(){
@@ -200,13 +201,13 @@ mod test {
             hash_bwtr(
                 rng.gen(),
                 &rand_fe_vec(5),
-                &rand_vec(20).try_into().unwrap(),
+                &rand_vec(MC_PK_SIZE).try_into().unwrap(),
                 &rand_vec(32).try_into().unwrap(),
                 rng.gen()
             ).is_ok()
         );
 
-        let bt = (rng.gen::<u64>(), <[u8; 20]>::try_from(rand_vec(20).as_slice()).unwrap());
+        let bt = (rng.gen::<u64>(), <[u8; MC_PK_SIZE]>::try_from(rand_vec(MC_PK_SIZE).as_slice()).unwrap());
         assert!(
             hash_cert(
                 Some(&rand_fe()),
@@ -245,7 +246,7 @@ mod test {
             hash_csw(
                 rng.gen(),
                 &rand_fe(),
-                &rand_vec(20).try_into().unwrap()
+                &rand_vec(MC_PK_SIZE).try_into().unwrap()
             ).is_ok()
         );
     }

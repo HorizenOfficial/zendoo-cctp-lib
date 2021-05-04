@@ -73,7 +73,7 @@ impl CommitmentTree {
         sc_id: &[u8],
         sc_fee:  u64,
         sc_request_data: &[[u8; FIELD_SIZE]],
-        mc_destination_address: &[u8; 20],
+        mc_destination_address: &[u8; MC_PK_SIZE],
         tx_hash: &[u8; 32],
         out_idx: u32
     ) -> bool {
@@ -95,7 +95,7 @@ impl CommitmentTree {
         constant: Option<&[u8; FIELD_SIZE]>,
         epoch_number: u32,
         quality: u64,
-        bt_list: &[(u64,[u8; 20])],
+        bt_list: &[(u64,[u8; MC_PK_SIZE])],
         custom_fields: Option<&[[u8; FIELD_SIZE]]>, //aka proof_data - includes custom_field_elements and bit_vectors merkle roots
         end_cumulative_sc_tx_commitment_tree_root: &[u8; FIELD_SIZE],
         btr_fee: u64,
@@ -155,7 +155,7 @@ impl CommitmentTree {
        sc_id: &[u8],
         amount: u64,
         nullifier: &[u8; FIELD_SIZE],
-        mc_pk_hash: &[u8; 20],
+        mc_pk_hash: &[u8; MC_PK_SIZE],
     )-> bool {
         if let Ok(csw_leaf) = hash_csw(
             amount, nullifier, mc_pk_hash
@@ -948,7 +948,7 @@ mod test {
                 &rand_fe(),
                 rng.gen(),
                 &rand_fe_vec(10),
-                &rand_vec(20).try_into().unwrap(),
+                &rand_vec(MC_PK_SIZE).try_into().unwrap(),
                 &rand_vec(32).try_into().unwrap(),
                 rng.gen()
             )
@@ -957,7 +957,7 @@ mod test {
         let comm2 = cmt.get_commitment();
         assert_ne!(comm1, comm2);
 
-        let bt = (rng.gen::<u64>(), <[u8; 20]>::try_from(rand_vec(20).as_slice()).unwrap());
+        let bt = (rng.gen::<u64>(), <[u8; MC_PK_SIZE]>::try_from(rand_vec(MC_PK_SIZE).as_slice()).unwrap());
         assert!(
             cmt.add_cert(
                 &rand_fe(),
@@ -1005,7 +1005,7 @@ mod test {
                 &rand_fe(),
                 rng.gen(),
                 &rand_fe(),
-                &rand_vec(20).try_into().unwrap()
+                &rand_vec(MC_PK_SIZE).try_into().unwrap()
             )
         );
 
