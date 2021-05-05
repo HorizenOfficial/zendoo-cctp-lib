@@ -5,12 +5,11 @@
 use super::compression;
 use crate::type_mapping::*;
 
-use algebra::ToConstraintField;
+use algebra::{ToConstraintField, log2};
 use primitives::merkle_tree::field_based_mht::FieldBasedMerkleTree;
 
 use bit_vec::BitVec;
 
-const MERKLE_TREE_HEIGHT: usize = 12;
 
 /// Computes the root hash of the Merkle tree created as a representation
 /// of `uncompressed_bit_vector`.
@@ -32,9 +31,10 @@ pub fn merkle_root_from_bytes(uncompressed_bit_vector: &[u8]) -> Result<algebra:
     let bv = BitVec::from_bytes(&uncompressed_bit_vector);
     let bool_vector: Vec<bool> = bv.into_iter().map(|x| x).collect();
 
-    let num_leaves = 1 << MERKLE_TREE_HEIGHT;
+    let merkle_tree_height = log2(bool_vector.len() / FIELD_CAPACITY) as usize;
+    let num_leaves = 1 << merkle_tree_height;
     let mut mt = GingerMHT::init(
-        MERKLE_TREE_HEIGHT,
+        merkle_tree_height,
         num_leaves,
     );
 
@@ -90,6 +90,7 @@ mod test {
     fn expected_size() {
         let mut bit_vector: Vec<u8> = vec![0; 63];
 
+        // Since the first byte specifies the compression algorithm, an error is expected.
         assert!(merkle_root_from_compressed_bytes(&bit_vector, bit_vector.len()).is_err());
 
         bit_vector.clear();
@@ -107,7 +108,7 @@ mod test {
     fn check_root_hash_computation() {
         let bit_vector_path = "./test/merkle_tree/random_bit_vector.dat";
         let root_hash_path = "./test/merkle_tree/random_bit_vector_root_hash.txt";
-        let raw_byte_vector: Vec<u8> = std::fs::read(bit_vector_path).unwrap();
+        let mut raw_byte_vector: Vec<u8> = std::fs::read(bit_vector_path).unwrap();
         let root_hash = std::fs::read_to_string(root_hash_path).unwrap();
 
         let computed_root = merkle_root_from_bytes(&raw_byte_vector).unwrap();
@@ -122,6 +123,14 @@ mod test {
         println!("Expected root hash: {}", root_hash);
         println!("Computed root hash: {}", computed_root_hash);
         println!("Compressed root hash: {}", compressed_root_hash);
+
+        // Add some bytes to make the merkle root hash change.
+        raw_byte_vector.extend(vec![1, 2, 3, 4, 5]);
+        let updated_root = merkle_root_from_bytes(&raw_byte_vector).unwrap();
+        let updated_root_hash = field_element_to_hex_string(updated_root);
+
+        // Check that the root hash is different than the previous one.
+        assert!(root_hash != updated_root_hash);
     }
 
     fn field_element_to_hex_string(field_element: FieldElement) -> String {

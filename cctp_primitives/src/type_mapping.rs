@@ -27,6 +27,7 @@ pub type Affine = dum::Affine;
 pub type Projective = dum::Projective;
 
 //Field size in bytes
+pub const FIELD_CAPACITY: usize = <Fr as PrimeField>::Params::CAPACITY as usize;
 pub const FIELD_SIZE: usize = ((
     <Fr as PrimeField>::Params::MODULUS_BITS +
         <Fr as PrimeField>::Params::REPR_SHAVE_BITS
