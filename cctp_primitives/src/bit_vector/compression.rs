@@ -9,7 +9,7 @@ use std::io::{Read, Write};
 use bzip2::read::{BzEncoder, BzDecoder};
 use flate2::{Compression as GzipCompression, write::GzEncoder, read::GzDecoder};
 
-use crate::{ printdbg, printlndbg};
+use crate::printlndbg;
 
 type Error = Box<dyn std::error::Error>;
 
@@ -72,10 +72,8 @@ pub fn compress_bit_vector(raw_bit_vector: &[u8], algorithm: CompressionAlgorith
     printlndbg!("Algorithm: {}, size: {}, address: {:p}", algorithm as u8, raw_bit_vector.len(), raw_bit_vector);
 
     printlndbg!("Bit vector content:");
+    printlndbg!("{:x?}", raw_bit_vector);
 
-    raw_bit_vector.iter().for_each(|byte| printdbg!("|{}", byte));
-
-    printlndbg!("|");
 
     match algorithm {
         CompressionAlgorithm::Uncompressed => compressed_bit_vector_result = Ok(raw_bit_vector.to_vec()),
@@ -130,10 +128,7 @@ pub fn decompress_bit_vector(compressed_bit_vector: &[u8], expected_size: usize)
     printlndbg!("Algorithm: {}, size: {}, expected decompressed size: {}, address: {:p}", compressed_bit_vector[0], compressed_bit_vector.len(), expected_size, compressed_bit_vector);
 
     printlndbg!("Bit vector content:");
-
-    compressed_bit_vector.iter().for_each(|byte| printdbg!("|{}", byte));
-
-    printlndbg!("|");
+    printlndbg!("{:x?}", compressed_bit_vector);
         
     let mut raw_bit_vector_result =  match compressed_bit_vector[0].try_into() {
         Ok(CompressionAlgorithm::Uncompressed) => Ok(compressed_bit_vector[1..].to_vec()),

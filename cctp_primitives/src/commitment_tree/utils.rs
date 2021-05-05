@@ -22,7 +22,11 @@ pub fn new_mt(height: usize) -> Result<FieldElementsMT, Error> {
 // Returns false if there is no more place to insert a leaf
 pub fn add_leaf(tree: &mut FieldElementsMT, leaf: &FieldElement, pos: &mut usize, capacity: usize) -> bool {
     if *pos < capacity {
-        tree.append(*leaf); *pos += 1;
+        match tree.append(*leaf) {
+            Ok(_res) => *pos += 1,
+            Err(_err) => return false
+        }
+        
         true
     } else {
         false

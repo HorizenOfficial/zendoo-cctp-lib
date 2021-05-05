@@ -625,7 +625,10 @@ impl CommitmentTree {
         if let Ok(mut cmt) = new_mt(CMT_MT_HEIGHT){
             let ids = self.get_indexed_sc_ids().into_iter().map(|s| *s.1).collect::<Vec<FieldElement>>();
             for id in ids {
-                cmt.append(self.get_sc_commitment_internal(&id).unwrap()); // SCTAs/SCTCs with such IDs exist, so unwrap() is safe here
+                match cmt.append(self.get_sc_commitment_internal(&id).unwrap()) { // SCTAs/SCTCs with such IDs exist, so unwrap() is safe here
+                    Ok(_res) => (),
+                    Err(_err) => return None
+                }
             }
             Some(cmt)
         } else {
