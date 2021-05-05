@@ -1,8 +1,9 @@
-use primitives::{FieldBasedHash, FieldBasedMerkleTree};
+use primitives::FieldBasedHash;
 use crate::type_mapping::{FIELD_SIZE, FieldElement, FieldHash, GingerMHT, Error};
 
 use rand::Rng;
 use algebra::{UniformRand, ToConstraintField, CanonicalSerialize, ToBytes, to_bytes};
+use crate::utils::mht::{new_ginger_mht, append_leaf_to_ginger_mht};
 
 pub const fn pow2(power: usize) -> usize { 1 << power }
 
@@ -11,19 +12,14 @@ pub const fn pow2(power: usize) -> usize { 1 << power }
 //--------------------------------------------------------------------------------------------------
 
 /// Creates new FieldElement-based MT
-pub fn new_mt(height: usize) -> Result<GingerMHT, Error> {
-    let processing_step = 2usize.pow(height as u32);
-    Ok(GingerMHT::init(
-        height,
-        processing_step
-    ))
+pub fn new_mt(height: usize) -> GingerMHT {
+    new_ginger_mht(height, 2usize.pow(height as u32))
 }
 
 /// Sequentially inserts leafs into an MT by using a specified position which is incremented afterwards
 /// Returns false if there is no more place to insert a leaf
-pub fn add_leaf(tree: &mut GingerMHT, leaf: &FieldElement, pos: &mut usize, capacity: usize) -> bool {
-    if *pos < capacity {
-        tree.append(*leaf); *pos += 1;
+pub fn add_leaf(tree: &mut GingerMHT, leaf: &FieldElement) -> bool {
+    if append_leaf_to_ginger_mht(tree, leaf).is_ok() {
         true
     } else {
         false

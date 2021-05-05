@@ -1,14 +1,16 @@
 //! MerkleTree and MerklePath wrappers, used by cryptolibs.
 
-use crate::type_mapping::{GingerMHT, FieldElement, GingerMHTPath, Error, FieldHash};
-use primitives::{FieldBasedHash, FieldBasedMerkleTree, FieldBasedMerkleTreePath};
+use crate::type_mapping::{GingerMHT, FieldElement, GingerMHTPath, Error};
+use primitives::{FieldBasedMerkleTree, FieldBasedMerkleTreePath};
 
 pub fn new_ginger_mht(height: usize, processing_step: usize) -> GingerMHT {
     GingerMHT::init(height, processing_step)
 }
 
-pub fn append_leaf_to_ginger_mht(tree: &mut GingerMHT, leaf: &FieldElement){
-    tree.append(*leaf);
+pub fn append_leaf_to_ginger_mht(tree: &mut GingerMHT, leaf: &FieldElement) -> Result<(), Error>
+{
+    let _ = tree.append(*leaf)?;
+    Ok(())
 }
 
 pub fn finalize_ginger_mht(tree: &GingerMHT) -> GingerMHT {
@@ -47,7 +49,7 @@ pub fn verify_ginger_merkle_path_without_length_check(
     path: &GingerMHTPath,
     leaf: &FieldElement,
     root: &FieldElement
-) -> Result<bool, Error> {
+) -> bool {
     path.verify_without_length_check(leaf, root)
 }
 
@@ -65,31 +67,7 @@ pub fn get_leaf_index_from_path(path: &GingerMHTPath) -> u64 {
     path.leaf_index() as u64
 }
 
-//TODO: Move to GingerLib
-pub fn apply(path: &GingerMHTPath, leaf: &FieldElement) -> FieldElement
+pub fn get_root_from_path(path: &GingerMHTPath, leaf: &FieldElement) -> FieldElement
 {
-    let mut digest = FieldHash::init_constant_length(2, None);
-    let mut prev_node = *leaf;
-    for (sibling, direction) in path.get_raw_path().iter() {
-
-        assert_eq!(sibling.len(), 1);
-        assert!(*direction == 0 || *direction == 1);
-
-        // Choose left and right hash according to direction
-        let (left, right) = if *direction == 0{
-            (prev_node, sibling[0].clone())
-        } else {
-            (sibling[0].clone(), prev_node)
-        };
-
-        // Compute the parent node
-        prev_node = digest
-            .update(left)
-            .update(right)
-            .finalize()
-            .unwrap();
-
-        digest.reset(None);
-    }
-    prev_node
+    path.compute_root(leaf)
 }

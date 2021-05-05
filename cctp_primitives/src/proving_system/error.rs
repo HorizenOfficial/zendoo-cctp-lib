@@ -5,6 +5,7 @@ use std::{
 
 #[derive(Debug)]
 pub enum ProvingSystemError {
+    UndefinedProvingSystem,
     CommitterKeyNotInitialized,
     SetupFailed(String),
     ProofCreationFailed(String),
@@ -19,6 +20,7 @@ pub enum ProvingSystemError {
 impl Display for ProvingSystemError {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         match self {
+            ProvingSystemError::UndefinedProvingSystem => write!(f, "A valid proving system type must be specified !"),
             ProvingSystemError::CommitterKeyNotInitialized => write!(f, "Committer Key has not been loaded"),
             ProvingSystemError::SetupFailed(err) => write!(f, "Failed to generate pk and vk {}", err),
             ProvingSystemError::ProofCreationFailed(err) => write!(f, "Failed to create proof {}", err),

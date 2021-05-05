@@ -52,6 +52,11 @@ pub fn init_dlog_keys(
     ck_g1_path: &str,
     ck_g2_path: &str,
 ) -> Result<(), Error> {
+
+    if matches!(proving_system, ProvingSystem::Undefined) {
+        return Err(ProvingSystemError::UndefinedProvingSystem)?
+    }
+
     load_g1_committer_key(segment_size - 1, ck_g1_path)?;
 
     if matches!(proving_system, ProvingSystem::Darlin) {
@@ -71,6 +76,7 @@ pub fn generate_circuit_keypair<C: ConstraintSynthesizer<FieldElement>>(
 ) -> Result<(), Error>
 {
     match proving_system {
+        ProvingSystem::Undefined => return Err(ProvingSystemError::UndefinedProvingSystem)?,
         ProvingSystem::CoboundaryMarlin => {
             let (pk, vk) = CoboundaryMarlin::setup(circ)?;
             write_to_file(&pk, pk_path)?;
@@ -80,7 +86,7 @@ pub fn generate_circuit_keypair<C: ConstraintSynthesizer<FieldElement>>(
             let (pk, vk) = Darlin::setup(circ)?;
             write_to_file(&pk, pk_path)?;
             write_to_file(&vk, vk_path)?;
-        }
+        },
     }
 
     Ok(())

@@ -40,7 +40,9 @@ pub fn merkle_root_from_bytes(uncompressed_bit_vector: &[u8]) -> Result<algebra:
 
     let leaves = bool_vector.to_field_elements()?;
 
-    leaves[..].iter().for_each(|&leaf| { mt.append(leaf); });
+    for leaf in leaves.into_iter() {
+        mt.append(leaf)?;
+    }
 
     match mt.finalize_in_place().root() {
         Some(x) => Ok(x),
