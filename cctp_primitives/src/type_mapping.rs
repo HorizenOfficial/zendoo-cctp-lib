@@ -15,11 +15,10 @@ use blake2::Blake2s;
 pub type FieldElement = Fr;
 pub type G1 = dee::Affine;
 pub type G2 = dum::Affine;
+pub type G2Projective = dum::Projective;
 
 pub type FieldBigInteger = BigInteger256;
 pub type ScalarFieldElement = Fq;
-pub type Affine = dum::Affine;
-pub type Projective = dum::Projective;
 
 //Field size in bytes
 pub const FIELD_CAPACITY: usize = <Fr as PrimeField>::Params::CAPACITY as usize;

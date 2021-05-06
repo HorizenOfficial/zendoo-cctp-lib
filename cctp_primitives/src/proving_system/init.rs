@@ -31,7 +31,7 @@ lazy_static! {
 
 /// Load G1CommitterKey of degree `max_degree` from `file_path` if it exists, otherwise create it,
 /// load it, and save it into a new file at `file_path`.
-pub fn load_g1_committer_key(max_degree: usize, file_path: &str) -> Result<(), SerializationError> {
+pub fn load_g1_committer_key(max_degree: usize, file_path: &Path) -> Result<(), SerializationError> {
 
     match load_generators::<G1>(max_degree, file_path) {
         // Generation/Loading successfull, assign the key to the lazy_static
@@ -46,7 +46,7 @@ pub fn load_g1_committer_key(max_degree: usize, file_path: &str) -> Result<(), S
 
 /// Load G2CommitterKey of degree `max_degree` from `file_path` if it exists, otherwise create it,
 /// load it, and save it into a new file at `file_path`.
-pub fn load_g2_committer_key(max_degree: usize, file_path: &str) -> Result<(), SerializationError> {
+pub fn load_g2_committer_key(max_degree: usize, file_path: &Path) -> Result<(), SerializationError> {
 
     match load_generators::<G2>(max_degree, file_path) {
         // Generation/Loading successfull, assign the key to the lazy_static
@@ -83,11 +83,11 @@ pub fn get_g2_committer_key<'a>() -> Result<RwLockReadGuard<'a, Option<Committer
     }
 }
 
-fn load_generators<G: AffineCurve>(max_degree: usize, file_path: &str) -> Result<CommitterKey<G>, SerializationError> {
+fn load_generators<G: AffineCurve>(max_degree: usize, file_path: &Path) -> Result<CommitterKey<G>, SerializationError> {
 
     let mut pk: CommitterKey<G>;
 
-    if Path::new(file_path).exists() {
+    if file_path.exists() {
         // Try to read the CommitterKey from file
         let fs = File::open(file_path).map_err(|e| SerializationError::IoError(e))?;
         pk = CanonicalDeserialize::deserialize(fs)?;
@@ -124,15 +124,16 @@ mod test {
     #[serial]
     fn check_load_g1_committer_key() {
         let max_degree = 1 << 10;
-        let file_path = "sample_pk_g1";
+        let mut file_path = std::env::temp_dir();
+        file_path.push("sample_ck_g1");
 
         let pp = InnerProductArgPC::<G1, Digest>::setup(max_degree).unwrap();
         let (pk, _) = InnerProductArgPC::<G1, Digest>::trim(&pp, max_degree).unwrap();
 
-        let fs = File::create(file_path).unwrap();
+        let fs = File::create(&file_path).unwrap();
         CanonicalSerialize::serialize(&pk, fs).unwrap();
 
-        load_g1_committer_key(max_degree, file_path).unwrap();
+        load_g1_committer_key(max_degree, &file_path).unwrap();
 
         let ck = get_g1_committer_key().unwrap();
 
@@ -145,22 +146,23 @@ mod test {
         assert_eq!(pk.s, ck.s);
         assert_eq!(pk.max_degree, ck.max_degree);
 
-        remove_file(file_path).unwrap();
+        remove_file(&file_path).unwrap();
     }
 
     #[test]
     #[serial]
     fn check_load_g2_committer_key() {
         let max_degree = 1 << 10;
-        let file_path = "sample_pk_g2";
+        let mut file_path = std::env::temp_dir();
+        file_path.push("sample_ck_g2");
 
         let pp = InnerProductArgPC::<G2, Digest>::setup(max_degree).unwrap();
         let (pk, _) = InnerProductArgPC::<G2, Digest>::trim(&pp, max_degree).unwrap();
 
-        let fs = File::create(file_path).unwrap();
+        let fs = File::create(&file_path).unwrap();
         CanonicalSerialize::serialize(&pk, fs).unwrap();
 
-        load_g2_committer_key(max_degree, file_path).unwrap();
+        load_g2_committer_key(max_degree, &file_path).unwrap();
 
         let ck = get_g2_committer_key().unwrap();
 
@@ -173,6 +175,6 @@ mod test {
         assert_eq!(pk.s, ck.s);
         assert_eq!(pk.max_degree, ck.max_degree);
 
-        remove_file(file_path).unwrap();
+        remove_file(&file_path).unwrap();
     }
 }

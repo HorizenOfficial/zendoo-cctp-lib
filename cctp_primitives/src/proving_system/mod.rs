@@ -14,7 +14,7 @@ use crate::{
         },
         error::ProvingSystemError,
     },
-    utils::proof_system::ProvingSystemUtils,
+    utils::proving_system::ProvingSystemUtils,
 };
 use r1cs_core::ConstraintSynthesizer;
 use rand::RngCore;

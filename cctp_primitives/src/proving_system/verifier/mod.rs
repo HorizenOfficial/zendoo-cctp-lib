@@ -4,7 +4,7 @@ use algebra::{
 use crate::{
     type_mapping::*,
     proving_system::error::ProvingSystemError,
-    utils::proof_system::ProvingSystemUtils,
+    utils::proving_system::ProvingSystemUtils,
 };
 use rand::RngCore;
 use crate::utils::serialization::deserialize_from_buffer;

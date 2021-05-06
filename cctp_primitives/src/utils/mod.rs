@@ -10,7 +10,7 @@ use crate::utils::serialization::deserialize_from_buffer;
 
 pub mod commitment_tree;
 pub mod debug;
-pub mod proof_system;
+pub mod proving_system;
 pub mod serialization;
 pub mod poseidon_hash;
 pub mod mht;
@@ -51,12 +51,12 @@ pub fn get_cert_data_hash(
     custom_fields: Option<&[[u8; FIELD_SIZE]]>, //aka proof_data - includes custom_field_elements and bit_vectors merkle roots
     end_cumulative_sc_tx_commitment_tree_root: &[u8; FIELD_SIZE],
     btr_fee: u64,
-    ft_min_fee: u64
+    ft_min_amount: u64
 ) -> Result<FieldElement, Error>
 {
-    // Pack btr_fee and ft_min_fee into a single field element
+    // Pack btr_fee and ft_min_amount into a single field element
     let fees_field_elements = {
-        let fes = bytes_to_field_elements(vec![btr_fee, ft_min_fee])?;
+        let fes = bytes_to_field_elements(vec![btr_fee, ft_min_amount])?;
         assert_eq!(fes.len(), 1);
         fes[0]
     };

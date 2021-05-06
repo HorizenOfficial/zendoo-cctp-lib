@@ -23,7 +23,7 @@ pub struct ZendooBatchVerifier {
 impl ZendooBatchVerifier {
 
     /// Constructor for Self, currently just the constructor for the HashMap.
-    pub fn init() -> Self {
+    pub fn create() -> Self {
         Self {
             verifier_data: HashMap::new(),
         }
@@ -159,15 +159,18 @@ mod test {
         proving_system::{
             init::{load_g1_committer_key, get_g1_committer_key, load_g2_committer_key, get_g2_committer_key},
             error::ProvingSystemError,
-            verifier::{UserInputs, ZendooVerifier, RawVerifierData},
+            verifier::{UserInputs, ZendooVerifier, RawVerifierData, certificate::CertificateProofUserInputs},
         },
         type_mapping::{FieldElement, G1, G2},
         utils::serialization::serialize_to_buffer
     };
     use poly_commit::ipa_pc::UniversalParams;
     use rand::{thread_rng, Rng};
+    use std::path::PathBuf;
     use serial_test::serial;
+    use crate::utils::commitment_tree::rand_fe;
 
+    // ***********************Tests with real test circuit*************************
     struct TestCircuitInputs {
         c: FieldElement,
         d: FieldElement
@@ -189,17 +192,19 @@ mod test {
         UniversalParams<G2>,
         usize,
         usize,
-        String,
-        String,
+        PathBuf,
+        PathBuf,
     ) {
 
         let max_pow = 7usize;
         let segment_size = 1 << max_pow;
 
         // Init committer keys
-        let g1_ck_path = "./ck_g1";
+        let mut g1_ck_path = std::env::temp_dir();
+        g1_ck_path.push("ck_g1");
+
         let committer_key_g1 = {
-            load_g1_committer_key(segment_size - 1, g1_ck_path).unwrap();
+            load_g1_committer_key(segment_size - 1, &g1_ck_path).unwrap();
             get_g1_committer_key().unwrap()
         }.as_ref().unwrap().clone();
 
@@ -209,9 +214,11 @@ mod test {
             s: committer_key_g1.s.clone(),
         };
 
-        let g2_ck_path = "./ck_g2";
+        let mut g2_ck_path = std::env::temp_dir();
+        g2_ck_path.push("ck_g2");
+
         let committer_key_g2 = {
-            load_g2_committer_key(segment_size - 1, g2_ck_path).unwrap();
+            load_g2_committer_key(segment_size - 1, &g2_ck_path).unwrap();
             get_g2_committer_key().unwrap()
         }.as_ref().unwrap().clone();
 
@@ -221,7 +228,7 @@ mod test {
             s: committer_key_g2.s.clone(),
         };
 
-        (params_g1, params_g2, max_pow, segment_size, g1_ck_path.to_owned(), g2_ck_path.to_owned())
+        (params_g1, params_g2, max_pow, segment_size, g1_ck_path, g2_ck_path)
     }
 
     #[test]
@@ -317,8 +324,8 @@ mod test {
         }
 
         // Cleanup
-        let _ = std::fs::remove_file(g1_ck_path);
-        let _ = std::fs::remove_file(g2_ck_path);
+        let _ = std::fs::remove_file(&g1_ck_path);
+        let _ = std::fs::remove_file(&g2_ck_path);
     }
 
     #[test]
@@ -327,7 +334,7 @@ mod test {
 
         let num_proofs = 100;
         let generation_rng = &mut thread_rng();
-        let mut batch_verifier = ZendooBatchVerifier::init();
+        let mut batch_verifier = ZendooBatchVerifier::create();
 
         let (
             params_g1,
@@ -441,7 +448,203 @@ mod test {
         }
 
         // Cleanup
-        let _ = std::fs::remove_file(g1_ck_path);
-        let _ = std::fs::remove_file(g2_ck_path);
+        let _ = std::fs::remove_file(&g1_ck_path);
+        let _ = std::fs::remove_file(&g2_ck_path);
+    }
+
+    // ************Tests with mocks for certificate and csw proofs batch verifier***************
+    struct TestCertificateVerifier<'a>(std::marker::PhantomData<&'a ()>);
+
+    impl<'a> ZendooVerifier for TestCertificateVerifier<'a> {
+        type Inputs = CertificateProofUserInputs<'a>;
+
+        fn verify_proof<R: RngCore>(
+            inputs: &Self::Inputs,
+            _proof_and_vk: RawVerifierData,
+            _check_proof: bool,
+            _check_vk: bool,
+            _rng: Option<&mut R>
+        ) -> Result<bool, ProvingSystemError>
+        {
+            let _ = inputs.get_circuit_inputs()?;
+            Ok(true)
+        }
+    }
+
+    struct TestZendooCertificateBatchVerifier<'a> {
+        verifier_data: HashMap<String, (RawVerifierData, CertificateProofUserInputs<'a>, bool)>,
+    }
+
+    impl<'a> TestZendooCertificateBatchVerifier<'a> {
+        fn create() -> Self {
+            Self {
+                verifier_data: HashMap::new(),
+            }
+        }
+
+        fn add_zendoo_proof_verifier_data(
+            &mut self,
+            id: String,
+            inputs: CertificateProofUserInputs<'a>,
+            proof_and_vk: RawVerifierData,
+            _check_proof: bool,
+            _check_vk: bool,
+            should_fail: bool, // Used here for testing
+        ) -> Result<(), ProvingSystemError> {
+            self.verifier_data.insert(id, (proof_and_vk, inputs, should_fail));
+            Ok(())
+        }
+
+        fn batch_verify_proofs<R: RngCore>(
+            proofs_vks_ins: Vec<(RawVerifierData, CertificateProofUserInputs<'a>, bool)>,
+            _g1_ck: &CommitterKeyG1,
+            _g2_ck: &CommitterKeyG2,
+            rng: &mut R,
+        ) -> Result<bool, Option<usize>>
+        {
+            for (i, (proof_vk, ins, should_fail)) in proofs_vks_ins.into_iter().enumerate() {
+                if !should_fail {
+                    match TestCertificateVerifier::verify_proof(
+                        &ins,
+                        proof_vk,
+                        true,
+                        true,
+                        Some(rng)
+                    )
+                    {
+                        Ok(res) => if !res { return Ok(false); },
+                        Err(_) => return Err(Some(i))
+                    }
+                } else {
+                    return Err(Some(i))
+                }
+            }
+
+            Ok(true)
+        }
+
+        fn batch_verify_subset<R: RngCore>(
+            &self,
+            ids: Vec<String>,
+            rng: &mut R,
+        ) -> Result<bool, ProvingSystemError>
+        {
+            // Retrieve committer keys
+            let g1_ck = get_g1_committer_key()?;
+            let g2_ck = get_g2_committer_key()?;
+
+            if ids.len() == 0 {
+                Err(ProvingSystemError::NoProofsToVerify)
+            } else {
+                let to_verify = ids.iter().map(|id| {
+                    match self.verifier_data.get(id) {
+                        Some(data) => Ok(data.clone()),
+                        None => return Err(ProvingSystemError::ProofNotPresent(id.clone())),
+                    }
+                }).collect::<Result<Vec<_>, ProvingSystemError>>()?;
+
+                // Perform batch verifications of the requested proofs
+                let res = Self::batch_verify_proofs(
+                    to_verify, g1_ck.as_ref().unwrap(),
+                    g2_ck.as_ref().unwrap(), rng
+                );
+
+                // Return the id of the first failing proof if it's possible to determine it
+                if res.is_err() {
+                    match res.unwrap_err() {
+                        Some(idx) => return Err(ProvingSystemError::FailedBatchVerification(Some(ids[idx].clone()))),
+                        None => return Err(ProvingSystemError::FailedBatchVerification(None))
+                    }
+                }
+
+                Ok(res.unwrap())
+            }
+        }
+
+        fn batch_verify_all<R: RngCore>(
+            &self,
+            rng: &mut R
+        ) -> Result<bool, ProvingSystemError>
+        {
+            self.batch_verify_subset(self.verifier_data.keys().map(|k| k.clone()).collect::<Vec<_>>(), rng)
+        }
+    }
+
+
+    #[serial]
+    #[test]
+    fn dummy_certificate_batch_verifier_test() {
+        let num_proofs = 100;
+        let generation_rng = &mut thread_rng();
+        let mut batch_verifier = TestZendooCertificateBatchVerifier::create();
+        let (_, _, _, _, g1_ck_path, g2_ck_path) = get_params();
+        let usr_ins = CertificateProofUserInputs {
+            constant: None,
+            epoch_number: 0,
+            quality: 0,
+            bt_list: &vec![(0u64, [0u8; MC_PK_SIZE]); 10],
+            custom_fields: None,
+            end_cumulative_sc_tx_commitment_tree_root: &rand_fe(),
+            btr_fee: 0,
+            ft_min_amount: 0
+        };
+        for i in 0..num_proofs {
+            // Randomly choose if to generate a SimpleMarlinProof or a FinalDarlinProof
+            let simple: bool = generation_rng.gen();
+            let (verifier_data, usr_ins) = if simple {
+                (
+                    RawVerifierData::CoboundaryMarlin { proof: vec![], vk: vec![] },
+                    usr_ins.clone()
+                )
+            } else {
+                (
+                    RawVerifierData::Darlin { proof: vec![], vk: vec![] },
+                    usr_ins.clone()
+                )
+            };
+
+            batch_verifier.add_zendoo_proof_verifier_data(
+                format!("Proof_{}", i),
+                usr_ins,
+                verifier_data,
+                false,
+                false,
+                false
+            ).unwrap();
+        }
+
+        // Verify all proofs
+        assert!(batch_verifier.batch_verify_all(generation_rng).unwrap());
+
+        // Trigger proof verification failure of one of the proofs at random index
+        let index: usize = generation_rng.gen_range(num_proofs/2, num_proofs);
+        let (_, _, should_fail) = batch_verifier.verifier_data.get_mut(&format!("Proof_{}", index)).unwrap();
+        *should_fail = true;
+
+        // Assert that the batch verification of all the proofs prior to that index is ok
+        assert!(batch_verifier.batch_verify_subset(
+            (0..num_proofs/2).map(|idx| format!("Proof_{}", idx)).collect::<Vec<_>>(),
+            generation_rng,
+        ).unwrap());
+
+        // Assert that the batch verification of all the proofs following that index fails
+        let res = batch_verifier.batch_verify_subset(
+            (num_proofs/2..num_proofs).map(|idx| format!("Proof_{}", idx)).collect::<Vec<_>>(),
+            generation_rng,
+        );
+        assert!(res.is_err());
+
+        // We are able to get the index of the failing proof:
+        match res.unwrap_err() {
+            ProvingSystemError::FailedBatchVerification(id) => {
+                let id = id.unwrap();
+                assert_eq!(id, format!("Proof_{}", index));
+            },
+            _ => panic!(),
+        }
+
+        // Cleanup
+        let _ = std::fs::remove_file(&g1_ck_path);
+        let _ = std::fs::remove_file(&g2_ck_path);
     }
 }
