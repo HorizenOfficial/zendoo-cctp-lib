@@ -52,31 +52,56 @@ fn _get_root_from_field_vec(field_vec: Vec<FieldElement>, height: usize) -> Resu
 /// Get the Merkle Root of a Binary Merkle Tree of height 12 built from the Backward Transfer list
 pub fn get_bt_merkle_root(bt_list: &[(u64,[u8; 20])]) -> Result<FieldElement, Error>
 {
-    _get_root_from_field_vec(bytes_to_field_elements(bt_list.to_vec())?, 12)
+    let mut accumulator = ByteAccumulator::init();
+    for bt in bt_list.iter() {
+        accumulator.update(bt)?;
+    }
+    _get_root_from_field_vec(accumulator.get_field_elements()?, 12)
 }
 
 //--------------------------------------------------------------------------------------------------
 // Hash utils
 //--------------------------------------------------------------------------------------------------
 
-// Calculates hash of a sequentially concatenated data elements
+// Computes the hash of a vector of field elements
 pub fn hash_vec(data: Vec<FieldElement>) -> FieldElement {
     let mut hasher = FieldHash::init(None);
     data.into_iter().for_each(|fe| { hasher.update(fe); });
     hasher.finalize()
 }
 
-// Computes FieldElement-based hash on the given byte-array
-pub fn hash_bytes(bytes: Vec<u8>) -> Result<FieldElement, Error> {
-    Ok(hash_vec(bytes_to_field_elements(bytes)?))
+/// Updatable struct that accumulates bytes into one or more FieldElements.
+#[derive(Clone)]
+pub struct ByteAccumulator {
+    /// Each byte buffer is converted into bits: this allows to efficiently
+    /// deserialize FieldElements out of them.
+    bit_buffer: Vec<bool>
 }
 
-// Converts byte-array into a sequence of FieldElements
-pub fn bytes_to_field_elements<T: ToBytes>(bytes: Vec<T>) -> Result<Vec<FieldElement>, Error> {
-    let mut bits = primitives::bytes_to_bits(&to_bytes!(bytes)?);
-    // byte serialization is in little endian, but bit serialization is in big endian: we need to reverse.
-    bits.reverse();
-    bits.to_field_elements()
+impl ByteAccumulator {
+    /// Initialize an empty accumulator.
+    pub fn init() -> Self { Self {bit_buffer: vec![] } }
+
+    /// Update this struct with bytes obtained by serializing the input instance `serializable`.
+    pub fn update<T: ToBytes>(&mut self, serializable: T) -> Result<&mut Self, Error> {
+        let mut bits = primitives::bytes_to_bits(&to_bytes!(serializable)?);
+        // byte serialization is in little endian, but bit serialization is in big endian: we need to reverse.
+        bits.reverse();
+        self.bit_buffer.append(&mut bits);
+        Ok(self)
+    }
+
+    /// (Safely) deserialize the accumulated bytes into FieldElements.
+    pub fn get_field_elements(&self) -> Result<Vec<FieldElement>, Error> {
+        self.bit_buffer.to_field_elements()
+    }
+
+    /// (Safely) deserialize the accumulated bytes into FieldElements
+    /// and then compute their FieldHash.
+    pub fn compute_field_hash(&self) -> Result<FieldElement, Error> {
+        let fes = self.get_field_elements()?;
+        Ok(hash_vec(fes))
+    }
 }
 
 //--------------------------------------------------------------------------------------------------

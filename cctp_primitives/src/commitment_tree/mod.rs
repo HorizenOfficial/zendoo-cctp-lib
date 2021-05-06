@@ -117,7 +117,6 @@ impl CommitmentTree {
     pub fn add_cert(
         &mut self,
         sc_id: &[u8; 32],
-        constant: Option<&[u8; FIELD_SIZE]>,
         epoch_number: u32,
         quality: u64,
         bt_list: &[(u64,[u8; 20])],
@@ -127,7 +126,7 @@ impl CommitmentTree {
         ft_min_amount: u64
     )-> bool {
         if let Ok(cert_leaf) = hash_cert(
-            constant, epoch_number, quality, bt_list, custom_fields,
+            epoch_number, quality, bt_list, custom_fields,
             end_cumulative_sc_tx_commitment_tree_root, btr_fee, ft_min_amount
         ){
             self.add_cert_leaf(sc_id, &cert_leaf)
@@ -154,17 +153,16 @@ impl CommitmentTree {
         custom_bitvector_elements_configs: &[(u32, u32)],
         btr_fee: u64,
         ft_min_amount: u64,
-        // TODO: verify if it's enough to add to the comm_tree just the Poseidonhash of the custom_creation_data (Oleksandr)
-        custom_creation_data_hash: &[u8; FIELD_SIZE],
+        custom_creation_data: &[u8],
         constant: Option<&[u8; FIELD_SIZE]>,
-        cert_verification_key_hash: &[u8; FIELD_SIZE],
-        csw_verification_key_hash: Option<&[u8; FIELD_SIZE]>
+        cert_verification_key: &[u8],
+        csw_verification_key: Option<&[u8]>
     )-> bool {
         if let Ok(scc_leaf) = hash_scc(
             amount, pub_key, tx_hash, out_idx, withdrawal_epoch_length, cert_proving_system,
             csw_proving_system, mc_btr_request_data_length, custom_field_elements_configs,
-            custom_bitvector_elements_configs, btr_fee, ft_min_amount, custom_creation_data_hash, constant,
-            cert_verification_key_hash, csw_verification_key_hash
+            custom_bitvector_elements_configs, btr_fee, ft_min_amount, custom_creation_data,
+            constant, cert_verification_key, csw_verification_key
         ){
             self.set_scc(sc_id, &scc_leaf)
         } else {
@@ -995,7 +993,6 @@ mod test {
         assert!(
             cmt.add_cert(
                 &rand_fe(),
-                Some(&rand_fe()),
                 rng.gen(),
                 rng.gen(),
                 &vec![bt, bt],
@@ -1024,10 +1021,10 @@ mod test {
                 &vec![(rng.gen(), rng.gen())],
                 rng.gen(),
                 rng.gen(),
-                &rand_fe(),
+                &rand_vec(100),
                 Some(&rand_fe()),
-                &rand_fe(),
-                Some(&rand_fe())
+                &rand_vec(100),
+                Some(&rand_vec(100))
             )
         );
 
