@@ -54,12 +54,12 @@ pub fn get_cert_data_hash(
     custom_fields: Option<&[[u8; FIELD_SIZE]]>, //aka proof_data - includes custom_field_elements and bit_vectors merkle roots
     end_cumulative_sc_tx_commitment_tree_root: &[u8; FIELD_SIZE],
     btr_fee: u64,
-    ft_min_fee: u64
+    ft_min_amount: u64
 ) -> Result<FieldElement, Error>
 {
-    // Pack btr_fee and ft_min_fee into a single field element
+    // Pack btr_fee and ft_min_amount into a single field element
     let fees_field_elements = {
-        let fes = bytes_to_field_elements(vec![btr_fee, ft_min_fee])?;
+        let fes = bytes_to_field_elements(vec![btr_fee, ft_min_amount])?;
         assert_eq!(fes.len(), 1);
         fes[0]
     };
@@ -115,12 +115,12 @@ pub fn hash_cert(
     custom_fields: Option<&[[u8; FIELD_SIZE]]>, //aka proof_data - includes custom_field_elements and bit_vectors merkle roots
     end_cumulative_sc_tx_commitment_tree_root: &[u8; FIELD_SIZE],
     btr_fee: u64,
-    ft_min_fee: u64
+    ft_min_amount: u64
 ) -> Result<FieldElement, Error>
 {
     get_cert_data_hash(
         constant, epoch_number, quality, bt_list, custom_fields,
-        end_cumulative_sc_tx_commitment_tree_root, btr_fee, ft_min_fee
+        end_cumulative_sc_tx_commitment_tree_root, btr_fee, ft_min_amount
     )
 }
 
@@ -132,12 +132,12 @@ pub fn hash_scc(
     out_idx: u32,
     withdrawal_epoch_length: u32,
     cert_proving_system: u8,
-    csw_proving_system: u8,
+    csw_proving_system: Option<u8>,
     mc_btr_request_data_length: u8,
     custom_field_elements_configs: &[u8],
     custom_bitvector_elements_configs: &[(u32, u32)],
     btr_fee: u64,
-    ft_min_fee: u64,
+    ft_min_amount: u64,
     // TODO: verify if it's enough to add to the comm_tree just the Poseidonhash of the custom_creation_data (Oleksandr)
     custom_creation_data_hash: &[u8; FIELD_SIZE],
     constant: Option<&[u8; FIELD_SIZE]>,
@@ -167,7 +167,7 @@ pub fn hash_scc(
         let mut buffer = Vec::new();
         withdrawal_epoch_length.write(&mut buffer)?;
         cert_proving_system.write(&mut buffer)?;
-        csw_proving_system.write(&mut buffer)?;
+        if csw_proving_system.is_some() { csw_proving_system.unwrap().write(&mut buffer)?; }
         mc_btr_request_data_length.write(&mut buffer)?;
         bytes_to_field_elements(buffer)
     }?;
@@ -183,8 +183,8 @@ pub fn hash_scc(
     }?;
     fes.append(&mut custom_conf_data_fes);
 
-    // Pack btr_fee and ft_min_fee into a single field element
-    fes.append(&mut bytes_to_field_elements(vec!([btr_fee, ft_min_fee]))?);
+    // Pack btr_fee and ft_min_amount into a single field element
+    fes.append(&mut bytes_to_field_elements(vec!([btr_fee, ft_min_amount]))?);
 
     // Read the other data as field elements if present and push it to fes
     fes.push(FieldElement::read(&custom_creation_data_hash[..])?);
@@ -274,7 +274,7 @@ mod test {
                 rng.gen(),
                 rng.gen(),
                 rng.gen(),
-                rng.gen(),
+                Some(rng.gen()),
                 rng.gen(),
                 &rand_vec(10),
                 &[(rng.gen(), rng.gen())],
