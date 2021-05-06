@@ -1,9 +1,4 @@
-use algebra::{
-    fields::tweedle::*,
-    curves::tweedle::*,
-    biginteger::BigInteger256,
-    PrimeField, FpParameters
-};
+use algebra::{fields::tweedle::*, curves::tweedle::*, biginteger::BigInteger256, PrimeField, FpParameters};
 use primitives::{
     crh::*,
     merkle_tree::*,

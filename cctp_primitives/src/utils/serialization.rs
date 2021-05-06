@@ -1,8 +1,37 @@
 use algebra::{serialize::*, SemanticallyValid};
-use std::fs::File;
+use std::{
+    fs::File, io::{Read, Write}
+};
+use crate::type_mapping::ProvingSystem;
+
+
+impl CanonicalSerialize for ProvingSystem {
+    fn serialize<W: Write>(&self, writer: W) -> Result<(), SerializationError> {
+        match self {
+            ProvingSystem::Undefined => CanonicalSerialize::serialize(&0u8, writer),
+            ProvingSystem::Darlin => CanonicalSerialize::serialize(&1u8, writer),
+            ProvingSystem::CoboundaryMarlin => CanonicalSerialize::serialize(&2u8, writer)
+        }
+    }
+
+    fn serialized_size(&self) -> usize {
+        1
+    }
+}
+
+impl CanonicalDeserialize for ProvingSystem {
+    fn deserialize<R: Read>(reader: R) -> Result<Self, SerializationError> {
+        let ps_type_byte: u8 = CanonicalDeserialize::deserialize(reader)?;
+        match ps_type_byte {
+            0u8 => Ok(ProvingSystem::Undefined),
+            1u8 => Ok(ProvingSystem::Darlin),
+            2u8 => Ok(ProvingSystem::CoboundaryMarlin),
+            _ => Err(SerializationError::InvalidData),
+        }
+    }
+}
 
 // Common functions useful to serialize/deserialize structs
-
 pub fn deserialize_from_buffer<T: CanonicalDeserialize>(buffer: &[u8]) ->  Result<T, SerializationError>
 {
     T::deserialize(buffer)

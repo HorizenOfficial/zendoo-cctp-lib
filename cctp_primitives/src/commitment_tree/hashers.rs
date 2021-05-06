@@ -3,7 +3,7 @@ use crate::utils::{
     commitment_tree::*, get_cert_data_hash
 };
 use crate::type_mapping::*;
-use crate::utils::serialization::deserialize_from_buffer;
+use crate::utils::serialization::{deserialize_from_buffer, serialize_to_buffer};
 
 // Computes FieldElement-based hash on the given Forward Transfer Transaction data
 pub fn hash_fwt(
@@ -59,12 +59,12 @@ pub fn hash_cert(
     custom_fields: Option<&[[u8; FIELD_SIZE]]>, //aka proof_data - includes custom_field_elements and bit_vectors merkle roots
     end_cumulative_sc_tx_commitment_tree_root: &[u8; FIELD_SIZE],
     btr_fee: u64,
-    ft_min_fee: u64
+    ft_min_amount: u64
 ) -> Result<FieldElement, Error>
 {
     get_cert_data_hash(
         constant, epoch_number, quality, bt_list, custom_fields,
-        end_cumulative_sc_tx_commitment_tree_root, btr_fee, ft_min_fee
+        end_cumulative_sc_tx_commitment_tree_root, btr_fee, ft_min_amount
     )
 }
 
@@ -75,13 +75,13 @@ pub fn hash_scc(
     tx_hash: &[u8; 32],
     out_idx: u32,
     withdrawal_epoch_length: u32,
-    cert_proving_system: u8,
-    csw_proving_system: u8,
+    cert_proving_system: ProvingSystem,
+    csw_proving_system: Option<ProvingSystem>,
     mc_btr_request_data_length: u8,
     custom_field_elements_configs: &[u8],
     custom_bitvector_elements_configs: &[(u32, u32)],
     btr_fee: u64,
-    ft_min_fee: u64,
+    ft_min_amount: u64,
     // TODO: verify if it's enough to add to the comm_tree just the Poseidonhash of the custom_creation_data (Oleksandr)
     custom_creation_data_hash: &[u8; FIELD_SIZE],
     constant: Option<&[u8; FIELD_SIZE]>,
@@ -113,8 +113,8 @@ pub fn hash_scc(
         let mut buffer = Vec::new();
 
         withdrawal_epoch_length.write(&mut buffer)?;
-        cert_proving_system.write(&mut buffer)?;
-        csw_proving_system.write(&mut buffer)?;
+        buffer.append(&mut serialize_to_buffer(&cert_proving_system)?);
+        if csw_proving_system.is_some() { buffer.append(&mut serialize_to_buffer(&csw_proving_system)?); }
         mc_btr_request_data_length.write(&mut buffer)?;
 
         bytes_to_field_elements(buffer)
@@ -135,8 +135,8 @@ pub fn hash_scc(
     }?;
     fes.append(&mut custom_conf_data_fes);
 
-    // Pack btr_fee and ft_min_fee into a single field element
-    fes.append(&mut bytes_to_field_elements(vec![btr_fee, ft_min_fee])?);
+    // Pack btr_fee and ft_min_amount into a single field element
+    fes.append(&mut bytes_to_field_elements(vec!([btr_fee, ft_min_amount]))?);
 
     // Read the other data as field elements if present and push it to fes
     fes.push(deserialize_from_buffer::<FieldElement>(&custom_creation_data_hash[..])?);
@@ -184,7 +184,7 @@ mod test {
     use rand::Rng;
     use std::convert::{TryFrom, TryInto};
     use crate::utils::commitment_tree::{rand_vec, rand_fe, rand_fe_vec};
-    use crate::type_mapping::MC_PK_SIZE;
+    use crate::type_mapping::{MC_PK_SIZE, ProvingSystem};
 
     #[test]
     fn test_hashers(){
@@ -230,8 +230,8 @@ mod test {
                 &rand_vec(32).try_into().unwrap(),
                 rng.gen(),
                 rng.gen(),
-                rng.gen(),
-                rng.gen(),
+                ProvingSystem::CoboundaryMarlin,
+                Some(ProvingSystem::CoboundaryMarlin),
                 rng.gen(),
                 &rand_vec(10),
                 &[(rng.gen(), rng.gen())],
