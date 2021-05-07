@@ -162,13 +162,16 @@ mod test {
             verifier::{UserInputs, ZendooVerifier, RawVerifierData, certificate::CertificateProofUserInputs},
         },
         type_mapping::{FieldElement, G1, G2},
-        utils::serialization::serialize_to_buffer
+        utils::{
+            serialization::serialize_to_buffer,
+            commitment_tree::rand_fe,
+            data_structures::BackwardTransfer
+        }
     };
     use poly_commit::ipa_pc::UniversalParams;
     use rand::{thread_rng, Rng};
     use std::path::PathBuf;
     use serial_test::serial;
-    use crate::utils::commitment_tree::rand_fe;
 
     // ***********************Tests with real test circuit*************************
     struct TestCircuitInputs {
@@ -582,7 +585,7 @@ mod test {
             constant: None,
             epoch_number: 0,
             quality: 0,
-            bt_list: &vec![(0u64, [0u8; MC_PK_SIZE]); 10],
+            bt_list: &vec![BackwardTransfer::default()],
             custom_fields: None,
             end_cumulative_sc_tx_commitment_tree_root: &rand_fe(),
             btr_fee: 0,

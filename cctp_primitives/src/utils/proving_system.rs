@@ -1,6 +1,6 @@
 use algebra::{serialize::*, Field};
 use crate::{
-    type_mapping::{FieldElement, ProvingSystem, CoboundaryMarlin, Darlin, Error},
+    type_mapping::{FieldElement, CoboundaryMarlin, Darlin, Error},
     proving_system::{
         init::{load_g1_committer_key, load_g2_committer_key},
         error::ProvingSystemError,
@@ -10,6 +10,7 @@ use crate::{
 use r1cs_core::ConstraintSynthesizer;
 use rand::RngCore;
 use std::path::Path;
+use crate::utils::data_structures::ProvingSystem;
 
 /// Defines common interfaces for calling the prover/verifier of a given proving system
 pub trait ProvingSystemUtils<F: Field> {

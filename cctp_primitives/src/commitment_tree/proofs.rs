@@ -62,7 +62,7 @@ impl ScCommitmentData {
 #[derive(PartialEq, Debug, CanonicalSerialize, CanonicalDeserialize)]
 pub struct ScNeighbour{
     pub(crate) id:      FieldElement,    // ID of SC
-    pub(crate) mpath:   GingerMHTPath,      // Merkle Path for SC-commitment of an SC with the given ID
+    pub(crate) mpath:   GingerMHTPath,   // Merkle Path for SC-commitment of an SC with the given ID
     pub(crate) sc_data: ScCommitmentData // data needed to build SC-commitment for the given ID
 }
 
@@ -108,11 +108,9 @@ impl ScExistenceProof {
 mod test {
     use crate::commitment_tree::proofs::{ScAliveCommitmentData, ScCeasedCommitmentData, ScCommitmentData, ScNeighbour};
     use crate::commitment_tree::CMT_MT_HEIGHT;
-    use crate::utils::{
-        commitment_tree::new_mt, serialization::{deserialize_from_buffer, serialize_to_buffer}
-    };
+    use crate::utils::commitment_tree::new_mt;
     use crate::type_mapping::FieldElement;
-    use algebra::UniformRand;
+    use algebra::{UniformRand, test_canonical_serialize_deserialize};
     use primitives::FieldBasedMerkleTree;
 
     // NOTE: Tests for ScExistenceProof and ScAbsenceProof are inside of the CommitmentTree module
@@ -127,10 +125,7 @@ mod test {
             cert_mr: FieldElement::rand(&mut rng),
             scc: FieldElement::rand(&mut rng)
         };
-        let data_result = deserialize_from_buffer(serialize_to_buffer(&data_initial).unwrap().as_slice());
-
-        assert!(data_result.is_ok());
-        assert_eq!(&data_initial, data_result.as_ref().unwrap());
+        test_canonical_serialize_deserialize(true, &data_initial);
     }
 
     #[test]
@@ -140,10 +135,8 @@ mod test {
         let data_initial = ScCeasedCommitmentData{
             csw_mr: FieldElement::rand(&mut rng)
         };
-        let data_result = deserialize_from_buffer(serialize_to_buffer(&data_initial).unwrap().as_slice());
+        test_canonical_serialize_deserialize(true, &data_initial);
 
-        assert!(data_result.is_ok());
-        assert_eq!(&data_initial, data_result.as_ref().unwrap());
     }
 
     #[test]
@@ -156,18 +149,12 @@ mod test {
             FieldElement::rand(&mut rng),
             FieldElement::rand(&mut rng)
         );
-        let data_result_alive = deserialize_from_buffer(serialize_to_buffer(&data_initial_alive).unwrap().as_slice());
-
-        assert!(data_result_alive.is_ok());
-        assert_eq!(&data_initial_alive, data_result_alive.as_ref().unwrap());
+        test_canonical_serialize_deserialize(true, &data_initial_alive);
 
         let data_initial_ceased = ScCommitmentData::create_ceased(
             FieldElement::rand(&mut rng)
         );
-        let data_result_ceased = deserialize_from_buffer(serialize_to_buffer(&data_initial_ceased).unwrap().as_slice());
-
-        assert!(data_result_ceased.is_ok());
-        assert_eq!(&data_initial_ceased, data_result_ceased.as_ref().unwrap());
+        test_canonical_serialize_deserialize(true, &data_initial_ceased);
     }
 
     #[test]
@@ -184,9 +171,6 @@ mod test {
         );
 
         let scn_initial = ScNeighbour::create(id, mpath, sc_data);
-        let scn_result = deserialize_from_buffer(serialize_to_buffer(&scn_initial).unwrap().as_slice());
-
-        assert!(scn_result.is_ok());
-        assert_eq!(&scn_initial, scn_result.as_ref().unwrap());
+        test_canonical_serialize_deserialize(true, &scn_initial);
     }
 }

@@ -1,12 +1,12 @@
-use algebra::ToBytes;
 use crate::{
     utils::{
-        commitment_tree::{bytes_to_field_elements, hash_vec},
+        commitment_tree::{hash_vec, ByteAccumulator},
+        serialization::deserialize_from_buffer
     },
-    type_mapping::{FieldElement, GINGER_MHT_POSEIDON_PARAMETERS, GingerMHT, Error, FIELD_SIZE, MC_PK_SIZE}
+    type_mapping::{FieldElement, GINGER_MHT_POSEIDON_PARAMETERS, GingerMHT, Error, FIELD_SIZE},
 };
 use primitives::FieldBasedMerkleTree;
-use crate::utils::serialization::deserialize_from_buffer;
+use crate::utils::data_structures::BackwardTransfer;
 
 pub mod commitment_tree;
 pub mod debug;
@@ -14,6 +14,7 @@ pub mod proving_system;
 pub mod serialization;
 pub mod poseidon_hash;
 pub mod mht;
+pub mod data_structures;
 
 fn _get_root_from_field_vec(field_vec: Vec<FieldElement>, height: usize) -> Result<FieldElement, Error> {
     assert!(height <= GINGER_MHT_POSEIDON_PARAMETERS.nodes.len());
@@ -32,22 +33,19 @@ fn _get_root_from_field_vec(field_vec: Vec<FieldElement>, height: usize) -> Resu
 }
 
 /// Get the Merkle Root of a Binary Merkle Tree of height 12 built from the Backward Transfer list
-pub fn get_bt_merkle_root(bt_list: &[(u64, [u8; MC_PK_SIZE])]) -> Result<FieldElement, Error>
+pub fn get_bt_merkle_root(bt_list: &[BackwardTransfer]) -> Result<FieldElement, Error>
 {
-    let mut buffer = Vec::new();
-    for (amount, pk) in bt_list.iter() {
-        amount.write(&mut buffer)?;
-        pk.write(&mut buffer)?;
+    let mut accumulator = ByteAccumulator::init();
+    for bt in bt_list.iter() {
+        accumulator.update(bt)?;
     }
-    _get_root_from_field_vec(bytes_to_field_elements(buffer)?, 12)
+    _get_root_from_field_vec(accumulator.get_field_elements()?, 12)
 }
 
-/// Compute H(
 pub fn get_cert_data_hash(
-    constant: Option<&[u8; FIELD_SIZE]>,
     epoch_number: u32,
     quality: u64,
-    bt_list: &[(u64, [u8; MC_PK_SIZE])],
+    bt_list: &[BackwardTransfer],
     custom_fields: Option<&[[u8; FIELD_SIZE]]>, //aka proof_data - includes custom_field_elements and bit_vectors merkle roots
     end_cumulative_sc_tx_commitment_tree_root: &[u8; FIELD_SIZE],
     btr_fee: u64,
@@ -55,11 +53,11 @@ pub fn get_cert_data_hash(
 ) -> Result<FieldElement, Error>
 {
     // Pack btr_fee and ft_min_amount into a single field element
-    let fees_field_elements = {
-        let fes = bytes_to_field_elements(vec![btr_fee, ft_min_amount])?;
-        assert_eq!(fes.len(), 1);
-        fes[0]
-    };
+    let fees_field_elements = ByteAccumulator::init()
+        .update(btr_fee)?
+        .update(ft_min_amount)?
+        .get_field_elements()?;
+    assert_eq!(fees_field_elements.len(), 1);
 
     // Pack epoch_number and quality into separate field elements (for simplicity of treatment in
     // the circuit)
@@ -74,16 +72,11 @@ pub fn get_cert_data_hash(
 
     // Compute cert sysdata hash
     let cert_sysdata_hash = hash_vec(
-        vec![epoch_number_fe, bt_root, quality_fe, end_cumulative_sc_tx_commitment_tree_root_fe, fees_field_elements]
+        vec![epoch_number_fe, bt_root, quality_fe, end_cumulative_sc_tx_commitment_tree_root_fe, fees_field_elements[0]]
     )?;
 
     // Final field elements to hash
     let mut fes = Vec::new();
-
-    // Read constant (if present) as FieldElement and add it to fes
-    if constant.is_some() {
-        fes.push(deserialize_from_buffer::<FieldElement>(&constant.unwrap()[..])?)
-    }
 
     // Compute linear hash of custom fields (if present) and add the digest to fes
     if custom_fields.is_some() {
@@ -95,8 +88,9 @@ pub fn get_cert_data_hash(
         fes.push(hash_vec(custom_fes)?)
     }
 
-    // Put cert_sysdata_hash
+    // Add cert_sysdata_hash
     fes.push(cert_sysdata_hash);
 
+    // Compute final hash
     hash_vec(fes)
 }

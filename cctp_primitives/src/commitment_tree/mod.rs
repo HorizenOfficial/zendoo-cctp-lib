@@ -14,6 +14,7 @@ use crate::{
         serialization::*,
     },
 };
+use crate::utils::data_structures::{ProvingSystem, BitVectorElementsConfig, BackwardTransfer};
 
 pub mod sidechain_tree_alive;
 pub mod sidechain_tree_ceased;
@@ -92,17 +93,16 @@ impl CommitmentTree {
     pub fn add_cert(
         &mut self,
         sc_id: &[u8; 32],
-        constant: Option<&[u8; FIELD_SIZE]>,
         epoch_number: u32,
         quality: u64,
-        bt_list: &[(u64,[u8; MC_PK_SIZE])],
+        bt_list: &[BackwardTransfer],
         custom_fields: Option<&[[u8; FIELD_SIZE]]>, //aka proof_data - includes custom_field_elements and bit_vectors merkle roots
         end_cumulative_sc_tx_commitment_tree_root: &[u8; FIELD_SIZE],
         btr_fee: u64,
         ft_min_amount: u64
     )-> bool {
         if let Ok(cert_leaf) = hash_cert(
-            constant, epoch_number, quality, bt_list, custom_fields,
+            epoch_number, quality, bt_list, custom_fields,
             end_cumulative_sc_tx_commitment_tree_root, btr_fee, ft_min_amount
         ){
             self.add_cert_leaf(sc_id, &cert_leaf)
@@ -126,20 +126,19 @@ impl CommitmentTree {
         csw_proving_system: Option<ProvingSystem>,
         mc_btr_request_data_length: u8,
         custom_field_elements_configs: &[u8],
-        custom_bitvector_elements_configs: &[(u32, u32)],
+        custom_bitvector_elements_configs: &[BitVectorElementsConfig],
         btr_fee: u64,
         ft_min_amount: u64,
-        // TODO: verify if it's enough to add to the comm_tree just the Poseidonhash of the custom_creation_data (Oleksandr)
-        custom_creation_data_hash: &[u8; FIELD_SIZE],
+        custom_creation_data: &[u8],
         constant: Option<&[u8; FIELD_SIZE]>,
-        cert_verification_key_hash: &[u8; FIELD_SIZE],
-        csw_verification_key_hash: Option<&[u8; FIELD_SIZE]>
+        cert_verification_key: &[u8],
+        csw_verification_key: Option<&[u8]>
     )-> bool {
         if let Ok(scc_leaf) = hash_scc(
             amount, pub_key, tx_hash, out_idx, withdrawal_epoch_length, cert_proving_system,
             csw_proving_system, mc_btr_request_data_length, custom_field_elements_configs,
-            custom_bitvector_elements_configs, btr_fee, ft_min_amount, custom_creation_data_hash, constant,
-            cert_verification_key_hash, csw_verification_key_hash
+            custom_bitvector_elements_configs, btr_fee, ft_min_amount, custom_creation_data,
+            constant, cert_verification_key, csw_verification_key
         ){
             self.set_scc(sc_id, &scc_leaf)
         } else {
@@ -695,15 +694,13 @@ impl CommitmentTree {
 
 #[cfg(test)]
 mod test {
-    use algebra::{Field, ToBytes};
+    use algebra::{Field, ToBytes, test_canonical_serialize_deserialize};
     use crate::type_mapping::*;
-    use crate::utils::{
-        commitment_tree::{rand_vec, rand_fe, rand_fe_vec},
-        serialization::{serialize_to_buffer, deserialize_from_buffer}
-    };
+    use crate::utils::commitment_tree::{rand_vec, rand_fe, rand_fe_vec};
     use rand::Rng;
-    use std::convert::{TryFrom, TryInto};
+    use std::convert::TryInto;
     use crate::commitment_tree::CommitmentTree;
+    use crate::utils::data_structures::{BackwardTransfer, ProvingSystem, BitVectorElementsConfig};
 
     // Creates a sequence of FieldElements with values [0, 1, 2, 3, 4]
     fn get_fe_0_4() -> Vec<FieldElement>{
@@ -808,18 +805,12 @@ mod test {
         let existence_proof = cmt.get_sc_existence_proof(&sc_ids[0]);
         assert!(existence_proof.is_some());
 
-        // Serializing and deserializing the generated existence proof
-        let existence_proof_deserialized =
-            deserialize_from_buffer(
-                serialize_to_buffer(existence_proof.as_ref().unwrap()).unwrap().as_slice()
-            );
-        assert!(existence_proof_deserialized.is_ok());
-        assert_eq!(existence_proof.as_ref().unwrap(), existence_proof_deserialized.as_ref().unwrap());
+        test_canonical_serialize_deserialize(true, &existence_proof);
 
         // Verification of a valid deserialized existence-proof
         assert!(CommitmentTree::verify_sc_commitment(
             cmt.get_sc_commitment(&sc_ids[0]).as_ref().unwrap(),
-            &existence_proof_deserialized.unwrap(),
+            &existence_proof.unwrap(),
             cmt.get_commitment().as_ref().unwrap()));
     }
 
@@ -842,17 +833,12 @@ mod test {
         let proof_empty = cmt.get_sc_absence_proof(&sc_id[0]);
         assert!(proof_empty.is_some());
 
-        // Serializing and deserializing the generated proof
-        let proof_empty_deserialized =
-            deserialize_from_buffer(
-                serialize_to_buffer(proof_empty.as_ref().unwrap()).unwrap().as_slice()
-            );
-        assert_eq!(proof_empty.as_ref().unwrap(), proof_empty_deserialized.as_ref().unwrap());
+        test_canonical_serialize_deserialize(true, &proof_empty);
 
         // Verification of a valid deserialized absence-proof
         assert!(CommitmentTree::verify_sc_absence(
             &sc_id[0],
-            proof_empty_deserialized.as_ref().unwrap(),
+            proof_empty.as_ref().unwrap(),
             commitment_empty.as_ref().unwrap())
         );
 
@@ -881,17 +867,12 @@ mod test {
         let proof_leftmost = cmt.get_sc_absence_proof(&sc_id[0]);
         assert!(proof_leftmost.is_some());
 
-        // Serializing and deserializing the generated proof
-        let proof_leftmost_deserialized =
-            deserialize_from_buffer(
-                serialize_to_buffer(proof_leftmost.as_ref().unwrap()).unwrap().as_slice()
-            );
-        assert_eq!(proof_leftmost.as_ref().unwrap(), proof_leftmost_deserialized.as_ref().unwrap());
+        test_canonical_serialize_deserialize(true, &proof_leftmost);
 
         // Verification of a valid deserialized absence-proof
         assert!(CommitmentTree::verify_sc_absence(
             &sc_id[0],
-            proof_leftmost_deserialized.as_ref().unwrap(),
+            proof_leftmost.as_ref().unwrap(),
             commitment.as_ref().unwrap())
         );
 
@@ -900,17 +881,12 @@ mod test {
         let proof_midst = cmt.get_sc_absence_proof(&sc_id[2]);
         assert!(proof_midst.is_some());
 
-        // Serializing and deserializing the generated proof
-        let proof_midst_deserialized =
-            deserialize_from_buffer(
-                serialize_to_buffer(proof_midst.as_ref().unwrap()).unwrap().as_slice()
-            );
-        assert_eq!(proof_midst.as_ref().unwrap(), proof_midst_deserialized.as_ref().unwrap());
+        test_canonical_serialize_deserialize(true, &proof_midst);
 
         // Verification of a valid deserialized absence-proof
         assert!(CommitmentTree::verify_sc_absence(
             &sc_id[2],
-            proof_midst_deserialized.as_ref().unwrap(),
+            proof_midst.as_ref().unwrap(),
             commitment.as_ref().unwrap())
         );
 
@@ -919,17 +895,12 @@ mod test {
         let proof_rightmost = cmt.get_sc_absence_proof(&sc_id[4]);
         assert!(proof_rightmost.is_some());
 
-        // Serializing and deserializing the generated proof
-        let proof_rightmost_deserialized =
-            deserialize_from_buffer(
-                serialize_to_buffer(proof_rightmost.as_ref().unwrap()).unwrap().as_slice()
-            );
-        assert_eq!(proof_rightmost.as_ref().unwrap(), proof_rightmost_deserialized.as_ref().unwrap());
+        test_canonical_serialize_deserialize(true, &proof_rightmost);
 
         // Verification of a valid deserialized absence-proof
         assert!(CommitmentTree::verify_sc_absence(
             &sc_id[4],
-            proof_rightmost_deserialized.as_ref().unwrap(),
+            proof_rightmost.as_ref().unwrap(),
             commitment.as_ref().unwrap())
         );
     }
@@ -969,14 +940,12 @@ mod test {
         let comm2 = cmt.get_commitment();
         assert_ne!(comm1, comm2);
 
-        let bt = (rng.gen::<u64>(), <[u8; MC_PK_SIZE]>::try_from(rand_vec(MC_PK_SIZE).as_slice()).unwrap());
         assert!(
             cmt.add_cert(
                 &rand_fe(),
-                Some(&rand_fe()),
                 rng.gen(),
                 rng.gen(),
-                &vec![bt, bt],
+                &vec![BackwardTransfer::default(); 10],
                 Some(&rand_fe_vec(2)),
                 &rand_fe(),
                 rng.gen(),
@@ -999,13 +968,13 @@ mod test {
                 Some(ProvingSystem::CoboundaryMarlin),
                 rng.gen(),
                 &rand_vec(10),
-                &vec![(rng.gen(), rng.gen())],
+                &vec![BitVectorElementsConfig::default(); 10],
                 rng.gen(),
                 rng.gen(),
-                &rand_fe(),
+                &rand_vec(100),
                 Some(&rand_fe()),
-                &rand_fe(),
-                Some(&rand_fe())
+                &rand_vec(100),
+                Some(&rand_vec(100))
             )
         );
 

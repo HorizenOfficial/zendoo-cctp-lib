@@ -63,14 +63,6 @@ pub type IPAPC = InnerProductArgPC<G1, Digest>;
 pub type CommitterKeyG1 = CommitterKey<G1>;
 pub type CommitterKeyG2 = CommitterKey<G2>;
 
-#[derive(Copy, Clone)]
-#[repr(C)]
-pub enum ProvingSystem {
-    Undefined,
-    Darlin,
-    CoboundaryMarlin,
-}
-
 // Coboundary Marlin instantiations
 pub type CoboundaryMarlin = marlin::Marlin<FieldElement, IPAPC, Digest>;
 pub type CoboundaryMarlinProof = MarlinProof<G1, Digest>;
