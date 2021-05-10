@@ -10,10 +10,10 @@ pub enum ProvingSystemError {
     SetupFailed(String),
     ProofCreationFailed(String),
     ProofVerificationFailed(String),
-    FailedBatchVerification(Option<String>),
+    FailedBatchVerification(Option<u32>),
     NoProofsToVerify,
-    ProofAlreadyExists(String),
-    ProofNotPresent(String),
+    ProofAlreadyExists(u32),
+    ProofNotPresent(u32),
     Other(String),
 }
 
