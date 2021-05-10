@@ -52,11 +52,15 @@ fn _get_root_from_field_vec(field_vec: Vec<FieldElement>, height: usize) -> Resu
 /// Get the Merkle Root of a Binary Merkle Tree of height 12 built from the Backward Transfer list
 pub fn get_bt_merkle_root(bt_list: &[(u64,[u8; 20])]) -> Result<FieldElement, Error>
 {
-    let mut accumulator = ByteAccumulator::init();
+    let mut leaves = Vec::with_capacity(bt_list.len());
     for bt in bt_list.iter() {
-        accumulator.update(bt)?;
+        let bt_fes = ByteAccumulator::init()
+            .update(bt)?
+            .get_field_elements()?;
+        assert_eq!(bt_fes.len(), 1);
+        leaves.push(bt_fes[0]);
     }
-    _get_root_from_field_vec(accumulator.get_field_elements()?, 12)
+    _get_root_from_field_vec(leaves, 12)
 }
 
 //--------------------------------------------------------------------------------------------------
@@ -83,6 +87,10 @@ impl ByteAccumulator {
     pub fn init() -> Self { Self {bit_buffer: vec![] } }
 
     /// Update this struct with bytes obtained by serializing the input instance `serializable`.
+    /// NOTE: Do not call if `serializable` is a FieldElement, since we enforce their explicit
+    /// deserialization and we shall not use this accumulation strategy.
+    /// In order to explicitly enforce this from this function we would need a negative trait
+    /// bound for Field, but this feature is currently not supported by the language.
     pub fn update<T: ToBytes>(&mut self, serializable: T) -> Result<&mut Self, Error> {
         let mut bits = primitives::bytes_to_bits(&to_bytes!(serializable)?);
         // byte serialization is in little endian, but bit serialization is in big endian: we need to reverse.
