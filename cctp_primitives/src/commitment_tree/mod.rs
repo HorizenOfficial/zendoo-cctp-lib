@@ -73,7 +73,7 @@ impl CommitmentTree {
         &mut self,
         sc_id: &[u8; 32],
         sc_fee:  u64,
-        sc_request_data: &[[u8; FIELD_SIZE]],
+        sc_request_data: Vec<&FieldElement>,
         mc_destination_address: &[u8; MC_PK_SIZE],
         tx_hash: &[u8; 32],
         out_idx: u32
@@ -96,8 +96,8 @@ impl CommitmentTree {
         epoch_number: u32,
         quality: u64,
         bt_list: &[BackwardTransfer],
-        custom_fields: Option<&[[u8; FIELD_SIZE]]>, //aka proof_data - includes custom_field_elements and bit_vectors merkle roots
-        end_cumulative_sc_tx_commitment_tree_root: &[u8; FIELD_SIZE],
+        custom_fields: Option<Vec<&FieldElement>>, //aka proof_data - includes custom_field_elements and bit_vectors merkle roots
+        end_cumulative_sc_tx_commitment_tree_root: &FieldElement,
         btr_fee: u64,
         ft_min_amount: u64
     )-> bool {
@@ -130,7 +130,7 @@ impl CommitmentTree {
         btr_fee: u64,
         ft_min_amount: u64,
         custom_creation_data: &[u8],
-        constant: Option<&[u8; FIELD_SIZE]>,
+        constant: Option<&FieldElement>,
         cert_verification_key: &[u8],
         csw_verification_key: Option<&[u8]>
     )-> bool {
@@ -151,9 +151,9 @@ impl CommitmentTree {
     //         otherwise returns the same as add_csw_leaf method
     pub fn add_csw(
         &mut self,
-       sc_id: &[u8; 32],
-        amount: u64,
-        nullifier: &[u8; FIELD_SIZE],
+        sc_id:      &[u8; 32],
+        amount:     u64,
+        nullifier:  &FieldElement,
         mc_pk_hash: &[u8; MC_PK_SIZE],
     )-> bool {
         if let Ok(csw_leaf) = hash_csw(
@@ -696,7 +696,7 @@ impl CommitmentTree {
 mod test {
     use algebra::{Field, ToBytes, test_canonical_serialize_deserialize};
     use crate::type_mapping::*;
-    use crate::utils::commitment_tree::{rand_vec, rand_fe, rand_fe_vec};
+    use crate::utils::commitment_tree::{rand_vec, rand_fe, rand_fe_vec, rand_fe_bytes};
     use rand::Rng;
     use std::convert::TryInto;
     use crate::commitment_tree::CommitmentTree;
@@ -914,7 +914,7 @@ mod test {
 
         assert!(
             cmt.add_fwt(
-                &rand_fe(),
+                &rand_fe_bytes(),
                 rng.gen(),
                 &rand_vec(32).try_into().unwrap(),
                 &rand_vec(32).try_into().unwrap(),
@@ -928,9 +928,9 @@ mod test {
 
         assert!(
             cmt.add_bwtr(
-                &rand_fe(),
+                &rand_fe_bytes(),
                 rng.gen(),
-                &rand_fe_vec(10),
+                rand_fe_vec(10).iter().collect(),
                 &rand_vec(MC_PK_SIZE).try_into().unwrap(),
                 &rand_vec(32).try_into().unwrap(),
                 rng.gen()
@@ -942,11 +942,11 @@ mod test {
 
         assert!(
             cmt.add_cert(
-                &rand_fe(),
+                &rand_fe_bytes(),
                 rng.gen(),
                 rng.gen(),
                 &vec![BackwardTransfer::default(); 10],
-                Some(&rand_fe_vec(2)),
+                Some(rand_fe_vec(2).iter().collect()),
                 &rand_fe(),
                 rng.gen(),
                 rng.gen(),
@@ -958,7 +958,7 @@ mod test {
 
         assert!(
             cmt.add_scc(
-                &rand_fe(),
+                &rand_fe_bytes(),
                 rng.gen(),
                 &rand_vec(32).try_into().unwrap(),
                 &rand_vec(32).try_into().unwrap(),
@@ -983,7 +983,7 @@ mod test {
 
         assert!(
             cmt.add_csw(
-                &rand_fe(),
+                &rand_fe_bytes(),
                 rng.gen(),
                 &rand_fe(),
                 &rand_vec(MC_PK_SIZE).try_into().unwrap()

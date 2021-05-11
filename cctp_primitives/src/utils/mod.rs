@@ -1,9 +1,6 @@
 use crate::{
-    utils::{
-        commitment_tree::{hash_vec, ByteAccumulator},
-        serialization::deserialize_from_buffer
-    },
-    type_mapping::{FieldElement, GINGER_MHT_POSEIDON_PARAMETERS, GingerMHT, Error, FIELD_SIZE},
+    utils::commitment_tree::{hash_vec, ByteAccumulator},
+    type_mapping::{FieldElement, GINGER_MHT_POSEIDON_PARAMETERS, GingerMHT, Error},
 };
 use primitives::FieldBasedMerkleTree;
 use crate::utils::data_structures::BackwardTransfer;
@@ -46,8 +43,8 @@ pub fn get_cert_data_hash(
     epoch_number: u32,
     quality: u64,
     bt_list: &[BackwardTransfer],
-    custom_fields: Option<&[[u8; FIELD_SIZE]]>, //aka proof_data - includes custom_field_elements and bit_vectors merkle roots
-    end_cumulative_sc_tx_commitment_tree_root: &[u8; FIELD_SIZE],
+    custom_fields: Option<Vec<&FieldElement>>, //aka proof_data - includes custom_field_elements and bit_vectors merkle roots
+    end_cumulative_sc_tx_commitment_tree_root: &FieldElement,
     btr_fee: u64,
     ft_min_amount: u64
 ) -> Result<FieldElement, Error>
@@ -67,12 +64,10 @@ pub fn get_cert_data_hash(
     // Compute bt_list merkle root
     let bt_root = get_bt_merkle_root(bt_list)?;
 
-    // Read end_cumulative_sc_tx_commitment_tree_root as field element
-    let end_cumulative_sc_tx_commitment_tree_root_fe = deserialize_from_buffer::<FieldElement>(&end_cumulative_sc_tx_commitment_tree_root[..])?;
 
     // Compute cert sysdata hash
     let cert_sysdata_hash = hash_vec(
-        vec![epoch_number_fe, bt_root, quality_fe, end_cumulative_sc_tx_commitment_tree_root_fe, fees_field_elements[0]]
+        vec![epoch_number_fe, bt_root, quality_fe, *end_cumulative_sc_tx_commitment_tree_root, fees_field_elements[0]]
     )?;
 
     // Final field elements to hash
@@ -82,9 +77,9 @@ pub fn get_cert_data_hash(
     if custom_fields.is_some() {
         let custom_fes = custom_fields
             .unwrap()
-            .iter()
-            .map(|custom_field_bytes| deserialize_from_buffer::<FieldElement>(&custom_field_bytes[..]))
-            .collect::<Result<Vec<_>, _>>()?;
+            .into_iter()
+            .map(|custom_field| *custom_field)
+            .collect::<Vec<_>>();
         fes.push(hash_vec(custom_fes)?)
     }
 

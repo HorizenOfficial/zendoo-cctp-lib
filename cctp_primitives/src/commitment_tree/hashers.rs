@@ -2,7 +2,6 @@ use crate::utils::{
     commitment_tree::*, get_cert_data_hash
 };
 use crate::type_mapping::*;
-use crate::utils::serialization::deserialize_from_buffer;
 use crate::utils::data_structures::{BitVectorElementsConfig, ProvingSystem, BackwardTransfer};
 
 // Computes FieldElement-based hash on the given Forward Transfer Transaction data
@@ -28,7 +27,7 @@ pub fn hash_fwt(
 // Computes FieldElement-based hash on the given Backward Transfer Request Transaction data
 pub fn hash_bwtr(
     sc_fee:  u64,
-    sc_request_data: &[[u8; FIELD_SIZE]],
+    sc_request_data: Vec<&FieldElement>,
     mc_destination_address: &[u8; MC_PK_SIZE],
     tx_hash: &[u8; 32],
     out_idx: u32
@@ -45,8 +44,8 @@ pub fn hash_bwtr(
     debug_assert!(fes.len() == 3);
 
     // sc_request_data elements MUST BE field elements
-    for fe in sc_request_data.iter() {
-        fes.push(deserialize_from_buffer::<FieldElement>(&fe[..])?);
+    for fe in sc_request_data.into_iter() {
+        fes.push(*fe);
     }
 
     hash_vec(fes)
@@ -57,8 +56,8 @@ pub fn hash_cert(
     epoch_number: u32,
     quality: u64,
     bt_list: &[BackwardTransfer],
-    custom_fields: Option<&[[u8; FIELD_SIZE]]>, //aka proof_data - includes custom_field_elements and bit_vectors merkle roots
-    end_cumulative_sc_tx_commitment_tree_root: &[u8; FIELD_SIZE],
+    custom_fields: Option<Vec<&FieldElement>>, //aka proof_data - includes custom_field_elements and bit_vectors merkle roots
+    end_cumulative_sc_tx_commitment_tree_root: &FieldElement,
     btr_fee: u64,
     ft_min_amount: u64
 ) -> Result<FieldElement, Error>
@@ -84,7 +83,7 @@ pub fn hash_scc(
     btr_fee: u64,
     ft_min_amount: u64,
     custom_creation_data: &[u8],
-    constant: Option<&[u8; FIELD_SIZE]>,
+    constant: Option<&FieldElement>,
     cert_verification_key: &[u8],
     csw_verification_key: Option<&[u8]>
 ) -> Result<FieldElement, Error>
@@ -139,7 +138,7 @@ pub fn hash_scc(
             .compute_field_hash_constant_length()?
     );
 
-    if constant.is_some() { fes.push(deserialize_from_buffer::<FieldElement>(&constant.unwrap()[..])?); }
+    if constant.is_some() { fes.push(*constant.unwrap()); }
 
     // Compute cert_verification_key hash and add it to fes
     fes.push(
@@ -164,7 +163,7 @@ pub fn hash_scc(
 // Computes FieldElement-based hash on the given Ceased Sidechain Withdrawal data
 pub fn hash_csw(
     amount: u64,
-    nullifier: &[u8; FIELD_SIZE],
+    nullifier: &FieldElement,
     mc_pk_hash: &[u8; MC_PK_SIZE],
 ) -> Result<FieldElement, Error>
 {
@@ -176,7 +175,7 @@ pub fn hash_csw(
     debug_assert!(fes.len() == 1);
 
     // Push the nullifier to fes
-    fes.push(deserialize_from_buffer::<FieldElement>(&nullifier[..])?);
+    fes.push(*nullifier);
 
     // Return final hash
     hash_vec(fes)
@@ -207,7 +206,7 @@ mod test {
         assert!(
             hash_bwtr(
                 rng.gen(),
-                &rand_fe_vec(5),
+                rand_fe_vec(5).iter().collect(),
                 &rand_vec(MC_PK_SIZE).try_into().unwrap(),
                 &rand_vec(32).try_into().unwrap(),
                 rng.gen()
@@ -219,7 +218,7 @@ mod test {
                 rng.gen(),
                 rng.gen(),
                 &vec![BackwardTransfer::default(); 10],
-                Some(&rand_fe_vec(2)),
+                Some(rand_fe_vec(2).iter().collect()),
                 &rand_fe(),
                 rng.gen(),
                 rng.gen(),

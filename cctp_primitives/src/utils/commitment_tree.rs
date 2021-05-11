@@ -1,5 +1,5 @@
 use primitives::FieldBasedHash;
-use crate::type_mapping::{FIELD_SIZE, FieldElement, FieldHash, GingerMHT, Error};
+use crate::type_mapping::{FieldElement, FieldHash, GingerMHT, Error, FIELD_SIZE};
 use rand::Rng;
 use algebra::{UniformRand, ToConstraintField, CanonicalSerialize};
 use crate::utils::mht::{new_ginger_mht, append_leaf_to_ginger_mht};
@@ -106,7 +106,13 @@ pub fn rand_vec(len: usize) -> Vec<u8> {
 }
 
 /// Get random (but valid) field element
-pub fn rand_fe() -> [u8; FIELD_SIZE]
+pub fn rand_fe() -> FieldElement
+{
+    FieldElement::rand(&mut rand::thread_rng())
+}
+
+/// Get random (but valid) field element bytes
+pub fn rand_fe_bytes() -> [u8; FIELD_SIZE]
 {
     let mut buffer = [0u8; FIELD_SIZE];
     CanonicalSerialize::serialize(&FieldElement::rand(&mut rand::thread_rng()), &mut buffer[..]).unwrap();
@@ -114,6 +120,6 @@ pub fn rand_fe() -> [u8; FIELD_SIZE]
 }
 
 /// Generate random (but valid) array of field elements
-pub fn rand_fe_vec(len: usize) -> Vec<[u8; FIELD_SIZE]> {
+pub fn rand_fe_vec(len: usize) -> Vec<FieldElement> {
     (0..len).map(|_| rand_fe()).collect::<Vec<_>>()
 }

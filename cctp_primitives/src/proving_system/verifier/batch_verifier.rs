@@ -17,7 +17,7 @@ use std::collections::HashMap;
 /// Data is not cleared automatically from the `verifier_data` HashMap after
 /// the corresponding verification procedure has been performed.
 pub struct ZendooBatchVerifier {
-    pub verifier_data: HashMap<u32, VerifierData>,
+    pub verifier_data: HashMap<u32, (VerifierData, Vec<FieldElement>)>,
 }
 
 impl ZendooBatchVerifier {
@@ -30,21 +30,14 @@ impl ZendooBatchVerifier {
     }
 
     /// Add a proof, uniquely identified by `id`, to the batch of proof to be verified.
-    pub fn add_zendoo_proof_verifier_data<V: ZendooVerifier>(
+    pub fn add_zendoo_proof_verifier_data<I: UserInputs>(
         &mut self,
         id:                         u32,
-        inputs:                     V::Inputs,
-        proof_and_vk:               RawVerifierData,
-        check_proof:                bool,
-        check_vk:                   bool,
+        inputs:                     I,
+        proof_and_vk:               VerifierData,
     ) -> Result<(), ProvingSystemError> {
         let usr_ins = inputs.get_circuit_inputs()?;
-
-        // Deserialize and save proof, vk and public inputs
-        let verifier_data = VerifierData::from_raw(proof_and_vk, check_proof, check_vk, usr_ins)
-            .map_err(|e| ProvingSystemError::Other(format!("{:?}", e)))?;
-
-        self.verifier_data.insert(id, verifier_data);
+        self.verifier_data.insert(id, (proof_and_vk, usr_ins));
 
         Ok(())
     }
@@ -56,7 +49,7 @@ impl ZendooBatchVerifier {
     /// contain the index in `proofs_vks_ins` of the offending proof; otherwise, it will be set
     /// to None.
     fn batch_verify_proofs<R: RngCore>(
-        proofs_vks_ins:  Vec<VerifierData>,
+        proofs_vks_ins:  Vec<(VerifierData, Vec<FieldElement>)>,
         g1_ck:           &CommitterKeyG1,
         g2_ck:           &CommitterKeyG2,
         rng:             &mut R,
@@ -67,12 +60,12 @@ impl ZendooBatchVerifier {
         // Collect all data in (GeneralPCD, VerificationKey) pairs
         let pcds_vks = proofs_vks_ins
             .into_iter()
-            .map(|proof_vk_ins| {
-                match proof_vk_ins {
-                    VerifierData::CoboundaryMarlin(proof, vk, ins) => {
+            .map(|(proof_vk, ins)| {
+                match proof_vk {
+                    VerifierData::CoboundaryMarlin(proof, vk) => {
                         (GeneralPCD::SimpleMarlin(SimpleMarlinPCD::<G1, Digest>::new(proof, ins)), vk)
                     },
-                    VerifierData::Darlin(proof, vk, ins) => {
+                    VerifierData::Darlin(proof, vk) => {
                         (GeneralPCD::FinalDarlin(FinalDarlinPCD::<G1, G2, Digest>::new(proof, ins)), vk)
                     },
                 }
@@ -159,11 +152,10 @@ mod test {
         proving_system::{
             init::{load_g1_committer_key, get_g1_committer_key, load_g2_committer_key, get_g2_committer_key},
             error::ProvingSystemError,
-            verifier::{UserInputs, ZendooVerifier, RawVerifierData, certificate::CertificateProofUserInputs},
+            verifier::{UserInputs, certificate::CertificateProofUserInputs},
         },
         type_mapping::{FieldElement, G1, G2},
         utils::{
-            serialization::serialize_to_buffer,
             commitment_tree::rand_fe,
             data_structures::BackwardTransfer
         }
@@ -185,10 +177,6 @@ mod test {
             Ok(vec![self.c, self.d])
         }
     }
-
-    struct TestCircuitVerifier {}
-
-    impl ZendooVerifier for TestCircuitVerifier { type Inputs = TestCircuitInputs; }
 
     fn get_params() -> (
         UniversalParams<G1>,
@@ -268,10 +256,10 @@ mod test {
                     generation_rng
                 );
                 (
-                    RawVerifierData::CoboundaryMarlin {
-                        proof: serialize_to_buffer::<CoboundaryMarlinProof>(&iteration_pcds[0].proof).unwrap(),
-                        vk:  serialize_to_buffer::<CoboundaryMarlinVerifierKey>(&iteration_vks[0]).unwrap()
-                    },
+                    VerifierData::CoboundaryMarlin(
+                        iteration_pcds[0].proof.clone(),
+                        iteration_vks[0].clone()
+                    ),
                     TestCircuitInputs {
                         c: iteration_pcds[0].usr_ins[0],
                         d: iteration_pcds[0].usr_ins[1]
@@ -290,10 +278,10 @@ mod test {
                 );
 
                 (
-                    RawVerifierData::Darlin {
-                        proof: serialize_to_buffer::<DarlinProof>(&iteration_pcds[0].final_darlin_proof).unwrap(),
-                        vk:  serialize_to_buffer::<DarlinVerifierKey>(&iteration_vks[0]).unwrap()
-                    },
+                    VerifierData::Darlin(
+                        iteration_pcds[0].final_darlin_proof.clone(),
+                        iteration_vks[0].clone()
+                    ),
                     TestCircuitInputs {
                         c: iteration_pcds[0].usr_ins[0],
                         d: iteration_pcds[0].usr_ins[1]
@@ -302,13 +290,7 @@ mod test {
             };
 
             // Verification success
-            assert!(TestCircuitVerifier::verify_proof(
-                &usr_ins,
-                verifier_data.clone(),
-                false,
-                false,
-                Some(generation_rng)
-            ).unwrap());
+            assert!(verifier_data.verify(usr_ins, Some(generation_rng)).unwrap());
 
             // Verification failure
             let wrong_usr_ins = TestCircuitInputs {
@@ -316,13 +298,7 @@ mod test {
                 d: generation_rng.gen()
             };
 
-            let res = TestCircuitVerifier::verify_proof(
-                &wrong_usr_ins,
-                verifier_data,
-                false,
-                false,
-                Some(generation_rng)
-            );
+            let res = verifier_data.verify(wrong_usr_ins, Some(generation_rng));
             assert!(res.is_err() || !res.unwrap());
         }
 
@@ -367,10 +343,10 @@ mod test {
                     generation_rng
                 );
                 (
-                    RawVerifierData::CoboundaryMarlin {
-                        proof: serialize_to_buffer::<CoboundaryMarlinProof>(&iteration_pcds[0].proof).unwrap(),
-                        vk:  serialize_to_buffer::<CoboundaryMarlinVerifierKey>(&iteration_vks[0]).unwrap()
-                    },
+                    VerifierData::CoboundaryMarlin(
+                        iteration_pcds[0].proof.clone(),
+                        iteration_vks[0].clone()
+                    ),
                     TestCircuitInputs {
                         c: iteration_pcds[0].usr_ins[0],
                         d: iteration_pcds[0].usr_ins[1]
@@ -389,10 +365,10 @@ mod test {
                 );
 
                 (
-                    RawVerifierData::Darlin {
-                        proof: serialize_to_buffer::<DarlinProof>(&iteration_pcds[0].final_darlin_proof).unwrap(),
-                        vk:  serialize_to_buffer::<DarlinVerifierKey>(&iteration_vks[0]).unwrap()
-                    },
+                    VerifierData::Darlin(
+                        iteration_pcds[0].final_darlin_proof.clone(),
+                        iteration_vks[0].clone()
+                    ),
                     TestCircuitInputs {
                         c: iteration_pcds[0].usr_ins[0],
                         d: iteration_pcds[0].usr_ins[1]
@@ -400,12 +376,10 @@ mod test {
                 )
             };
 
-            batch_verifier.add_zendoo_proof_verifier_data::<TestCircuitVerifier>(
+            batch_verifier.add_zendoo_proof_verifier_data(
                 i,
                 usr_ins,
                 verifier_data,
-                false,
-                false,
             ).unwrap();
         }
 
@@ -419,14 +393,8 @@ mod test {
             FieldElement::rand(generation_rng),
             FieldElement::rand(generation_rng)
         ];
-        match batch_verifier.verifier_data.get_mut(&index).unwrap() {
-            VerifierData::CoboundaryMarlin(_, _, usr_ins) => {
-                *usr_ins = wrong_ins
-            },
-            VerifierData::Darlin(_, _ ,usr_ins) => {
-                *usr_ins = wrong_ins
-            }
-        }
+        let (_, ins) = batch_verifier.verifier_data.get_mut(&index).unwrap();
+        *ins = wrong_ins;
 
         // Assert that the batch verification of all the proofs prior to that index is ok
         assert!(batch_verifier.batch_verify_subset(
@@ -456,26 +424,9 @@ mod test {
     }
 
     // ************Tests with mocks for certificate and csw proofs batch verifier***************
-    struct TestCertificateVerifier<'a>(std::marker::PhantomData<&'a ()>);
-
-    impl<'a> ZendooVerifier for TestCertificateVerifier<'a> {
-        type Inputs = CertificateProofUserInputs<'a>;
-
-        fn verify_proof<R: RngCore>(
-            inputs: &Self::Inputs,
-            _proof_and_vk: RawVerifierData,
-            _check_proof: bool,
-            _check_vk: bool,
-            _rng: Option<&mut R>
-        ) -> Result<bool, ProvingSystemError>
-        {
-            let _ = inputs.get_circuit_inputs()?;
-            Ok(true)
-        }
-    }
 
     struct TestZendooCertificateBatchVerifier<'a> {
-        verifier_data: HashMap<u32, (RawVerifierData, CertificateProofUserInputs<'a>, bool)>,
+        verifier_data: HashMap<u32, (VerifierData, CertificateProofUserInputs<'a>, bool)>,
     }
 
     impl<'a> TestZendooCertificateBatchVerifier<'a> {
@@ -489,9 +440,7 @@ mod test {
             &mut self,
             id: u32,
             inputs: CertificateProofUserInputs<'a>,
-            proof_and_vk: RawVerifierData,
-            _check_proof: bool,
-            _check_vk: bool,
+            proof_and_vk: VerifierData,
             should_fail: bool, // Used here for testing
         ) -> Result<(), ProvingSystemError> {
             self.verifier_data.insert(id, (proof_and_vk, inputs, should_fail));
@@ -499,26 +448,14 @@ mod test {
         }
 
         fn batch_verify_proofs<R: RngCore>(
-            proofs_vks_ins: Vec<(RawVerifierData, CertificateProofUserInputs<'a>, bool)>,
+            proofs_vks_ins: Vec<(VerifierData, CertificateProofUserInputs<'a>, bool)>,
             _g1_ck: &CommitterKeyG1,
             _g2_ck: &CommitterKeyG2,
-            rng: &mut R,
+            _rng: &mut R,
         ) -> Result<bool, Option<usize>>
         {
-            for (i, (proof_vk, ins, should_fail)) in proofs_vks_ins.into_iter().enumerate() {
-                if !should_fail {
-                    match TestCertificateVerifier::verify_proof(
-                        &ins,
-                        proof_vk,
-                        true,
-                        true,
-                        Some(rng)
-                    )
-                        {
-                            Ok(res) => if !res { return Ok(false); },
-                            Err(_) => return Err(Some(i))
-                        }
-                } else {
+            for (i, (_, _, should_fail)) in proofs_vks_ins.into_iter().enumerate() {
+                if should_fail {
                     return Err(Some(i))
                 }
             }
@@ -580,7 +517,16 @@ mod test {
         let num_proofs = 100;
         let generation_rng = &mut thread_rng();
         let mut batch_verifier = TestZendooCertificateBatchVerifier::create();
-        let (_, _, _, _, g1_ck_path, g2_ck_path) = get_params();
+        let (
+            params_g1,
+            params_g2,
+            _,
+            segment_size,
+            g1_ck_path,
+            g2_ck_path
+        ) = get_params();
+        let num_constraints = segment_size;
+
         let usr_ins = CertificateProofUserInputs {
             constant: None,
             epoch_number: 0,
@@ -591,17 +537,43 @@ mod test {
             btr_fee: 0,
             ft_min_amount: 0
         };
+
+        // Generate test CoboundaryMarlinProof and CoboundaryMarlinVk
+        let (coboundary_marlin_proof, coboundary_marlin_vk) = {
+            let (pcds, vks) = generate_simple_marlin_test_data(
+                num_constraints - 1,
+                segment_size,
+                &params_g1,
+                1,
+                generation_rng
+            );
+            (pcds[0].proof.clone(), vks[0].clone())
+        };
+
+        // Generate test DarlinProof and DarlinMarlinVk
+        let (darlin_proof, darlin_vk) = {
+            let (pcds, vks) = generate_final_darlin_test_data(
+                num_constraints - 1,
+                segment_size,
+                &params_g1,
+                &params_g2,
+                1,
+                generation_rng
+            );
+            (pcds[0].final_darlin_proof.clone(), vks[0].clone())
+        };
+
         for i in 0..num_proofs {
             // Randomly choose if to generate a SimpleMarlinProof or a FinalDarlinProof
             let simple: bool = generation_rng.gen();
             let (verifier_data, usr_ins) = if simple {
                 (
-                    RawVerifierData::CoboundaryMarlin { proof: vec![], vk: vec![] },
+                    VerifierData::CoboundaryMarlin(coboundary_marlin_proof.clone(), coboundary_marlin_vk.clone()),
                     usr_ins.clone()
                 )
             } else {
                 (
-                    RawVerifierData::Darlin { proof: vec![], vk: vec![] },
+                    VerifierData::Darlin(darlin_proof.clone(), darlin_vk.clone()),
                     usr_ins.clone()
                 )
             };
@@ -611,8 +583,6 @@ mod test {
                 usr_ins,
                 verifier_data,
                 false,
-                false,
-                false
             ).unwrap();
         }
 
