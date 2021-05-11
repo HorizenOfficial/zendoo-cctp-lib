@@ -14,7 +14,10 @@ use crate::{
         serialization::*,
     },
 };
-use crate::utils::data_structures::{ProvingSystem, BitVectorElementsConfig, BackwardTransfer};
+use crate::utils::{
+    data_structures::{BitVectorElementsConfig, BackwardTransfer},
+    proving_system::ProvingSystem,
+};
 
 pub mod sidechain_tree_alive;
 pub mod sidechain_tree_ceased;
@@ -700,7 +703,10 @@ mod test {
     use rand::Rng;
     use std::convert::TryInto;
     use crate::commitment_tree::CommitmentTree;
-    use crate::utils::data_structures::{BackwardTransfer, ProvingSystem, BitVectorElementsConfig};
+    use crate::utils::{
+        data_structures::{BackwardTransfer, BitVectorElementsConfig},
+        proving_system::ProvingSystem,
+    };
 
     // Creates a sequence of FieldElements with values [0, 1, 2, 3, 4]
     fn get_fe_0_4() -> Vec<FieldElement>{

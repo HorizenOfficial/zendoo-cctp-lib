@@ -56,40 +56,6 @@ impl CanonicalDeserialize for BackwardTransfer {
     }
 }
 
-#[derive(Copy, Clone, Debug, Eq, PartialEq,)]
-#[repr(C)]
-pub enum ProvingSystem {
-    Undefined,
-    Darlin,
-    CoboundaryMarlin,
-}
-
-impl CanonicalSerialize for ProvingSystem {
-    fn serialize<W: Write>(&self, writer: W) -> Result<(), SerializationError> {
-        match self {
-            ProvingSystem::Undefined => CanonicalSerialize::serialize(&0u8, writer),
-            ProvingSystem::Darlin => CanonicalSerialize::serialize(&1u8, writer),
-            ProvingSystem::CoboundaryMarlin => CanonicalSerialize::serialize(&2u8, writer)
-        }
-    }
-
-    fn serialized_size(&self) -> usize {
-        1
-    }
-}
-
-impl CanonicalDeserialize for ProvingSystem {
-    fn deserialize<R: Read>(reader: R) -> Result<Self, SerializationError> {
-        let ps_type_byte: u8 = CanonicalDeserialize::deserialize(reader)?;
-        match ps_type_byte {
-            0u8 => Ok(ProvingSystem::Undefined),
-            1u8 => Ok(ProvingSystem::Darlin),
-            2u8 => Ok(ProvingSystem::CoboundaryMarlin),
-            _ => Err(SerializationError::InvalidData),
-        }
-    }
-}
-
 #[cfg(test)]
 mod test {
     use super::*;
@@ -108,12 +74,6 @@ mod test {
             let test_bt = BackwardTransfer::default();
             assert_eq!(serialize_to_buffer(&test_bt).unwrap().len(), test_bt.serialized_size());
             test_canonical_serialize_deserialize(true, &test_bt);
-        }
-
-        {
-            let test_ps = ProvingSystem::Undefined;
-            assert_eq!(serialize_to_buffer(&test_ps).unwrap().len(), 1);
-            test_canonical_serialize_deserialize(true, &test_ps);
         }
     }
 }

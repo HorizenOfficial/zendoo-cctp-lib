@@ -4,6 +4,7 @@ use crate::{
     utils::proving_system::ProvingSystemUtils,
 };
 use rand::RngCore;
+use crate::utils::proving_system::{ZendooProof, ZendooVerifierKey, check_matching_proving_system_type};
 
 pub mod certificate;
 // To be defined
@@ -16,34 +17,30 @@ pub trait UserInputs {
     fn get_circuit_inputs(&self) -> Result<Vec<FieldElement>, ProvingSystemError>;
 }
 
-/// Enum containing all that is needed to perform the batch verification,
-/// separated by proving system type.
-#[derive(Clone)]
-pub enum VerifierData {
-    CoboundaryMarlin(CoboundaryMarlinProof, CoboundaryMarlinVerifierKey),
-    Darlin(DarlinProof, DarlinVerifierKey),
-}
+/// Verify the content of `self`
+pub fn verify_zendoo_proof<I: UserInputs, R: RngCore>(
+    inputs: I,
+    proof:  &ZendooProof,
+    vk:     &ZendooVerifierKey,
+    rng:    Option<&mut R>
+) -> Result<bool, ProvingSystemError>
+{
+    let usr_ins = inputs.get_circuit_inputs()?;
 
-impl VerifierData {
-    /// Verify the content of `self`
-    pub fn verify<I: UserInputs, R: RngCore>(
-        &self,
-        inputs: I,
-        rng: Option<&mut R>
-    ) -> Result<bool, ProvingSystemError>
-    {
-        let usr_ins = inputs.get_circuit_inputs()?;
-
-        // Verify proof (selecting the proper proving system)
-        let res = match self {
-            VerifierData::CoboundaryMarlin(proof, vk) =>
-                CoboundaryMarlin::verify_proof(&proof, &vk, usr_ins, rng)
-                    .map_err(|e| ProvingSystemError::ProofVerificationFailed(format!("{:?}", e)))?,
-            VerifierData::Darlin(proof, vk) =>
-                Darlin::verify_proof(&proof, &vk, usr_ins, rng)
-                    .map_err(|e| ProvingSystemError::ProofVerificationFailed(format!("{:?}", e)))?,
-        };
-
-        Ok(res)
+    if !check_matching_proving_system_type(proof, vk) {
+        return Err(ProvingSystemError::ProvingSystemMismatch);
     }
+
+    // Verify proof (selecting the proper proving system)
+    let res = match (proof, vk) {
+        (ZendooProof::CoboundaryMarlin(proof), ZendooVerifierKey::CoboundaryMarlin(vk)) =>
+            CoboundaryMarlin::verify_proof(proof, vk, usr_ins, rng)
+                .map_err(|e| ProvingSystemError::ProofVerificationFailed(format!("{:?}", e)))?,
+        (ZendooProof::Darlin(proof), ZendooVerifierKey::Darlin(vk)) =>
+            Darlin::verify_proof(proof, vk, usr_ins, rng)
+                .map_err(|e| ProvingSystemError::ProofVerificationFailed(format!("{:?}", e)))?,
+        _ => unreachable!()
+    };
+
+    Ok(res)
 }

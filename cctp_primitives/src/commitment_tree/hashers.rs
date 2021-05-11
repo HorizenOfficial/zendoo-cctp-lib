@@ -2,7 +2,10 @@ use crate::utils::{
     commitment_tree::*, get_cert_data_hash
 };
 use crate::type_mapping::*;
-use crate::utils::data_structures::{BitVectorElementsConfig, ProvingSystem, BackwardTransfer};
+use crate::utils::{
+    data_structures::{BitVectorElementsConfig, BackwardTransfer},
+    proving_system::ProvingSystem,
+};
 
 // Computes FieldElement-based hash on the given Forward Transfer Transaction data
 pub fn hash_fwt(
@@ -188,7 +191,10 @@ mod test {
     use std::convert::TryInto;
     use crate::utils::commitment_tree::{rand_vec, rand_fe, rand_fe_vec};
     use crate::type_mapping::MC_PK_SIZE;
-    use crate::utils::data_structures::{BitVectorElementsConfig, BackwardTransfer, ProvingSystem};
+    use crate::utils::{
+        data_structures::{BitVectorElementsConfig, BackwardTransfer},
+        proving_system::ProvingSystem,
+    };
 
     #[test]
     fn test_hashers(){
