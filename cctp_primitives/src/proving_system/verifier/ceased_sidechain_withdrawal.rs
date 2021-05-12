@@ -1,21 +1,16 @@
-use crate::proving_system::verifier::{ZendooVerifier, UserInputs};
-use crate::type_mapping::{FieldElement, FIELD_SIZE};
+use crate::proving_system::{
+    verifier::UserInputs, error::ProvingSystemError,
+};
+use crate::type_mapping::{FieldElement, MC_PK_SIZE};
 
 pub struct CSWProofUserInputs<'a> {
-    _amount:         u64,
-    _sc_id:          &'a [u8; 32],
-    _nullifier:      &'a [u8; FIELD_SIZE],
-    _pub_key_hash:   &'a [u8; MC_PK_SIZE],
-    _reedem_script:  &'a [u8],
-    _cert_data_hash: &'a [u8; FIELD_SIZE],
+    pub amount:                                     u64,
+    pub sc_id:                                      &'a [u8; 32],
+    pub pub_key_hash:                               &'a [u8; MC_PK_SIZE],
+    pub cert_data_hash:                             &'a FieldElement,
+    pub end_cumulative_sc_tx_commitment_tree_root:  &'a FieldElement,
 }
 
-impl UserInputs for CSWProofUserInputs {
-    fn get_circuit_inputs(&self) -> Vec<FieldElement> { unimplemented!() }
-}
-
-pub struct ZendooCSWProofVerifier<'a>(PhantomData<&'a ()>);
-
-impl<'a> ZendooVerifier for ZendooCSWProofVerifier<'a> {
-    type Inputs = CSWProofUserInputs<'a>;
+impl<'a> UserInputs for CSWProofUserInputs<'a> {
+    fn get_circuit_inputs(&self) -> Result<Vec<FieldElement>, ProvingSystemError> { unimplemented!() }
 }

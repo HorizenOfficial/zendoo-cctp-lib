@@ -7,8 +7,7 @@ use rand::RngCore;
 use crate::utils::proving_system::{ZendooProof, ZendooVerifierKey, check_matching_proving_system_type};
 
 pub mod certificate;
-// To be defined
-//pub mod ceased_sidechain_withdrawal;
+pub mod ceased_sidechain_withdrawal;
 pub mod batch_verifier;
 
 /// Wrapper for the user inputs of a circuit, assumed to be a vector of Field Elements
