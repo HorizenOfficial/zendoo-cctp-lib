@@ -7,7 +7,6 @@ use crate::utils::data_structures::BackwardTransfer;
 
 pub mod commitment_tree;
 pub mod debug;
-pub mod proving_system;
 pub mod serialization;
 pub mod poseidon_hash;
 pub mod mht;

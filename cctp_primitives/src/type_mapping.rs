@@ -5,8 +5,9 @@ use primitives::{
 };
 pub use primitives::merkle_tree::tweedle_dee::TWEEDLE_DEE_MHT_POSEIDON_PARAMETERS as GINGER_MHT_POSEIDON_PARAMETERS;
 use proof_systems::darlin::{
-    *, data_structures::*, pcd::simple_marlin::MarlinProof
+    *, data_structures::*
 };
+pub use proof_systems::darlin::pcd::simple_marlin::MarlinProof;
 use poly_commit::ipa_pc::*;
 use blake2::Blake2s;
 

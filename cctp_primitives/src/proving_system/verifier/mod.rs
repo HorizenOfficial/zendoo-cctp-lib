@@ -1,10 +1,10 @@
 use crate::{
     type_mapping::*,
     proving_system::error::ProvingSystemError,
-    utils::proving_system::ProvingSystemUtils,
+    proving_system::{ZendooProof, ZendooVerifierKey, check_matching_proving_system_type},
 };
 use rand::RngCore;
-use crate::utils::proving_system::{ZendooProof, ZendooVerifierKey, check_matching_proving_system_type};
+use crate::proving_system::init::{get_g1_committer_key, get_g2_committer_key};
 
 pub mod certificate;
 pub mod ceased_sidechain_withdrawal;
@@ -30,14 +30,32 @@ pub fn verify_zendoo_proof<I: UserInputs, R: RngCore>(
         return Err(ProvingSystemError::ProvingSystemMismatch);
     }
 
+    let ck_g1 = get_g1_committer_key()?;
+
     // Verify proof (selecting the proper proving system)
     let res = match (proof, vk) {
+
+        // Verify CoboundaryMarlinProof
         (ZendooProof::CoboundaryMarlin(proof), ZendooVerifierKey::CoboundaryMarlin(vk)) =>
-            CoboundaryMarlin::verify_proof(proof, vk, usr_ins, rng)
-                .map_err(|e| ProvingSystemError::ProofVerificationFailed(format!("{:?}", e)))?,
-        (ZendooProof::Darlin(proof), ZendooVerifierKey::Darlin(vk)) =>
-            Darlin::verify_proof(proof, vk, usr_ins, rng)
-                .map_err(|e| ProvingSystemError::ProofVerificationFailed(format!("{:?}", e)))?,
+            CoboundaryMarlin::verify(
+                vk,
+                ck_g1.as_ref().unwrap(),
+                usr_ins.as_slice(),
+                &proof.0
+            ).map_err(|e| ProvingSystemError::ProofVerificationFailed(format!("{:?}", e)))?,
+
+        // Verify DarlinProof
+        (ZendooProof::Darlin(proof), ZendooVerifierKey::Darlin(vk)) => {
+            let ck_g2 = get_g2_committer_key()?;
+            Darlin::verify(
+                vk,
+                ck_g1.as_ref().unwrap(),
+                ck_g2.as_ref().unwrap(),
+                usr_ins.as_slice(),
+                proof,
+                rng.unwrap()
+            ).map_err(|e| ProvingSystemError::ProofVerificationFailed(format!("{:?}", e)))?
+        },
         _ => unreachable!()
     };
 

@@ -11,7 +11,7 @@ use crate::{
 use proof_systems::darlin::pcd::{GeneralPCD, simple_marlin::SimpleMarlinPCD, final_darlin::FinalDarlinPCD};
 use rand::RngCore;
 use std::collections::HashMap;
-use crate::utils::proving_system::{ZendooProof, ZendooVerifierKey, check_matching_proving_system_type};
+use crate::proving_system::{ZendooProof, ZendooVerifierKey, check_matching_proving_system_type};
 
 /// Updatable struct storing all the data required to verify a batch of proof.
 /// The struct provides function to add new proofs and to verify a subset of them.

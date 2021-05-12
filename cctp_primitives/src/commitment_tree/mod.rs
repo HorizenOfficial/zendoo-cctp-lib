@@ -8,15 +8,13 @@ use crate::{
         proofs::{ScExistenceProof, ScAbsenceProof, ScCommitmentData, ScNeighbour},
         hashers::{hash_fwt, hash_bwtr, hash_scc, hash_cert, hash_csw}
     },
+    proving_system::ProvingSystem,
     type_mapping::*,
     utils::{
         commitment_tree::{pow2, new_mt},
         serialization::*,
+        data_structures::{BitVectorElementsConfig, BackwardTransfer}
     },
-};
-use crate::utils::{
-    data_structures::{BitVectorElementsConfig, BackwardTransfer},
-    proving_system::ProvingSystem,
 };
 
 pub mod sidechain_tree_alive;
@@ -699,14 +697,15 @@ impl CommitmentTree {
 mod test {
     use algebra::{Field, ToBytes, test_canonical_serialize_deserialize};
     use crate::type_mapping::*;
-    use crate::utils::commitment_tree::{rand_vec, rand_fe, rand_fe_vec, rand_fe_bytes};
-    use rand::Rng;
-    use std::convert::TryInto;
     use crate::commitment_tree::CommitmentTree;
     use crate::utils::{
         data_structures::{BackwardTransfer, BitVectorElementsConfig},
-        proving_system::ProvingSystem,
+        commitment_tree::{rand_vec, rand_fe, rand_fe_vec, rand_fe_bytes}
     };
+    use crate::proving_system::ProvingSystem;
+    use rand::Rng;
+    use std::convert::TryInto;
+
 
     // Creates a sequence of FieldElements with values [0, 1, 2, 3, 4]
     fn get_fe_0_4() -> Vec<FieldElement>{
