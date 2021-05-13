@@ -88,3 +88,14 @@ pub fn get_cert_data_hash(
     // Compute final hash
     hash_vec(fes)
 }
+
+pub fn compute_sc_id(
+    tx_hash: &[u8; 32],
+    pos: u32
+) -> Result<FieldElement, Error>
+{
+    ByteAccumulator::init()
+        .update(&tx_hash[..])?
+        .update(pos)?
+        .compute_field_hash_constant_length()
+}
