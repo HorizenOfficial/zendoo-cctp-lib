@@ -22,7 +22,11 @@ pub fn new_mt(height: usize) -> Result<FieldElementsMT, Error> {
 // Returns false if there is no more place to insert a leaf
 pub fn add_leaf(tree: &mut FieldElementsMT, leaf: &FieldElement, pos: &mut usize, capacity: usize) -> bool {
     if *pos < capacity {
-        tree.append(*leaf); *pos += 1;
+        match tree.append(*leaf) {
+            Ok(_res) => *pos += 1,
+            Err(_err) => return false
+        }
+        
         true
     } else {
         false
@@ -31,11 +35,11 @@ pub fn add_leaf(tree: &mut FieldElementsMT, leaf: &FieldElement, pos: &mut usize
 
 // Calculates hash of a sequentially concatenated data elements
 pub fn hash_vec(data: &Vec<FieldElement>) -> FieldElement {
-    let mut hasher = <FieldHash>::init(None);
+    let mut hasher = <FieldHash>::init_constant_length(data.len(), None);
     for &fe in data {
         hasher.update(fe);
     }
-    hasher.finalize()
+    hasher.finalize().unwrap()
 }
 
 // Generates vector of random bytes
