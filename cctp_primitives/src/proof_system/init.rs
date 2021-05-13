@@ -1,6 +1,6 @@
 use super::type_mapping::*;
 
-use algebra::{FromBytes, ToBytes, AffineCurve};
+use algebra::{serialize::*, AffineCurve};
 
 use poly_commit::PolynomialCommitment;
 use poly_commit::ipa_pc::{CommitterKey, InnerProductArgPC};
@@ -10,14 +10,7 @@ use lazy_static::lazy_static;
 use std::sync::RwLock;
 use std::fs::File;
 use std::path::Path;
-use std::io::{
-    Result as IoResult,
-    Error as IoError,
-    ErrorKind as IoErrorKind,
-};
-
 use blake2::Blake2s;
-use rand::thread_rng;
 
 lazy_static! {
     static ref G1_COMMITTER_KEY: RwLock<Option<CommitterKey<G1Affine>>> = RwLock::new(None);
@@ -27,7 +20,7 @@ lazy_static! {
     static ref G2_COMMITTER_KEY: RwLock<Option<CommitterKey<G2Affine>>> = RwLock::new(None);
 }
 
-pub fn load_g1_commiter_key(max_degree: usize, file_path: &str) -> IoResult<()> {
+pub fn load_g1_commiter_key(max_degree: usize, file_path: &str) -> Result<(), SerializationError> {
 
     match load_generators::<G1Affine>(max_degree, file_path) {
         Ok(loaded_key) => {
@@ -38,7 +31,7 @@ pub fn load_g1_commiter_key(max_degree: usize, file_path: &str) -> IoResult<()> 
     }
 }
 
-pub fn load_g2_commiter_key(max_degree: usize, file_path: &str) -> IoResult<()> {
+pub fn load_g2_commiter_key(max_degree: usize, file_path: &str) -> Result<(), SerializationError> {
 
     match load_generators::<G2Affine>(max_degree, file_path) {
         Ok(loaded_key) => {
@@ -49,33 +42,30 @@ pub fn load_g2_commiter_key(max_degree: usize, file_path: &str) -> IoResult<()> 
     }
 }
 
-fn load_generators<G: AffineCurve>(max_degree: usize, file_path: &str) -> IoResult<CommitterKey<G>> {
+fn load_generators<G: AffineCurve>(max_degree: usize, file_path: &str) -> Result<CommitterKey<G>, SerializationError> {
 
-    let mut pk;
+    let mut pk: CommitterKey<G>;
 
     if Path::new(file_path).exists() {
-        let fs = File::open(file_path)?;
-        pk = CommitterKey::<G>::read(&fs)?;
+        // Try to read the CommitterKey from file
+        let fs = File::open(file_path).map_err(|e| SerializationError::IoError(e))?;
+        pk = CanonicalDeserialize::deserialize(fs)?;
         if pk.max_degree == max_degree {
-            return Ok(pk);
+            return Ok(pk)
         }
     }
 
-    let pp = match InnerProductArgPC::<G, Blake2s>::setup(max_degree, &mut thread_rng()) {
-        Ok(pp) => pp,
-        Err(e) => {
-            return Err(IoError::new(IoErrorKind::Other, e));
-        }
-    };
-    pk = match InnerProductArgPC::<G, Blake2s>::trim(&pp, max_degree, 0, None) {
-        Ok((pk, _)) => pk,
-        Err(e) => {
-            return Err(IoError::new(IoErrorKind::Other, e));
-        }
-    };
-    let fs = File::create(file_path)?;
-    pk.write(&fs)?;
+    // File doesn't exist or the pk is smaller than the requested max_degree:
+    // generate the committer key and save it to file
+    let pp = InnerProductArgPC::<G, Blake2s>::setup(max_degree)
+        .map_err(|_| SerializationError::InvalidData)?;
+    let (ck, _) = InnerProductArgPC::<G, Blake2s>::trim(&pp, max_degree)
+        .map_err(|_| SerializationError::InvalidData)?;
+    pk = ck;
+    let fs = File::create(file_path).map_err(|e| SerializationError::IoError(e))?;
+    CanonicalSerialize::serialize(&pk, fs)?;
 
+    // Return the read/generated committer key
     Ok(pk)
 }
 
@@ -86,12 +76,11 @@ mod test {
     use crate::proof_system::{load_g1_commiter_key, load_g2_commiter_key};
     use crate::proof_system::type_mapping::*;
 
-    use algebra::ToBytes;
+    use algebra::serialize::*;
 
     use poly_commit::ipa_pc::InnerProductArgPC;
     use poly_commit::PolynomialCommitment;
 
-    use rand::thread_rng;
     use blake2::Blake2s;
 
     use std::fs::{File, remove_file};
@@ -101,11 +90,11 @@ mod test {
         let max_degree = 1 << 10;
         let file_path = "sample_pk_g1";
 
-        let pp = InnerProductArgPC::<G1Affine, Blake2s>::setup(max_degree, &mut thread_rng()).unwrap();
-        let (pk, _) = InnerProductArgPC::<G1Affine, Blake2s>::trim(&pp, max_degree, 0, None).unwrap();
+        let pp = InnerProductArgPC::<G1Affine, Blake2s>::setup(max_degree).unwrap();
+        let (pk, _) = InnerProductArgPC::<G1Affine, Blake2s>::trim(&pp, max_degree).unwrap();
 
-        let fs = File::create(file_path).unwrap();
-        pk.write(&fs).unwrap();
+        let fs = File::create(&file_path).unwrap();
+        CanonicalSerialize::serialize(&pk, fs).unwrap();
 
         load_g1_commiter_key(max_degree, file_path).unwrap();
 
@@ -128,11 +117,11 @@ mod test {
         let max_degree = 1 << 10;
         let file_path = "sample_pk_g2";
 
-        let pp = InnerProductArgPC::<G2Affine, Blake2s>::setup(max_degree, &mut thread_rng()).unwrap();
-        let (pk, _) = InnerProductArgPC::<G2Affine, Blake2s>::trim(&pp, max_degree, 0, None).unwrap();
+        let pp = InnerProductArgPC::<G2Affine, Blake2s>::setup(max_degree).unwrap();
+        let (pk, _) = InnerProductArgPC::<G2Affine, Blake2s>::trim(&pp, max_degree).unwrap();
 
-        let fs = File::create(file_path).unwrap();
-        pk.write(&fs).unwrap();
+        let fs = File::create(&file_path).unwrap();
+        CanonicalSerialize::serialize(&pk, fs).unwrap();
 
         load_g2_commiter_key(max_degree, file_path).unwrap();
 

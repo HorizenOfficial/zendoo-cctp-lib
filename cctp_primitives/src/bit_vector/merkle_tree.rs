@@ -5,15 +5,15 @@
 use super::compression;
 
 use algebra::{
-    fields::tweedle::Fr as TweedleFr, ToConstraintField
+    fields::tweedle::Fr as TweedleFr, ToConstraintField, log2
 };
 
 use primitives::{
-    crh::poseidon::parameters::tweedle::{TweedleFrPoseidonHash, TweedleFrBatchPoseidonHash},
+    crh::poseidon::parameters::tweedle_dee::{TweedleFrPoseidonHash, TweedleFrBatchPoseidonHash},
     merkle_tree::field_based_mht::{
-        FieldBasedMerkleTreeParameters, FieldBasedMerkleTreePrecomputedEmptyConstants,
+        FieldBasedMerkleTreeParameters, FieldBasedMerkleTreePrecomputedZeroConstants,
         BatchFieldBasedMerkleTreeParameters, FieldBasedOptimizedMHT, FieldBasedMerkleTree,
-        parameters::tweedle_fr::TWEEDLE_MHT_POSEIDON_PARAMETERS
+        parameters::tweedle_dee::TWEEDLE_DEE_MHT_POSEIDON_PARAMETERS
     }
 };
 
@@ -25,7 +25,7 @@ impl FieldBasedMerkleTreeParameters for TweedleFieldBasedMerkleTreeParams {
     type Data = TweedleFr;
     type H = TweedleFrPoseidonHash;
     const MERKLE_ARITY: usize = 2;
-    const EMPTY_HASH_CST: Option<FieldBasedMerkleTreePrecomputedEmptyConstants<'static, Self::H>> = Some(TWEEDLE_MHT_POSEIDON_PARAMETERS);
+    const ZERO_NODE_CST: Option<FieldBasedMerkleTreePrecomputedZeroConstants<'static, Self::H>> = Some(TWEEDLE_DEE_MHT_POSEIDON_PARAMETERS);
 }
 
 impl BatchFieldBasedMerkleTreeParameters for TweedleFieldBasedMerkleTreeParams {
@@ -36,7 +36,8 @@ type TweedlePoseidonMHT = FieldBasedOptimizedMHT<TweedleFieldBasedMerkleTreePara
 
 type Error = Box<dyn std::error::Error>;
 
-const MERKLE_TREE_HEIGHT: usize = 12;
+// Capacity of the field element in bits
+const FIELD_CAPACITY: usize = 254;
 
 /// Computes the root hash of the Merkle tree created as a representation
 /// of `uncompressed_bit_vector`.
@@ -49,7 +50,7 @@ const MERKLE_TREE_HEIGHT: usize = 12;
 /// ```
 /// use cctp_primitives::bit_vector::merkle_tree::*;
 ///
-/// let bit_vector: Vec<u8> = (0..100).collect();
+/// let bit_vector: Vec<u8> = (0..64).collect();
 /// let merkle_root = merkle_root_from_bytes(&bit_vector).unwrap();
 /// 
 /// ```
@@ -58,15 +59,23 @@ pub fn merkle_root_from_bytes(uncompressed_bit_vector: &[u8]) -> Result<algebra:
     let bv = BitVec::from_bytes(&uncompressed_bit_vector);
     let bool_vector: Vec<bool> = bv.into_iter().map(|x| x).collect();
 
-    let num_leaves = 1 << MERKLE_TREE_HEIGHT;
+    // The bit vector may contain some padding bits at the end that have to be discarded
+    let real_bit_vector_size: usize = bool_vector.len() - bool_vector.len() % FIELD_CAPACITY;
+
+    let merkle_tree_height = log2(real_bit_vector_size / FIELD_CAPACITY) as usize;
+    let num_leaves = 1 << merkle_tree_height;
     let mut mt = TweedlePoseidonMHT::init(
-        MERKLE_TREE_HEIGHT,
+        merkle_tree_height,
         num_leaves,
     );
 
-    let leaves = bool_vector.to_field_elements()?;
+    let leaves = bool_vector[..real_bit_vector_size].to_field_elements()?;
 
-    leaves[..].iter().for_each(|&leaf| { mt.append(leaf); });
+    assert_eq!(leaves.len(), num_leaves);
+
+    for leaf in leaves.into_iter() {
+        mt.append(leaf)?;
+    }
 
     match mt.finalize_in_place().root() {
         Some(x) => Ok(x),
@@ -90,7 +99,7 @@ pub fn merkle_root_from_bytes(uncompressed_bit_vector: &[u8]) -> Result<algebra:
 /// use cctp_primitives::bit_vector::compression::*;
 /// use cctp_primitives::bit_vector::merkle_tree::*;
 ///
-/// let bit_vector: Vec<u8> = (0..100).collect();
+/// let bit_vector: Vec<u8> = (0..64).collect();
 /// let compressed_bit_vector = compress_bit_vector(&bit_vector, CompressionAlgorithm::Uncompressed).unwrap();
 /// let merkle_root = merkle_root_from_compressed_bytes(&compressed_bit_vector, bit_vector.len()).unwrap();
 /// 
@@ -116,6 +125,7 @@ mod test {
     fn expected_size() {
         let mut bit_vector: Vec<u8> = vec![0; 63];
 
+        // Since the first byte specifies the compression algorithm, an error is expected.
         assert!(merkle_root_from_compressed_bytes(&bit_vector, bit_vector.len()).is_err());
 
         bit_vector.clear();
@@ -131,9 +141,22 @@ mod test {
 
     #[test]
     fn check_root_hash_computation() {
-        let bit_vector_path = "./test/merkle_tree/random_bit_vector.dat";
-        let root_hash_path = "./test/merkle_tree/random_bit_vector_root_hash.txt";
-        let raw_byte_vector: Vec<u8> = std::fs::read(bit_vector_path).unwrap();
+
+        let test_data_set = vec![
+            ("./test/merkle_tree/bvt_4x254_bytes.dat", "./test/merkle_tree/bvt_4x254_root.txt"),
+            ("./test/merkle_tree/bvt_8x254_bytes.dat", "./test/merkle_tree/bvt_8x254_root.txt"),
+            ("./test/merkle_tree/bvt_16x254_bytes.dat", "./test/merkle_tree/bvt_16x254_root.txt"),
+            ("./test/merkle_tree/bvt_32x254_bytes.dat", "./test/merkle_tree/bvt_32x254_root.txt"),
+            ("./test/merkle_tree/bvt_64x254_bytes.dat", "./test/merkle_tree/bvt_64x254_root.txt"),
+        ];
+
+        for test_data in test_data_set {
+            check_root_hash_computation_from_file(test_data.0, test_data.1);
+        }
+    }
+ 
+    fn check_root_hash_computation_from_file(bit_vector_path: &str, root_hash_path: &str) {
+        let mut raw_byte_vector: Vec<u8> = std::fs::read(bit_vector_path).unwrap();
         let root_hash = std::fs::read_to_string(root_hash_path).unwrap();
 
         let computed_root = merkle_root_from_bytes(&raw_byte_vector).unwrap();
@@ -148,6 +171,14 @@ mod test {
         println!("Expected root hash: {}", root_hash);
         println!("Computed root hash: {}", computed_root_hash);
         println!("Compressed root hash: {}", compressed_root_hash);
+
+        // Add some bytes to make the merkle root hash change.
+        raw_byte_vector.extend(vec![1;  raw_byte_vector.len()]);
+        let updated_root = merkle_root_from_bytes(&raw_byte_vector).unwrap();
+        let updated_root_hash = field_element_to_hex_string(updated_root);
+
+        // Check that the root hash is different than the previous one.
+        assert!(root_hash != updated_root_hash);
     }
 
     fn field_element_to_hex_string(field_element: Fp256<FrParameters>) -> String {
