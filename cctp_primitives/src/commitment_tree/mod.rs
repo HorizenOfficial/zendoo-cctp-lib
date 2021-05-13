@@ -1,4 +1,4 @@
-use primitives::{merkle_tree::field_based_mht::FieldBasedMerkleTreeParameters, FieldBasedMerkleTreePrecomputedEmptyConstants, FieldBasedMerkleTreePath, FieldBasedOptimizedMHT, BatchFieldBasedMerkleTreeParameters, FieldBasedMerkleTree, FieldBasedMHTPath};
+use primitives::{merkle_tree::field_based_mht::FieldBasedMerkleTreeParameters, FieldBasedMerkleTreePrecomputedZeroConstants, FieldBasedMerkleTreePath, FieldBasedOptimizedMHT, BatchFieldBasedMerkleTreeParameters, FieldBasedMerkleTree, FieldBasedMHTPath};
 use crate::commitment_tree::sidechain_tree_alive::{SidechainTreeAlive, SidechainAliveSubtreeType};
 use crate::commitment_tree::sidechain_tree_ceased::SidechainTreeCeased;
 use crate::commitment_tree::proofs::{ScExistenceProof, ScAbsenceProof, ScCommitmentData, ScNeighbour};
@@ -18,7 +18,7 @@ use algebra::fields::tweedle::Fr as FieldElement;
 use primitives::{
     TweedleFrPoseidonHash as FieldHash,
     TweedleFrBatchPoseidonHash as FieldBatchHash,
-    merkle_tree::field_based_mht::parameters::tweedle_fr::TWEEDLE_MHT_POSEIDON_PARAMETERS as MHT_PARAMETERS
+    merkle_tree::field_based_mht::parameters::tweedle_dee::TWEEDLE_DEE_MHT_POSEIDON_PARAMETERS as MHT_PARAMETERS
 };
 //--------------------------------------------------------------------------------------------------
 // Parameters for a Field-based Merkle Tree
@@ -31,7 +31,7 @@ impl FieldBasedMerkleTreeParameters for GingerMerkleTreeParameters {
     type Data = FieldElement;
     type H = FieldHash;
     const MERKLE_ARITY: usize = 2;
-    const EMPTY_HASH_CST: Option<FieldBasedMerkleTreePrecomputedEmptyConstants<'static, Self::H>> =
+    const ZERO_NODE_CST: Option<FieldBasedMerkleTreePrecomputedZeroConstants<'static, Self::H>> =
         Some(MHT_PARAMETERS);
 }
 
@@ -360,7 +360,7 @@ impl CommitmentTree {
 
                     left.id < absent_id
                         && left_path_status.is_ok() && left_path_status.unwrap() == true
-                        && (left.mpath.is_rightmost() || left.mpath.is_non_empty_rightmost()) // is a last leaf in MT or a last non-empty leaf in MT
+                        && (left.mpath.is_rightmost() || left.mpath.are_right_leaves_empty()) // is a last leaf in MT or a last non-empty leaf in MT
                 } else {
                     false // couldn't build sc_commitment
                 }

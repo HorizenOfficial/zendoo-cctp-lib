@@ -33,6 +33,6 @@ unsafe_code
 )]
 #![forbid(unsafe_code)]
 
-//pub mod commitment_tree;
+pub mod commitment_tree;
 pub mod bit_vector;
 pub mod utils;

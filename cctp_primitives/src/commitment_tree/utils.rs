@@ -35,11 +35,11 @@ pub fn add_leaf(tree: &mut FieldElementsMT, leaf: &FieldElement, pos: &mut usize
 
 // Calculates hash of a sequentially concatenated data elements
 pub fn hash_vec(data: &Vec<FieldElement>) -> FieldElement {
-    let mut hasher = <FieldHash>::init(None);
+    let mut hasher = <FieldHash>::init_constant_length(data.len(), None);
     for &fe in data {
         hasher.update(fe);
     }
-    hasher.finalize()
+    hasher.finalize().unwrap()
 }
 
 // Generates vector of random bytes
