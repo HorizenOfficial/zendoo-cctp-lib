@@ -1,6 +1,6 @@
 use primitives::{
     FieldBasedHash, FieldBasedMerkleTree,
-    merkle_tree::field_based_mht::parameters::tweedle_fr::TWEEDLE_MHT_POSEIDON_PARAMETERS as MHT_PARAMETERS
+    merkle_tree::field_based_mht::parameters::tweedle_dee::TWEEDLE_DEE_MHT_POSEIDON_PARAMETERS as MHT_PARAMETERS
 };
 use crate::commitment_tree::{FieldElement, FieldHash, FieldElementsMT, FIELD_SIZE};
 use rand::Rng;
@@ -27,7 +27,11 @@ pub fn new_mt(height: usize) -> Result<FieldElementsMT, Error> {
 // Returns false if there is no more place to insert a leaf
 pub fn add_leaf(tree: &mut FieldElementsMT, leaf: &FieldElement, pos: &mut usize, capacity: usize) -> bool {
     if *pos < capacity {
-        tree.append(*leaf); *pos += 1;
+        match tree.append(*leaf) {
+            Ok(_res) => *pos += 1,
+            Err(_err) => return false
+        }
+        
         true
     } else {
         false
@@ -38,12 +42,11 @@ fn _get_root_from_field_vec(field_vec: Vec<FieldElement>, height: usize) -> Resu
     assert!(height <= MHT_PARAMETERS.nodes.len());
     if field_vec.len() > 0 {
         let mut mt = new_mt(height)?;
-        for fe in field_vec.into_iter(){
-            mt.append(fe);
+        for fe in field_vec.into_iter() {
+            mt.append(fe)?;
         }
         mt.finalize_in_place();
         mt.root().ok_or(Error::from("Failed to compute Merkle Tree root"))
-
     } else {
         Ok(MHT_PARAMETERS.nodes[height])
     }
@@ -69,9 +72,9 @@ pub fn get_bt_merkle_root(bt_list: &[(u64,[u8; 20])]) -> Result<FieldElement, Er
 
 // Computes the hash of a vector of field elements
 pub fn hash_vec(data: Vec<FieldElement>) -> FieldElement {
-    let mut hasher = FieldHash::init(None);
+    let mut hasher = FieldHash::init_constant_length(data.len(), None);
     data.into_iter().for_each(|fe| { hasher.update(fe); });
-    hasher.finalize()
+    hasher.finalize().unwrap()
 }
 
 /// Updatable struct that accumulates bytes into one or more FieldElements.
