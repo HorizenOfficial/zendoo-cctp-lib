@@ -1,15 +1,18 @@
+use algebra::FromBytes;
 use primitives::{merkle_tree::field_based_mht::FieldBasedMerkleTreeParameters, FieldBasedMerkleTreePrecomputedZeroConstants, FieldBasedMerkleTreePath, FieldBasedOptimizedMHT, BatchFieldBasedMerkleTreeParameters, FieldBasedMerkleTree, FieldBasedMHTPath};
 use crate::commitment_tree::sidechain_tree_alive::{SidechainTreeAlive, SidechainAliveSubtreeType};
 use crate::commitment_tree::sidechain_tree_ceased::SidechainTreeCeased;
 use crate::commitment_tree::proofs::{ScExistenceProof, ScAbsenceProof, ScCommitmentData, ScNeighbour};
 use crate::commitment_tree::hashers::{hash_fwt, hash_bwtr, hash_scc, hash_cert, hash_csw};
-use crate::commitment_tree::utils::{pow2, new_mt, fe_from_bytes};
+use crate::commitment_tree::utils::{pow2, new_mt};
 
 pub mod sidechain_tree_alive;
 pub mod sidechain_tree_ceased;
 pub mod proofs;
 pub mod hashers;
 pub mod utils;
+
+pub(crate) const FIELD_SIZE: usize = 32;
 
 //--------------------------------------------------------------------------------------------------
 // Underlying FieldElement, FieldHash, FieldBatchHash and field-related MHT-parameters
@@ -70,12 +73,14 @@ impl CommitmentTree {
     // Adds Forward Transfer Transaction to the Commitment Tree
     // Returns false if hash_fwt can't get hash for data given in parameters;
     //         otherwise returns the same as add_fwt_leaf method
-    pub fn add_fwt(&mut self,
-                   sc_id: &[u8],
-                   amount: i64,
-                   pub_key: &[u8],
-                   tx_hash: &[u8],
-                   out_idx: u32) -> bool {
+    pub fn add_fwt(
+        &mut self,
+        sc_id: &[u8; 32],
+        amount: u64,
+        pub_key: &[u8; 32],
+        tx_hash: &[u8; 32],
+        out_idx: u32
+    ) -> bool {
         if let Ok(fwt_leaf) = hash_fwt(
             amount, pub_key, tx_hash, out_idx
         ){
@@ -88,15 +93,17 @@ impl CommitmentTree {
     // Adds Backward Transfer Request Transaction to the Commitment Tree
     // Returns false if hash_bwtr can't get hash for data given in parameters;
     //         otherwise returns the same as add_bwtr_leaf method
-    pub fn add_bwtr(&mut self,
-                    sc_id: &[u8],
-                    sc_fee: i64,
-                    sc_request_data: &[u8],
-                    pk_hash: &[u8],
-                    tx_hash: &[u8],
-                    out_idx: u32) -> bool {
+    pub fn add_bwtr(
+        &mut self,
+        sc_id: &[u8; 32],
+        sc_fee:  u64,
+        sc_request_data: &[[u8; FIELD_SIZE]],
+        mc_destination_address: &[u8; 20],
+        tx_hash: &[u8; 32],
+        out_idx: u32
+    ) -> bool {
         if let Ok(bwtr_leaf) = hash_bwtr(
-            sc_fee, sc_request_data, pk_hash, tx_hash, out_idx
+            sc_fee, sc_request_data, mc_destination_address, tx_hash, out_idx
         ){
             self.add_bwtr_leaf(sc_id, &bwtr_leaf)
         } else {
@@ -107,17 +114,20 @@ impl CommitmentTree {
     // Adds Certificate to the Commitment Tree
     // Returns false if hash_cert can't get hash for data given in parameters;
     //         otherwise returns the same as add_cert_leaf method
-    pub fn add_cert(&mut self,
-                    sc_id: &[u8],
-                    epoch_number: u32,
-                    quality: u64,
-                    cert_data_hash: &[u8],
-                    bt_list: &[(i64,[u8; 20])],
-                    custom_fields_merkle_root: &[u8],
-                    end_cumulative_sc_tx_commitment_tree_root: &[u8])-> bool {
+    pub fn add_cert(
+        &mut self,
+        sc_id: &[u8; 32],
+        epoch_number: u32,
+        quality: u64,
+        bt_list: &[(u64,[u8; 20])],
+        custom_fields: Option<&[[u8; FIELD_SIZE]]>, //aka proof_data - includes custom_field_elements and bit_vectors merkle roots
+        end_cumulative_sc_tx_commitment_tree_root: &[u8; FIELD_SIZE],
+        btr_fee: u64,
+        ft_min_amount: u64
+    )-> bool {
         if let Ok(cert_leaf) = hash_cert(
-            epoch_number, quality, cert_data_hash, bt_list,
-            custom_fields_merkle_root, end_cumulative_sc_tx_commitment_tree_root
+            epoch_number, quality, bt_list, custom_fields,
+            end_cumulative_sc_tx_commitment_tree_root, btr_fee, ft_min_amount
         ){
             self.add_cert_leaf(sc_id, &cert_leaf)
         } else {
@@ -128,22 +138,31 @@ impl CommitmentTree {
     // Adds Sidechain Creation Transaction to the Commitment Tree
     // Returns false if hash_scc can't get hash for data given in parameters;
     //         otherwise returns the same as set_scc_leaf method
-    pub fn add_scc(&mut self,
-                   sc_id: &[u8],
-                   amount: i64,
-                   pub_key: &[u8],
-                   withdrawal_epoch_length: u32,
-                   custom_data: &[u8],
-                   constant: Option<&[u8]>,
-                   cert_verification_key: &[u8],
-                   btr_verification_key: Option<&[u8]>,
-                   csw_verification_key: Option<&[u8]>,
-                   tx_hash: &[u8],
-                   out_idx: u32)-> bool {
+    pub fn add_scc(
+        &mut self,
+        sc_id: &[u8; 32],
+        amount: u64,
+        pub_key: &[u8; 32],
+        tx_hash: &[u8; 32],
+        out_idx: u32,
+        withdrawal_epoch_length: u32,
+        cert_proving_system: u8,
+        csw_proving_system: Option<u8>,
+        mc_btr_request_data_length: u8,
+        custom_field_elements_configs: &[u8],
+        custom_bitvector_elements_configs: &[(u32, u32)],
+        btr_fee: u64,
+        ft_min_amount: u64,
+        custom_creation_data: &[u8],
+        constant: Option<&[u8; FIELD_SIZE]>,
+        cert_verification_key: &[u8],
+        csw_verification_key: Option<&[u8]>
+    )-> bool {
         if let Ok(scc_leaf) = hash_scc(
-            amount, pub_key, withdrawal_epoch_length, custom_data, constant,
-            cert_verification_key, btr_verification_key, csw_verification_key,
-            tx_hash, out_idx
+            amount, pub_key, tx_hash, out_idx, withdrawal_epoch_length, cert_proving_system,
+            csw_proving_system, mc_btr_request_data_length, custom_field_elements_configs,
+            custom_bitvector_elements_configs, btr_fee, ft_min_amount, custom_creation_data,
+            constant, cert_verification_key, csw_verification_key
         ){
             self.set_scc(sc_id, &scc_leaf)
         } else {
@@ -154,14 +173,15 @@ impl CommitmentTree {
     // Adds Ceased Sidechain Withdrawal to the Commitment Tree
     // Returns false if hash_csw can't get hash for data given in parameters;
     //         otherwise returns the same as add_csw_leaf method
-    pub fn add_csw(&mut self,
-                   sc_id: &[u8],
-                   amount: i64,
-                   nullifier: &[u8],
-                   pk_hash: &[u8],
-                   active_cert_data_hash: &[u8])-> bool {
+    pub fn add_csw(
+        &mut self,
+       sc_id: &[u8; 32],
+        amount: u64,
+        nullifier: &[u8; FIELD_SIZE],
+        mc_pk_hash: &[u8; 20],
+    )-> bool {
         if let Ok(csw_leaf) = hash_csw(
-            amount, nullifier, pk_hash, active_cert_data_hash
+            amount, nullifier, mc_pk_hash
         ){
             self.add_csw_leaf(sc_id, &csw_leaf)
         } else {
@@ -171,86 +191,86 @@ impl CommitmentTree {
 
     // Adds Forward Transfer Transaction's hash to the FWT subtree of the corresponding SidechainTreeAlive
     // Returns false if maximum number of FWTs has been inserted or if there is a SidechainTreeCeased with the specified ID
-    pub fn add_fwt_leaf(&mut self, sc_id: &[u8], fwt: &FieldElement) -> bool {
+    pub fn add_fwt_leaf(&mut self, sc_id: &[u8; 32], fwt: &FieldElement) -> bool {
         self.scta_add_subtree_leaf(sc_id, fwt, SidechainAliveSubtreeType::FWT)
     }
 
     // Adds Backward Transfer Request Transaction's hash to the BWTR subtree of the corresponding SidechainTreeAlive
     // Returns false if maximum number of BWTRs has been inserted or if there is a SidechainTreeCeased with the specified ID
-    pub fn add_bwtr_leaf(&mut self, sc_id: &[u8], bwtr: &FieldElement) -> bool {
+    pub fn add_bwtr_leaf(&mut self, sc_id: &[u8; 32], bwtr: &FieldElement) -> bool {
         self.scta_add_subtree_leaf(sc_id, bwtr, SidechainAliveSubtreeType::BWTR)
     }
 
     // Adds Certificate's hash to the CERT subtree of the corresponding SidechainTreeAlive
     // Returns false if maximum number of CERTs has been inserted or if there is a SidechainTreeCeased with the specified ID
-    pub fn add_cert_leaf(&mut self, sc_id: &[u8], cert: &FieldElement) -> bool {
+    pub fn add_cert_leaf(&mut self, sc_id: &[u8; 32], cert: &FieldElement) -> bool {
         self.scta_add_subtree_leaf(sc_id, cert, SidechainAliveSubtreeType::CERT)
     }
 
     // Sets Sidechain Creation Transaction's hash for the corresponding SidechainTreeAlive
     // Returns false if there is a SidechainTreeCeased with the specified ID
-    pub fn set_scc(&mut self, sc_id: &[u8], scc: &FieldElement) -> bool {
+    pub fn set_scc(&mut self, sc_id: &[u8; 32], scc: &FieldElement) -> bool {
         self.scta_add_subtree_leaf(sc_id, scc, SidechainAliveSubtreeType::SCC)
     }
 
     // Adds Ceased Sidechain Withdrawal's hash to the CSW subtree of the corresponding SidechainTreeCeased
     // Returns false if CSW subtree has no place to add new element or if there is a SidechainTreeAlive with the specified ID
-    pub fn add_csw_leaf(&mut self, sc_id: &[u8], csw: &FieldElement) -> bool {
+    pub fn add_csw_leaf(&mut self, sc_id: &[u8; 32], csw: &FieldElement) -> bool {
         self.sctc_add_subtree_leaf(sc_id, csw)
     }
 
     // Gets commitment, i.e. root of the Forward Transfer Transactions subtree of a specified SidechainTreeAlive
     // Returns None if SidechainTreeAlive with a specified ID doesn't exist in a current CommitmentTree
-    pub fn get_fwt_commitment(&mut self, sc_id: &[u8]) -> Option<FieldElement> {
+    pub fn get_fwt_commitment(&mut self, sc_id: &[u8; 32]) -> Option<FieldElement> {
         self.scta_get_subtree_commitment(sc_id, SidechainAliveSubtreeType::FWT)
     }
 
     // Gets commitment, i.e. root of the Backward Transfer Requests Transactions subtree of a specified SidechainTreeAlive
     // Returns None if SidechainTreeAlive with a specified ID doesn't exist in a current CommitmentTree
-    pub fn get_bwtr_commitment(&mut self, sc_id: &[u8]) -> Option<FieldElement> {
+    pub fn get_bwtr_commitment(&mut self, sc_id: &[u8; 32]) -> Option<FieldElement> {
         self.scta_get_subtree_commitment(sc_id, SidechainAliveSubtreeType::BWTR)
     }
 
     // Gets commitment, i.e. root of the Certificates subtree of a specified SidechainTreeAlive
     // Returns None if SidechainTreeAlive with a specified ID doesn't exist in a current CommitmentTree
-    pub fn get_cert_commitment(&mut self, sc_id: &[u8]) -> Option<FieldElement> {
+    pub fn get_cert_commitment(&mut self, sc_id: &[u8; 32]) -> Option<FieldElement> {
         self.scta_get_subtree_commitment(sc_id, SidechainAliveSubtreeType::CERT)
     }
 
     // Gets Sidechain Creation Transaction hash for a specified SidechainTreeAlive
     // Returns None if SidechainTreeAlive with a specified ID doesn't exist in a current CommitmentTree
-    pub fn get_scc(&mut self, sc_id: &[u8]) -> Option<FieldElement> {
+    pub fn get_scc(&mut self, sc_id: &[u8; 32]) -> Option<FieldElement> {
         self.scta_get_subtree_commitment(sc_id, SidechainAliveSubtreeType::SCC)
     }
 
     // Gets commitment, i.e. root of the Ceased Sidechain Withdrawals subtree of a specified SidechainTreeCeased
     // Returns None if SidechainTreeCeased with a specified ID doesn't exist in a current CommitmentTree
-    pub fn get_csw_commitment(&mut self, sc_id: &[u8]) -> Option<FieldElement> {
+    pub fn get_csw_commitment(&mut self, sc_id: &[u8; 32]) -> Option<FieldElement> {
         self.sctc_get_subtree_commitment(sc_id)
     }
 
     // Gets all leaves, of a Forward Transfer Transactions subtree of a specified SidechainTreeAlive
     // Returns None if SidechainTreeCeased with a specified ID doesn't exist in a current CommitmentTree
-    pub fn get_fwt_leaves(&mut self, sc_id: &[u8]) -> Option<Vec<FieldElement>> {
+    pub fn get_fwt_leaves(&mut self, sc_id: &[u8; 32]) -> Option<Vec<FieldElement>> {
         self.scta_get_subtree_leaves(sc_id, SidechainAliveSubtreeType::FWT)
     }
 
     // Gets all leaves, of a Backward Transfer Requests Transactions subtree of a specified SidechainTreeAlive
     // Returns None if SidechainTreeCeased with a specified ID doesn't exist in a current CommitmentTree
-    pub fn get_bwtr_leaves(&mut self, sc_id: &[u8]) -> Option<Vec<FieldElement>> {
+    pub fn get_bwtr_leaves(&mut self, sc_id: &[u8; 32]) -> Option<Vec<FieldElement>> {
         self.scta_get_subtree_leaves(sc_id, SidechainAliveSubtreeType::BWTR)
     }
 
     // Gets all leaves, of a Certificates subtree of a specified SidechainTreeAlive
     // Returns None if SidechainTreeCeased with a specified ID doesn't exist in a current CommitmentTree
-    pub fn get_cert_leaves(&mut self, sc_id: &[u8]) -> Option<Vec<FieldElement>> {
+    pub fn get_cert_leaves(&mut self, sc_id: &[u8; 32]) -> Option<Vec<FieldElement>> {
         self.scta_get_subtree_leaves(sc_id, SidechainAliveSubtreeType::CERT)
     }
 
     // Gets commitment of a specified SidechainTreeAlive/SidechainTreeCeased
     // Returns None if SidechainTreeAlive/SidechainTreeCeased with a specified ID doesn't exist in a current CommitmentTree
     pub fn get_sc_commitment(&mut self, sc_id_bytes: &[u8]) -> Option<FieldElement> {
-        self.get_sc_commitment_internal(&fe_from_bytes(sc_id_bytes).ok()?)
+        self.get_sc_commitment_internal(&FieldElement::read(sc_id_bytes).ok()?)
     }
 
     // Gets commitment for a CommitmentTree
@@ -268,7 +288,7 @@ impl CommitmentTree {
     // Returns None if sidechain with a specified ID is absent in a current CommitmentTree,
     //              if get_commitments_tree or get_merkle_path returned None
     pub fn get_sc_existence_proof(&mut self, sc_id_bytes: &[u8]) -> Option<ScExistenceProof> {
-        let sc_id = fe_from_bytes(sc_id_bytes).ok()?;
+        let sc_id = FieldElement::read(sc_id_bytes).ok()?;
         if let Some(index) = self.sc_id_to_index(&sc_id){
             if let Some(tree) = self.get_commitments_tree(){
                 Some(
@@ -289,7 +309,7 @@ impl CommitmentTree {
     //              if absent_id is not really absent,
     //              if some internal error occurred
     pub fn get_sc_absence_proof(&mut self, absent_id_bytes: &[u8]) -> Option<ScAbsenceProof> {
-        let absent_id = fe_from_bytes(absent_id_bytes).ok()?;
+        let absent_id = FieldElement::read(absent_id_bytes).ok()?;
         let (left, right) = self.get_neighbours_for_absent(&absent_id)?;
         let tree = self.get_commitments_tree()?.finalize();
 
@@ -329,7 +349,7 @@ impl CommitmentTree {
     // Returns true if proof is correct, false otherwise
     pub fn verify_sc_absence(absent_id_bytes: &[u8], proof: &ScAbsenceProof, commitment: &FieldElement) -> bool {
         // Parsing bytes of absent_id as FieldElement
-        if let Ok(absent_id) = fe_from_bytes(absent_id_bytes){
+        if let Ok(absent_id) = FieldElement::read(absent_id_bytes){
             // Checking if left and right neighbours are present
             if let (Some(left), Some(right)) = (
                 proof.left.as_ref(), proof.right.as_ref()
@@ -482,7 +502,7 @@ impl CommitmentTree {
     // Adds leaf to a subtree of a specified type in a specified SidechainTreeAlive
     // Returns false if there is SidechainTreeCeased with the same ID or if get_sct_mut couldn't get SidechainTreeAlive with a specified ID
     fn scta_add_subtree_leaf(&mut self, sc_id_bytes: &[u8], leaf: &FieldElement, subtree_type: SidechainAliveSubtreeType) -> bool {
-        if let Ok(sc_id) = fe_from_bytes(sc_id_bytes){
+        if let Ok(sc_id) = FieldElement::read(sc_id_bytes){
             if !self.is_present_sctc(&sc_id) { // there shouldn't be SCTC with the same ID
                 if let Some(sct) = self.get_add_scta_mut(&sc_id){
                     let result = match subtree_type {
@@ -508,7 +528,7 @@ impl CommitmentTree {
     // Adds leaf to a CSW-subtree of a specified SidechainTreeCeased
     // Returns false if there is SidechainTreeAlive with the same ID or if get_sctc_mut couldn't get SidechainTreeCeased with a specified ID
     fn sctc_add_subtree_leaf(&mut self, sc_id_bytes: &[u8], leaf: &FieldElement) -> bool {
-        if let Ok(sc_id) = fe_from_bytes(sc_id_bytes){
+        if let Ok(sc_id) = FieldElement::read(sc_id_bytes){
             if !self.is_present_scta(&sc_id) { // there shouldn't be SCTA with the same ID
                 if let Some(sctc) = self.get_add_sctc_mut(&sc_id){
                     let result = sctc.add_csw(leaf);
@@ -529,7 +549,7 @@ impl CommitmentTree {
     // Gets commitment i.e. root of a subtree of a specified type in a specified SidechainTreeAlive
     // Returns None if get_sctc couldn't get SidechainTreeCeased with a specified ID
     fn scta_get_subtree_commitment(&mut self, sc_id_bytes: &[u8], subtree_type: SidechainAliveSubtreeType) -> Option<FieldElement> {
-        let sc_id = fe_from_bytes(sc_id_bytes).ok()?;
+        let sc_id = FieldElement::read(sc_id_bytes).ok()?;
         if let Some(sc_tree) = self.get_scta_mut(&sc_id){
             Some(
                 match subtree_type {
@@ -547,7 +567,7 @@ impl CommitmentTree {
     // Gets commitment i.e. root of a subtree of a specified type in a specified SidechainTreeCeased
     // Returns None if get_sctc couldn't get SidechainTreeCeased with a specified ID
     fn sctc_get_subtree_commitment(&mut self, sc_id_bytes: &[u8]) -> Option<FieldElement> {
-        let sc_id = fe_from_bytes(sc_id_bytes).ok()?;
+        let sc_id = FieldElement::read(sc_id_bytes).ok()?;
         if let Some(sctc) = self.get_sctc_mut(&sc_id){
             Some(sctc.get_csw_commitment())
         } else {
@@ -558,7 +578,7 @@ impl CommitmentTree {
     // Gets all leaves of a subtree of a specified type in a specified SidechainTreeAlive
     // Returns None if there is no SidechainTreeAlive with a specified ID
     fn scta_get_subtree_leaves(&mut self, sc_id_bytes: &[u8], subtree_type: SidechainAliveSubtreeType) -> Option<Vec<FieldElement>> {
-        let sc_id = fe_from_bytes(sc_id_bytes).ok()?;
+        let sc_id = FieldElement::read(sc_id_bytes).ok()?;
         if let Some(sc_tree) = self.get_scta_mut(&sc_id){
             Some(
                 match subtree_type {
@@ -701,17 +721,12 @@ impl CommitmentTree {
 
 #[cfg(test)]
 mod test {
-    use algebra::{Field, UniformRand};
+    use algebra::{Field, ToBytes, to_bytes, FromBytes};
     use crate::commitment_tree::{FieldElement, CommitmentTree};
-    use crate::commitment_tree::utils::{rand_vec, fe_to_bytes};
+    use crate::commitment_tree::utils::{rand_vec, rand_fe, rand_fe_vec};
     use rand::Rng;
-    use std::convert::TryFrom;
+    use std::convert::{TryFrom, TryInto};
     use crate::commitment_tree::proofs::{ScExistenceProof, ScAbsenceProof};
-
-    // Generates a random FieldElement and serializes it into a byte-array
-    fn rand_fe_bytes() -> Vec<u8>{
-        fe_to_bytes(&FieldElement::rand(&mut rand::thread_rng()))
-    }
 
     // Creates a sequence of FieldElements with values [0, 1, 2, 3, 4]
     fn get_fe_0_4() -> Vec<FieldElement>{
@@ -728,8 +743,17 @@ mod test {
         let mut cmt = CommitmentTree::create();
         let fe = get_fe_0_4();
         // Initial order of IDs is reversed, i.e. vec![3, 2, 1, 0] to test SCIDs-ordering functionality
-        let sc_ids: Vec<Vec<u8>> = fe.iter().take(4).rev().map(fe_to_bytes).collect();
-        let non_existing_sc_id = fe_to_bytes(&fe[4]);
+        let sc_ids: Vec<[u8; 32]> = fe.iter().take(4).rev().map(|fe| {
+            let mut fe_bytes = [0u8; 32];
+            fe.write(&mut fe_bytes[..]).unwrap();
+            fe_bytes
+        }).collect();
+
+        let non_existing_sc_id = {
+            let mut fe_bytes = [0u8; 32];
+            fe[4].write(&mut fe_bytes[..]).unwrap();
+            fe_bytes
+        };
 
         // Initial commitment_tree value of an empty CMT
         let empty_comm = cmt.get_commitment().unwrap();
@@ -809,8 +833,8 @@ mod test {
 
         // Serializing and deserializing the generated existence proof
         let existence_proof_deserialized =
-            ScExistenceProof::from_bytes(
-                &existence_proof.as_ref().unwrap().to_bytes()
+            ScExistenceProof::read(
+                to_bytes!(existence_proof.as_ref().unwrap()).unwrap().as_slice()
             );
         assert!(existence_proof_deserialized.is_ok());
         assert_eq!(existence_proof.as_ref().unwrap(), existence_proof_deserialized.as_ref().unwrap());
@@ -824,7 +848,12 @@ mod test {
 
     #[test]
     fn sc_absence_proofs_tests(){
-        let sc_id: Vec<Vec<u8>> = get_fe_0_4().iter().map(fe_to_bytes).collect();
+        let sc_id: Vec<[u8; 32]> = get_fe_0_4().iter().map(|fe| {
+            let mut fe_bytes = [0u8; 32];
+            fe.write(&mut fe_bytes[..]).unwrap();
+            fe_bytes
+        }).collect();
+
         let leaf = FieldElement::one();
 
         let mut cmt = CommitmentTree::create();
@@ -838,8 +867,8 @@ mod test {
 
         // Serializing and deserializing the generated proof
         let proof_empty_deserialized =
-            ScAbsenceProof::from_bytes(
-                &proof_empty.as_ref().unwrap().to_bytes()
+            ScAbsenceProof::read(
+                to_bytes!(proof_empty.as_ref().unwrap()).unwrap().as_slice()
             );
         assert_eq!(proof_empty.as_ref().unwrap(), proof_empty_deserialized.as_ref().unwrap());
 
@@ -877,8 +906,8 @@ mod test {
 
         // Serializing and deserializing the generated proof
         let proof_leftmost_deserialized =
-            ScAbsenceProof::from_bytes(
-                &proof_leftmost.as_ref().unwrap().to_bytes()
+            ScAbsenceProof::read(
+                to_bytes!(proof_leftmost.as_ref().unwrap()).unwrap().as_slice()
             );
         assert_eq!(proof_leftmost.as_ref().unwrap(), proof_leftmost_deserialized.as_ref().unwrap());
 
@@ -896,8 +925,8 @@ mod test {
 
         // Serializing and deserializing the generated proof
         let proof_midst_deserialized =
-            ScAbsenceProof::from_bytes(
-                &proof_midst.as_ref().unwrap().to_bytes()
+            ScAbsenceProof::read(
+                to_bytes!(proof_midst.as_ref().unwrap()).unwrap().as_slice()
             );
         assert_eq!(proof_midst.as_ref().unwrap(), proof_midst_deserialized.as_ref().unwrap());
 
@@ -915,8 +944,8 @@ mod test {
 
         // Serializing and deserializing the generated proof
         let proof_rightmost_deserialized =
-            ScAbsenceProof::from_bytes(
-                &proof_rightmost.as_ref().unwrap().to_bytes()
+            ScAbsenceProof::read(
+                to_bytes!(proof_rightmost.as_ref().unwrap()).unwrap().as_slice()
             );
         assert_eq!(proof_rightmost.as_ref().unwrap(), proof_rightmost_deserialized.as_ref().unwrap());
 
@@ -937,10 +966,10 @@ mod test {
 
         assert!(
             cmt.add_fwt(
-                &rand_fe_bytes(),
+                &rand_fe(),
                 rng.gen(),
-                &rand_vec(32),
-                &rand_vec(32),
+                &rand_vec(32).try_into().unwrap(),
+                &rand_vec(32).try_into().unwrap(),
                 rng.gen()
             )
         );
@@ -951,11 +980,11 @@ mod test {
 
         assert!(
             cmt.add_bwtr(
-                &rand_fe_bytes(),
+                &rand_fe(),
                 rng.gen(),
-                &rand_vec(32),
-                &rand_vec(32),
-                &rand_vec(32),
+                &rand_fe_vec(10),
+                &rand_vec(20).try_into().unwrap(),
+                &rand_vec(32).try_into().unwrap(),
                 rng.gen()
             )
         );
@@ -963,16 +992,17 @@ mod test {
         let comm2 = cmt.get_commitment();
         assert_ne!(comm1, comm2);
 
-        let bt = (rng.gen::<i64>(), <[u8; 20]>::try_from(rand_vec(20).as_slice()).unwrap());
+        let bt = (rng.gen::<u64>(), <[u8; 20]>::try_from(rand_vec(20).as_slice()).unwrap());
         assert!(
             cmt.add_cert(
-                &rand_fe_bytes(),
+                &rand_fe(),
                 rng.gen(),
                 rng.gen(),
-                &rand_vec(20),
                 &vec![bt, bt],
-                &rand_vec(32),
-                &rand_vec(32)
+                Some(&rand_fe_vec(2)),
+                &rand_fe(),
+                rng.gen(),
+                rng.gen(),
             )
         );
 
@@ -981,17 +1011,23 @@ mod test {
 
         assert!(
             cmt.add_scc(
-                &rand_fe_bytes(),
+                &rand_fe(),
                 rng.gen(),
-                &rand_vec(32),
+                &rand_vec(32).try_into().unwrap(),
+                &rand_vec(32).try_into().unwrap(),
                 rng.gen(),
-                &rand_vec(32),
-                Some(&rand_vec(32)),
-                &rand_vec(1544),
-                Some(&rand_vec(1544)),
-                Some(&rand_vec(1544)),
-                &rand_vec(32),
-                rng.gen()
+                rng.gen(),
+                rng.gen(),
+                Some(rng.gen()),
+                rng.gen(),
+                &rand_vec(10),
+                &vec![(rng.gen(), rng.gen())],
+                rng.gen(),
+                rng.gen(),
+                &rand_vec(100),
+                Some(&rand_fe()),
+                &rand_vec(100),
+                Some(&rand_vec(100))
             )
         );
 
@@ -1000,11 +1036,10 @@ mod test {
 
         assert!(
             cmt.add_csw(
-                &rand_fe_bytes(),
+                &rand_fe(),
                 rng.gen(),
-                &rand_vec(32),
-                &rand_vec(20),
-                &rand_vec(32)
+                &rand_fe(),
+                &rand_vec(20).try_into().unwrap()
             )
         );
 

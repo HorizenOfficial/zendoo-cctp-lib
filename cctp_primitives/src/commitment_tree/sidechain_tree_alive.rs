@@ -117,7 +117,7 @@ impl SidechainTreeAlive {
                             bwtr_mr: FieldElement,
                             cert_mr: FieldElement,
                             scc: FieldElement) -> FieldElement {
-        hash_vec(&vec![fwt_mr, bwtr_mr, cert_mr, scc, sc_id])
+        hash_vec(vec![fwt_mr, bwtr_mr, cert_mr, scc, sc_id])
     }
 }
 
