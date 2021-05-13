@@ -31,11 +31,15 @@ fn _get_root_from_field_vec(field_vec: Vec<FieldElement>, height: usize) -> Resu
 /// Get the Merkle Root of a Binary Merkle Tree of height 12 built from the Backward Transfer list
 pub fn get_bt_merkle_root(bt_list: &[BackwardTransfer]) -> Result<FieldElement, Error>
 {
-    let mut accumulator = ByteAccumulator::init();
+    let mut leaves = Vec::with_capacity(bt_list.len());
     for bt in bt_list.iter() {
-        accumulator.update(bt)?;
+        let bt_fes = ByteAccumulator::init()
+            .update(bt)?
+            .get_field_elements()?;
+        assert_eq!(bt_fes.len(), 1);
+        leaves.push(bt_fes[0]);
     }
-    _get_root_from_field_vec(accumulator.get_field_elements()?, 12)
+    _get_root_from_field_vec(leaves, 12)
 }
 
 pub fn get_cert_data_hash(
