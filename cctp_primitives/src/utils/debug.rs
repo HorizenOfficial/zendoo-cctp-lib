@@ -6,7 +6,7 @@
 #[allow(unused_macros)]
 
 /// Prints a string to standard output only if `debug_assertions` is set
-/// (i.e. only if the compilation is performed without optimization). 
+/// (i.e. only if the compilation is performed without optimization).
 #[cfg(debug_assertions)]
 #[macro_export]
 macro_rules! printdbg {

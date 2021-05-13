@@ -33,7 +33,8 @@ unsafe_code
 )]
 #![forbid(unsafe_code)]
 
+pub mod type_mapping;
 pub mod commitment_tree;
 pub mod bit_vector;
 pub mod utils;
-pub mod proof_system;
+pub mod proving_system;

@@ -1,6 +1,6 @@
 use algebra::Field;
-use crate::commitment_tree::{FieldElement, FieldElementsMT};
-use crate::commitment_tree::utils::{hash_vec, pow2, new_mt, add_leaf, Error};
+use crate::type_mapping::{FieldElement, GingerMHT, Error};
+use crate::utils::commitment_tree::{new_mt, add_leaf, hash_vec};
 use std::borrow::BorrowMut;
 use primitives::FieldBasedMerkleTree;
 
@@ -8,10 +8,6 @@ use primitives::FieldBasedMerkleTree;
 pub const FWT_MT_HEIGHT:  usize = 12;
 pub const BWTR_MT_HEIGHT: usize = 12;
 pub const CERT_MT_HEIGHT: usize = 12;
-
-const FWT_MT_CAPACITY:  usize = pow2(FWT_MT_HEIGHT);
-const BWTR_MT_CAPACITY: usize = pow2(BWTR_MT_HEIGHT);
-const CERT_MT_CAPACITY: usize = pow2(CERT_MT_HEIGHT);
 
 // Types of contained subtrees
 pub enum SidechainAliveSubtreeType {
@@ -22,13 +18,9 @@ pub struct SidechainTreeAlive {
     sc_id:    FieldElement,    // ID of a sidechain for which SidechainTreeAlive is created
     scc:      FieldElement,    // Sidechain Creation Transaction hash
 
-    fwt_mt:  FieldElementsMT,  // MT for Forward Transfer Transactions
-    bwtr_mt: FieldElementsMT,  // MT for Backward Transfers Requests Transactions
-    cert_mt: FieldElementsMT,  // MT for Certificates
-
-    fwt_num:  usize,           // Number of contained Forward Transfers Transactions
-    bwtr_num: usize,           // Number of contained Backward Transfers Requests Transactions
-    cert_num: usize,           // Number of contained Certificates
+    fwt_mt:  GingerMHT,  // MT for Forward Transfer Transactions
+    bwtr_mt: GingerMHT,  // MT for Backward Transfers Requests Transactions
+    cert_mt: GingerMHT,  // MT for Certificates
 }
 
 impl SidechainTreeAlive {
@@ -42,14 +34,10 @@ impl SidechainTreeAlive {
                 // Default SCC value for an empty SidechainTreeAlive; Probability of collision with a real SCC value considering it is a random FieldElement is negligible
                 scc:      FieldElement::zero(),
 
-                // Default leaves values of an empty FieldElementsMT are also FieldElement::zero(); They are specified in MHT_PARAMETERS as 0-level nodes
-                fwt_mt:  new_mt(FWT_MT_HEIGHT)?,
-                bwtr_mt: new_mt(BWTR_MT_HEIGHT)?,
-                cert_mt: new_mt(CERT_MT_HEIGHT)?,
-
-                fwt_num:  0,
-                bwtr_num: 0,
-                cert_num: 0
+                // Default leaves values of an empty GingerMHT are also FieldElement::zero(); They are specified in MHT_PARAMETERS as 0-level nodes
+                fwt_mt:  new_mt(FWT_MT_HEIGHT),
+                bwtr_mt: new_mt(BWTR_MT_HEIGHT),
+                cert_mt: new_mt(CERT_MT_HEIGHT),
             }
         )
     }
@@ -59,17 +47,17 @@ impl SidechainTreeAlive {
 
     // Sequentially adds leafs to the FWT MT
     pub fn add_fwt(&mut self, fwt: &FieldElement) -> bool {
-        add_leaf(&mut self.fwt_mt, fwt, &mut self.fwt_num, FWT_MT_CAPACITY)
+        add_leaf(&mut self.fwt_mt, fwt)
     }
 
     // Sequentially adds leafs to the BWTR MT
     pub fn add_bwtr(&mut self, bwtr: &FieldElement) -> bool {
-        add_leaf(&mut self.bwtr_mt, bwtr, &mut self.bwtr_num, BWTR_MT_CAPACITY)
+        add_leaf(&mut self.bwtr_mt, bwtr)
     }
 
     // Sequentially adds leafs to the CERT MT
     pub fn add_cert(&mut self, cert: &FieldElement) -> bool {
-        add_leaf(&mut self.cert_mt, cert, &mut self.cert_num, CERT_MT_CAPACITY)
+        add_leaf(&mut self.cert_mt, cert)
     }
 
     // Sets SCC value
@@ -117,13 +105,13 @@ impl SidechainTreeAlive {
                             bwtr_mr: FieldElement,
                             cert_mr: FieldElement,
                             scc: FieldElement) -> FieldElement {
-        hash_vec(vec![fwt_mr, bwtr_mr, cert_mr, scc, sc_id])
+        hash_vec(vec![fwt_mr, bwtr_mr, cert_mr, scc, sc_id]).unwrap()
     }
 }
 
 #[cfg(test)]
 mod test {
-    use crate::commitment_tree::FieldElement;
+    use crate::type_mapping::FieldElement;
     use algebra::Field;
     use crate::commitment_tree::sidechain_tree_alive::SidechainTreeAlive;
 

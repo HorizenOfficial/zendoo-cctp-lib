@@ -3,41 +3,13 @@
 //! `merkle_tree` exposes functions to compute a bit vector Merkle tree.
 
 use super::compression;
+use crate::type_mapping::*;
 
-use algebra::{
-    fields::tweedle::Fr as TweedleFr, ToConstraintField, log2
-};
-
-use primitives::{
-    crh::poseidon::parameters::tweedle_dee::{TweedleFrPoseidonHash, TweedleFrBatchPoseidonHash},
-    merkle_tree::field_based_mht::{
-        FieldBasedMerkleTreeParameters, FieldBasedMerkleTreePrecomputedZeroConstants,
-        BatchFieldBasedMerkleTreeParameters, FieldBasedOptimizedMHT, FieldBasedMerkleTree,
-        parameters::tweedle_dee::TWEEDLE_DEE_MHT_POSEIDON_PARAMETERS
-    }
-};
+use algebra::{ToConstraintField, log2};
+use primitives::merkle_tree::field_based_mht::FieldBasedMerkleTree;
 
 use bit_vec::BitVec;
 
-#[derive(Clone, Debug)]
-struct TweedleFieldBasedMerkleTreeParams;
-impl FieldBasedMerkleTreeParameters for TweedleFieldBasedMerkleTreeParams {
-    type Data = TweedleFr;
-    type H = TweedleFrPoseidonHash;
-    const MERKLE_ARITY: usize = 2;
-    const ZERO_NODE_CST: Option<FieldBasedMerkleTreePrecomputedZeroConstants<'static, Self::H>> = Some(TWEEDLE_DEE_MHT_POSEIDON_PARAMETERS);
-}
-
-impl BatchFieldBasedMerkleTreeParameters for TweedleFieldBasedMerkleTreeParams {
-    type BH = TweedleFrBatchPoseidonHash;
-}
-
-type TweedlePoseidonMHT = FieldBasedOptimizedMHT<TweedleFieldBasedMerkleTreeParams>;
-
-type Error = Box<dyn std::error::Error>;
-
-// Capacity of the field element in bits
-const FIELD_CAPACITY: usize = 254;
 
 /// Computes the root hash of the Merkle tree created as a representation
 /// of `uncompressed_bit_vector`.
@@ -64,7 +36,7 @@ pub fn merkle_root_from_bytes(uncompressed_bit_vector: &[u8]) -> Result<algebra:
 
     let merkle_tree_height = log2(real_bit_vector_size / FIELD_CAPACITY) as usize;
     let num_leaves = 1 << merkle_tree_height;
-    let mut mt = TweedlePoseidonMHT::init(
+    let mut mt = GingerMHT::init(
         merkle_tree_height,
         num_leaves,
     );
@@ -118,8 +90,6 @@ mod test {
     use compression::{CompressionAlgorithm, compress_bit_vector};
 
     use std::fmt::Write;
-    
-    use algebra::{ToBytes, to_bytes, fields::{models::Fp256, tweedle::fr::FrParameters}};
 
     #[test]
     fn expected_size() {
@@ -181,7 +151,9 @@ mod test {
         assert!(root_hash != updated_root_hash);
     }
 
-    fn field_element_to_hex_string(field_element: Fp256<FrParameters>) -> String {
+    fn field_element_to_hex_string(field_element: FieldElement) -> String {
+        use algebra::{ToBytes, to_bytes};
+
         let mut hex_string = String::from("0x");
         let field_element_bytes = to_bytes!(field_element).unwrap();
 
