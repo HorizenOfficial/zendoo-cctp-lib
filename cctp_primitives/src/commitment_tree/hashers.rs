@@ -1,7 +1,6 @@
 use crate::utils::{
     commitment_tree::*, get_cert_data_hash, data_structures::{BitVectorElementsConfig, BackwardTransfer},
 };
-use crate::proving_system::ProvingSystem;
 use crate::type_mapping::*;
 
 // Computes FieldElement-based hash on the given Forward Transfer Transaction data
@@ -75,8 +74,6 @@ pub fn hash_scc(
     tx_hash: &[u8; 32],
     out_idx: u32,
     withdrawal_epoch_length: u32,
-    cert_proving_system: ProvingSystem,
-    csw_proving_system: Option<ProvingSystem>,
     mc_btr_request_data_length: u8,
     custom_field_elements_configs: &[u8],
     custom_bitvector_elements_configs: &[BitVectorElementsConfig],
@@ -108,9 +105,6 @@ pub fn hash_scc(
         let mut accumulator = ByteAccumulator::init();
         accumulator
             .update(withdrawal_epoch_length)?
-            .update(cert_proving_system)?;
-        if csw_proving_system.is_some() { accumulator.update(csw_proving_system.unwrap())?; }
-        accumulator
             .update(mc_btr_request_data_length)?
             .get_field_elements()
     }?;
@@ -189,7 +183,6 @@ mod test {
         data_structures::{BitVectorElementsConfig, BackwardTransfer},
         commitment_tree::{rand_vec, rand_fe, rand_fe_vec}
     };
-    use crate::proving_system::ProvingSystem;
     use rand::Rng;
     use std::convert::TryInto;
 
@@ -235,8 +228,6 @@ mod test {
                 &rand_vec(32).try_into().unwrap(),
                 rng.gen(),
                 rng.gen(),
-                ProvingSystem::CoboundaryMarlin,
-                Some(ProvingSystem::CoboundaryMarlin),
                 rng.gen(),
                 &rand_vec(10),
                 &vec![BitVectorElementsConfig::default(); 10],
