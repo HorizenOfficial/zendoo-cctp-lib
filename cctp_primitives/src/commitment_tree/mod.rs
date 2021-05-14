@@ -8,7 +8,6 @@ use crate::{
         proofs::{ScExistenceProof, ScAbsenceProof, ScCommitmentData, ScNeighbour},
         hashers::{hash_fwt, hash_bwtr, hash_scc, hash_cert, hash_csw}
     },
-    proving_system::ProvingSystem,
     type_mapping::*,
     utils::{
         commitment_tree::{pow2, new_mt},
@@ -122,8 +121,6 @@ impl CommitmentTree {
         tx_hash: &[u8; 32],
         out_idx: u32,
         withdrawal_epoch_length: u32,
-        cert_proving_system: ProvingSystem,
-        csw_proving_system: Option<ProvingSystem>,
         mc_btr_request_data_length: u8,
         custom_field_elements_configs: &[u8],
         custom_bitvector_elements_configs: &[BitVectorElementsConfig],
@@ -135,8 +132,8 @@ impl CommitmentTree {
         csw_verification_key: Option<&[u8]>
     )-> bool {
         if let Ok(scc_leaf) = hash_scc(
-            amount, pub_key, tx_hash, out_idx, withdrawal_epoch_length, cert_proving_system,
-            csw_proving_system, mc_btr_request_data_length, custom_field_elements_configs,
+            amount, pub_key, tx_hash, out_idx, withdrawal_epoch_length,
+            mc_btr_request_data_length, custom_field_elements_configs,
             custom_bitvector_elements_configs, btr_fee, ft_min_amount, custom_creation_data,
             constant, cert_verification_key, csw_verification_key
         ){
@@ -683,7 +680,6 @@ mod test {
         data_structures::{BackwardTransfer, BitVectorElementsConfig},
         commitment_tree::{rand_vec, rand_fe, rand_fe_vec}
     };
-    use crate::proving_system::ProvingSystem;
     use rand::Rng;
     use std::convert::TryInto;
 
@@ -937,8 +933,6 @@ mod test {
                 &rand_vec(32).try_into().unwrap(),
                 rng.gen(),
                 rng.gen(),
-                ProvingSystem::CoboundaryMarlin,
-                Some(ProvingSystem::CoboundaryMarlin),
                 rng.gen(),
                 &rand_vec(10),
                 &vec![BitVectorElementsConfig::default(); 10],
