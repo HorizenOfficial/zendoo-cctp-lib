@@ -1,8 +1,7 @@
 use primitives::FieldBasedHash;
-use crate::type_mapping::{FIELD_SIZE, FieldElement, FieldHash, GingerMHT, Error};
-
+use crate::type_mapping::{FieldElement, FieldHash, GingerMHT, Error, FIELD_SIZE};
 use rand::Rng;
-use algebra::{UniformRand, ToConstraintField, CanonicalSerialize, ToBytes, to_bytes};
+use algebra::{UniformRand, ToConstraintField, CanonicalSerialize};
 use crate::utils::mht::{new_ginger_mht, append_leaf_to_ginger_mht};
 
 pub const fn pow2(power: usize) -> usize { 1 << power }
@@ -50,19 +49,50 @@ pub fn hash_vec_variable_length(data: Vec<FieldElement>, mod_rate: bool) -> Resu
     hasher.finalize()
 }
 
-/// Computes FieldElement-based hash on the given byte-array
-pub fn hash_bytes(bytes: Vec<u8>) -> Result<FieldElement, Error> {
-    let fes = bytes_to_field_elements(bytes)?;
-    let length = fes.len();
-    hash_vec_constant_length(fes, length)
+/// Updatable struct that accumulates bytes into one or more FieldElements.
+#[derive(Clone)]
+pub struct ByteAccumulator {
+    /// Each byte buffer is converted into bits: this allows to efficiently
+    /// deserialize FieldElements out of them.
+    bit_buffer: Vec<bool>
 }
 
-/// Converts byte-array into a sequence of FieldElements
-pub fn bytes_to_field_elements<T: ToBytes>(to_serialize: Vec<T>) -> Result<Vec<FieldElement>, Error> {
-    let mut bits = primitives::bytes_to_bits(to_bytes!(to_serialize)?.as_slice());
-    // byte serialization is in little endian, but bit serialization is in big endian: we need to reverse.
-    bits.reverse();
-    bits.to_field_elements()
+impl ByteAccumulator {
+    /// Initialize an empty accumulator.
+    pub fn init() -> Self { Self {bit_buffer: vec![] } }
+
+    /// Update this struct with bytes obtained by serializing the input instance `serializable`.
+    pub fn update<T: CanonicalSerialize>(&mut self, serializable: T) -> Result<&mut Self, Error> {
+
+        // Serialize serializable without saving any additional info
+        let mut buffer = Vec::with_capacity(serializable.serialized_size());
+        serializable.serialize_without_metadata(&mut buffer)?;
+
+        let mut bits = primitives::bytes_to_bits(buffer.as_slice());
+        // byte serialization is in little endian, but bit serialization is in big endian: we need to reverse.
+        bits.reverse();
+        self.bit_buffer.append(&mut bits);
+        Ok(self)
+    }
+
+    /// (Safely) deserialize the accumulated bytes into FieldElements.
+    pub fn get_field_elements(&self) -> Result<Vec<FieldElement>, Error> {
+        self.bit_buffer.to_field_elements()
+    }
+
+    /// (Safely) deserialize the accumulated bytes into FieldElements
+    /// and then compute their FieldHash.
+    pub fn compute_field_hash_constant_length(&self) -> Result<FieldElement, Error> {
+        let fes = self.get_field_elements()?;
+        hash_vec(fes)
+    }
+
+    /// (Safely) deserialize the accumulated bytes into FieldElements
+    /// and then compute their FieldHash.
+    pub fn compute_field_hash_variable_length(&self, mod_rate: bool) -> Result<FieldElement, Error> {
+        let fes = self.get_field_elements()?;
+        hash_vec_variable_length(fes, mod_rate)
+    }
 }
 
 //--------------------------------------------------------------------------------------------------
@@ -76,7 +106,13 @@ pub fn rand_vec(len: usize) -> Vec<u8> {
 }
 
 /// Get random (but valid) field element
-pub fn rand_fe() -> [u8; FIELD_SIZE]
+pub fn rand_fe() -> FieldElement
+{
+    FieldElement::rand(&mut rand::thread_rng())
+}
+
+/// Get random (but valid) field element bytes
+pub fn rand_fe_bytes() -> [u8; FIELD_SIZE]
 {
     let mut buffer = [0u8; FIELD_SIZE];
     CanonicalSerialize::serialize(&FieldElement::rand(&mut rand::thread_rng()), &mut buffer[..]).unwrap();
@@ -84,6 +120,6 @@ pub fn rand_fe() -> [u8; FIELD_SIZE]
 }
 
 /// Generate random (but valid) array of field elements
-pub fn rand_fe_vec(len: usize) -> Vec<[u8; FIELD_SIZE]> {
+pub fn rand_fe_vec(len: usize) -> Vec<FieldElement> {
     (0..len).map(|_| rand_fe()).collect::<Vec<_>>()
 }

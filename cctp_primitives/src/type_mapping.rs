@@ -1,17 +1,13 @@
-use algebra::{
-    fields::tweedle::*,
-    curves::tweedle::*,
-    biginteger::BigInteger256,
-    PrimeField, FpParameters
-};
+use algebra::{fields::tweedle::*, curves::tweedle::*, biginteger::BigInteger256, PrimeField, FpParameters};
 use primitives::{
     crh::*,
     merkle_tree::*,
 };
 pub use primitives::merkle_tree::tweedle_dee::TWEEDLE_DEE_MHT_POSEIDON_PARAMETERS as GINGER_MHT_POSEIDON_PARAMETERS;
 use proof_systems::darlin::{
-    *, data_structures::*, pcd::simple_marlin::MarlinProof
+    *, data_structures::*
 };
+pub use proof_systems::darlin::pcd::simple_marlin::MarlinProof;
 use poly_commit::ipa_pc::*;
 use blake2::Blake2s;
 
@@ -20,11 +16,10 @@ use blake2::Blake2s;
 pub type FieldElement = Fr;
 pub type G1 = dee::Affine;
 pub type G2 = dum::Affine;
+pub type G2Projective = dum::Projective;
 
 pub type FieldBigInteger = BigInteger256;
 pub type ScalarFieldElement = Fq;
-pub type Affine = dum::Affine;
-pub type Projective = dum::Projective;
 
 //Field size in bytes
 pub const FIELD_CAPACITY: usize = <Fr as PrimeField>::Params::CAPACITY as usize;
@@ -68,14 +63,6 @@ pub type Digest = Blake2s;
 pub type IPAPC = InnerProductArgPC<G1, Digest>;
 pub type CommitterKeyG1 = CommitterKey<G1>;
 pub type CommitterKeyG2 = CommitterKey<G2>;
-
-#[derive(Copy, Clone)]
-#[repr(C)]
-pub enum ProvingSystem {
-    Undefined,
-    Darlin,
-    CoboundaryMarlin,
-}
 
 // Coboundary Marlin instantiations
 pub type CoboundaryMarlin = marlin::Marlin<FieldElement, IPAPC, Digest>;

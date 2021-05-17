@@ -6,14 +6,15 @@ use std::{
 #[derive(Debug)]
 pub enum ProvingSystemError {
     UndefinedProvingSystem,
+    ProvingSystemMismatch,
     CommitterKeyNotInitialized,
     SetupFailed(String),
     ProofCreationFailed(String),
     ProofVerificationFailed(String),
-    FailedBatchVerification(Option<String>),
+    FailedBatchVerification(Option<u32>),
     NoProofsToVerify,
-    ProofAlreadyExists(String),
-    ProofNotPresent(String),
+    ProofAlreadyExists(u32),
+    ProofNotPresent(u32),
     Other(String),
 }
 
@@ -21,6 +22,7 @@ impl Display for ProvingSystemError {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         match self {
             ProvingSystemError::UndefinedProvingSystem => write!(f, "A valid proving system type must be specified !"),
+            ProvingSystemError::ProvingSystemMismatch => write!(f, "Not all of the crypto artifacts belong to the same proving system"),
             ProvingSystemError::CommitterKeyNotInitialized => write!(f, "Committer Key has not been loaded"),
             ProvingSystemError::SetupFailed(err) => write!(f, "Failed to generate pk and vk {}", err),
             ProvingSystemError::ProofCreationFailed(err) => write!(f, "Failed to create proof {}", err),

@@ -1,9 +1,7 @@
-use algebra::ToBytes;
 use crate::utils::{
-    commitment_tree::*, get_cert_data_hash
+    commitment_tree::*, get_cert_data_hash, data_structures::{BitVectorElementsConfig, BackwardTransfer},
 };
 use crate::type_mapping::*;
-use crate::utils::serialization::deserialize_from_buffer;
 
 // Computes FieldElement-based hash on the given Forward Transfer Transaction data
 pub fn hash_fwt(
@@ -14,57 +12,58 @@ pub fn hash_fwt(
 )-> Result<FieldElement, Error>
 {
     // ceil(256 + 256 + 96/254) = ceil(608/254) = 3 fes
-    let mut buffer = Vec::new();
-    amount.write(&mut buffer)?;
-    pub_key.write(&mut buffer)?;
-    tx_hash.write(&mut buffer)?;
-    out_idx.write(&mut buffer)?;
+    let mut accumulator = ByteAccumulator::init();
+    accumulator
+        .update(amount)?
+        .update(&pub_key[..])?
+        .update(&tx_hash[..])?
+        .update(out_idx)?;
 
-    hash_bytes(buffer)
+    debug_assert!(accumulator.clone().get_field_elements().unwrap().len() == 3);
+    accumulator.compute_field_hash_constant_length()
 }
 
 // Computes FieldElement-based hash on the given Backward Transfer Request Transaction data
 pub fn hash_bwtr(
     sc_fee:  u64,
-    sc_request_data: &[[u8; FIELD_SIZE]],
+    sc_request_data: Vec<&FieldElement>,
     mc_destination_address: &[u8; MC_PK_SIZE],
     tx_hash: &[u8; 32],
     out_idx: u32
 ) -> Result<FieldElement, Error>
 {
-    let mut buffer = Vec::new();
-    sc_fee.write(&mut buffer)?;
-    mc_destination_address.write(&mut buffer)?;
-    tx_hash.write(&mut buffer)?;
-    out_idx.write(&mut buffer)?;
-
     // ceil(256 + 160 + 96/254) = ceil(512/254) = 3 fes
-    let mut fes = bytes_to_field_elements(buffer)?;
+    let mut fes = ByteAccumulator::init()
+        .update(sc_fee)?
+        .update(&mc_destination_address[..])?
+        .update(&tx_hash[..])?
+        .update(out_idx)?
+        .get_field_elements()?;
+
+    debug_assert!(fes.len() == 3);
 
     // sc_request_data elements MUST BE field elements
-    for fe in sc_request_data.iter() {
-        fes.push(deserialize_from_buffer::<FieldElement>(&fe[..])?);
+    for fe in sc_request_data.into_iter() {
+        fes.push(*fe);
     }
 
     hash_vec(fes)
 }
 
 // Computes FieldElement-based hash on the given Certificate data
-//TODO: Maybe we will put additional data ? I hope not :)
 pub fn hash_cert(
-    constant: Option<&[u8; FIELD_SIZE]>,
     epoch_number: u32,
     quality: u64,
-    bt_list: &[(u64,[u8; MC_PK_SIZE])],
-    custom_fields: Option<&[[u8; FIELD_SIZE]]>, //aka proof_data - includes custom_field_elements and bit_vectors merkle roots
-    end_cumulative_sc_tx_commitment_tree_root: &[u8; FIELD_SIZE],
+    bt_list: &[BackwardTransfer],
+    custom_fields: Option<Vec<&FieldElement>>, //aka proof_data - includes custom_field_elements and bit_vectors merkle roots
+    end_cumulative_sc_tx_commitment_tree_root: &FieldElement,
     btr_fee: u64,
-    ft_min_fee: u64
+    ft_min_amount: u64
 ) -> Result<FieldElement, Error>
 {
     get_cert_data_hash(
-        constant, epoch_number, quality, bt_list, custom_fields,
-        end_cumulative_sc_tx_commitment_tree_root, btr_fee, ft_min_fee
+        epoch_number, quality, bt_list, custom_fields,
+        end_cumulative_sc_tx_commitment_tree_root, btr_fee, ft_min_amount
     )
 }
 
@@ -75,78 +74,80 @@ pub fn hash_scc(
     tx_hash: &[u8; 32],
     out_idx: u32,
     withdrawal_epoch_length: u32,
-    cert_proving_system: u8,
-    csw_proving_system: u8,
     mc_btr_request_data_length: u8,
     custom_field_elements_configs: &[u8],
-    custom_bitvector_elements_configs: &[(u32, u32)],
+    custom_bitvector_elements_configs: &[BitVectorElementsConfig],
     btr_fee: u64,
-    ft_min_fee: u64,
-    // TODO: verify if it's enough to add to the comm_tree just the Poseidonhash of the custom_creation_data (Oleksandr)
-    custom_creation_data_hash: &[u8; FIELD_SIZE],
-    constant: Option<&[u8; FIELD_SIZE]>,
-    cert_verification_key_hash: &[u8; FIELD_SIZE],
-    csw_verification_key_hash: Option<&[u8; FIELD_SIZE]>
+    ft_min_amount: u64,
+    custom_creation_data: &[u8],
+    constant: Option<&FieldElement>,
+    cert_verification_key: &[u8],
+    csw_verification_key: Option<&[u8]>
 ) -> Result<FieldElement, Error>
 {
-    //TODO: Is there a reason why we deserialize tx_data_fes, sc_base_conf_fes and fees_fes separately ?
-    //      Can't we concatenate them in a single byte array and then deserialize it ?
-
     // Init hash input
     let mut fes = Vec::new();
 
     // Convert tx data to field elements
-    let mut tx_data_fes = {
-        let mut buffer = Vec::new();
-
-        amount.write(&mut buffer)?;
-        pub_key.write(&mut buffer)?;
-        tx_hash.write(&mut buffer)?;
-        out_idx.write(&mut buffer)?;
-
-        bytes_to_field_elements(buffer)
-    }?;
+    // ceil(256 + 256 + 96/254) = ceil(608/254) = 3 fes
+    let mut tx_data_fes = ByteAccumulator::init()
+        .update(amount)?
+        .update(&pub_key[..])?
+        .update(&tx_hash[..])?
+        .update(out_idx)?
+        .get_field_elements()?;
+    debug_assert!(tx_data_fes.len() == 3);
     fes.append(&mut tx_data_fes);
+
 
     // Convert sc base configuration data into field elements
     let mut sc_base_conf_fes = {
-        let mut buffer = Vec::new();
-
-        withdrawal_epoch_length.write(&mut buffer)?;
-        cert_proving_system.write(&mut buffer)?;
-        csw_proving_system.write(&mut buffer)?;
-        mc_btr_request_data_length.write(&mut buffer)?;
-
-        bytes_to_field_elements(buffer)
+        let mut accumulator = ByteAccumulator::init();
+        accumulator
+            .update(withdrawal_epoch_length)?
+            .update(mc_btr_request_data_length)?
+            .get_field_elements()
     }?;
     fes.append(&mut sc_base_conf_fes);
 
-
     // Convert custom configuration data into field elements
-    let mut custom_conf_data_fes = {
-        let mut buffer = Vec::new();
-
-        custom_field_elements_configs.write(&mut buffer)?;
-        for (e1, e2) in custom_bitvector_elements_configs.iter() {
-            e1.write(&mut buffer)?;
-            e2.write(&mut buffer)?;
-        }
-        bytes_to_field_elements(buffer)
-    }?;
+    let mut custom_conf_data_fes = ByteAccumulator::init()
+        .update(custom_field_elements_configs)?
+        .update(custom_bitvector_elements_configs)?
+        .get_field_elements()?;
     fes.append(&mut custom_conf_data_fes);
 
-    // Pack btr_fee and ft_min_fee into a single field element
-    fes.append(&mut bytes_to_field_elements(vec![btr_fee, ft_min_fee])?);
+    // Pack btr_fee and ft_min_amount into a single field element
+    let mut fees_field_elements = ByteAccumulator::init()
+        .update(btr_fee)?
+        .update(ft_min_amount)?
+        .get_field_elements()?;
+    debug_assert!(fees_field_elements.len() == 1);
+    fes.append(&mut fees_field_elements);
 
-    // Read the other data as field elements if present and push it to fes
-    fes.push(deserialize_from_buffer::<FieldElement>(&custom_creation_data_hash[..])?);
+    // Compute custom_creation_data hash and add it to fes
+    fes.push(
+        ByteAccumulator::init()
+            .update(custom_creation_data)?
+            .compute_field_hash_constant_length()?
+    );
 
-    if constant.is_some() { fes.push(deserialize_from_buffer::<FieldElement>(&constant.unwrap()[..])?); }
+    if constant.is_some() { fes.push(*constant.unwrap()); }
 
-    fes.push(deserialize_from_buffer::<FieldElement>(&cert_verification_key_hash[..])?);
+    // Compute cert_verification_key hash and add it to fes
+    fes.push(
+        ByteAccumulator::init()
+            .update(cert_verification_key)?
+            .compute_field_hash_constant_length()?
+    );
 
-    if csw_verification_key_hash.is_some() {
-        fes.push(deserialize_from_buffer::<FieldElement>(&csw_verification_key_hash.unwrap()[..])?);
+    // Compute csw_verification_key hash (if present) and add it to fes
+    if csw_verification_key.is_some() {
+        fes.push(
+            ByteAccumulator::init()
+                .update(csw_verification_key.unwrap())?
+                .compute_field_hash_constant_length()?
+        );
     }
 
     // Compute final hash
@@ -154,25 +155,21 @@ pub fn hash_scc(
 }
 
 // Computes FieldElement-based hash on the given Ceased Sidechain Withdrawal data
-//TODO verify with Oleksandr if we need to add the redeemScript (signature?)
 pub fn hash_csw(
     amount: u64,
-    nullifier: &[u8; FIELD_SIZE],
+    nullifier: &FieldElement,
     mc_pk_hash: &[u8; MC_PK_SIZE],
 ) -> Result<FieldElement, Error>
 {
-    let mut fes = Vec::new();
-
     // Pack amount and pk_hash into a single field element
-    let mut buffer = Vec::new();
-
-    amount.write(&mut buffer)?;
-    mc_pk_hash.write(&mut buffer)?;
-
-    fes.append(&mut bytes_to_field_elements(buffer)?);
+    let mut fes = ByteAccumulator::init()
+        .update(amount)?
+        .update(&mc_pk_hash[..])?
+        .get_field_elements()?;
+    debug_assert!(fes.len() == 1);
 
     // Push the nullifier to fes
-    fes.push(deserialize_from_buffer::<FieldElement>(&nullifier[..])?);
+    fes.push(*nullifier);
 
     // Return final hash
     hash_vec(fes)
@@ -181,10 +178,13 @@ pub fn hash_csw(
 #[cfg(test)]
 mod test {
     use crate::commitment_tree::hashers::{hash_fwt, hash_bwtr, hash_scc, hash_cert, hash_csw};
-    use rand::Rng;
-    use std::convert::{TryFrom, TryInto};
-    use crate::utils::commitment_tree::{rand_vec, rand_fe, rand_fe_vec};
     use crate::type_mapping::MC_PK_SIZE;
+    use crate::utils::{
+        data_structures::{BitVectorElementsConfig, BackwardTransfer},
+        commitment_tree::{rand_vec, rand_fe, rand_fe_vec}
+    };
+    use rand::Rng;
+    use std::convert::TryInto;
 
     #[test]
     fn test_hashers(){
@@ -202,21 +202,19 @@ mod test {
         assert!(
             hash_bwtr(
                 rng.gen(),
-                &rand_fe_vec(5),
+                rand_fe_vec(5).iter().collect(),
                 &rand_vec(MC_PK_SIZE).try_into().unwrap(),
                 &rand_vec(32).try_into().unwrap(),
                 rng.gen()
             ).is_ok()
         );
 
-        let bt = (rng.gen::<u64>(), <[u8; MC_PK_SIZE]>::try_from(rand_vec(MC_PK_SIZE).as_slice()).unwrap());
         assert!(
             hash_cert(
-                Some(&rand_fe()),
                 rng.gen(),
                 rng.gen(),
-                &vec![bt, bt],
-                Some(&rand_fe_vec(2)),
+                &vec![BackwardTransfer::default(); 10],
+                Some(rand_fe_vec(2).iter().collect()),
                 &rand_fe(),
                 rng.gen(),
                 rng.gen(),
@@ -231,16 +229,14 @@ mod test {
                 rng.gen(),
                 rng.gen(),
                 rng.gen(),
-                rng.gen(),
-                rng.gen(),
                 &rand_vec(10),
-                &[(rng.gen(), rng.gen())],
+                &vec![BitVectorElementsConfig::default(); 10],
                 rng.gen(),
                 rng.gen(),
-                &rand_fe(),
+                &rand_vec(100),
                 Some(&rand_fe()),
-                &rand_fe(),
-                Some(&rand_fe())
+                &rand_vec(100),
+                Some(&rand_vec(100))
             ).is_ok()
         );
 
