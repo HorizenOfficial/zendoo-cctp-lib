@@ -39,6 +39,7 @@ impl<'a> UserInputs for CSWProofUserInputs<'a> {
 }
 
 #[cfg(test)]
+#[ignore]
 #[test]
 fn test_phantom_cert_data_hash() {
     assert_eq!(
