@@ -1,0 +1,41 @@
+os: linux
+dist: focal
+language: generic
+services:
+  - docker
+
+# env variable definitions
+# DOCKER_ORG, IMAGE_NAME and IMAGE_TAG will determine which docker image is being used,
+# see https://github.com/HorizenOfficial/sc-ci-base-docker#currently-available-tags-only-latest-shown
+# for details on available tags.
+# TESTS configures which test scripts to run from the ci/tests folder. The format is either comma
+# separated substrings, matching on the filename ('001,002' evaluates to 001*.sh and 002*.sh), or '*'
+# which evaluates to *.sh (all .sh files).
+# CARGOARGS is passed like this 'cargo $CARGOARGS check|test|build' to all cargo commands in the test scripts.
+# Additionally at container startup the version of Rust specified by CARGOARGS is also installed
+# using rustup should it not yet be installed in the container flavor.
+# RUST_CROSS_TARGETS comma separated list of targets to install, will be installed for all toolchains.
+# RUSTUP_TOOLCHAIN another way to override the used Rust version, although CARGOARGS takes precedence, see:
+# https://rust-lang.github.io/rustup/overrides.html
+# RUSTFLAGS global rust compiler flags to set.
+# ALLOW_FAIL=true allow this job to fail without causing the whole Travis run to fail.
+
+env:
+  global:
+    - DOCKER_ORG=zencash
+    - IMAGE_NAME=sc-ci-base
+    - ALLOW_FAIL=false
+  jobs:
+    - ALLOW_FAIL=true IMAGE_TAG=bionic_rust-1.42.0_latest TESTS='001,002' CARGOARGS='+1.42.0'
+    - IMAGE_TAG=bionic_rust-stable_latest TESTS='*' CARGOARGS='+stable'
+    - IMAGE_TAG=bionic_rust-nightly_latest TESTS='*' RUSTFLAGS='' CARGOARGS='+nightly'
+    - ALLOW_FAIL=true IMAGE_TAG=focal_rust-1.42.0_latest TESTS='001,002' CARGOARGS='+1.42.0'
+    - IMAGE_TAG=focal_rust-stable_latest TESTS='*' CARGOARGS='+stable'
+    - IMAGE_TAG=focal_rust-nightly_latest TESTS='*' RUSTFLAGS='' CARGOARGS='+nightly'
+
+script: ci/script.sh
+
+jobs:
+  allow_failures:
+    env:
+      - ALLOW_FAIL=true
