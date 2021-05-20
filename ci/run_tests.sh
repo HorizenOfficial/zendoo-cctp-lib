@@ -27,7 +27,7 @@ exitcode=0
 
 # determine what tests to run
 if printf "%s\n" "${tests[@]}" | grep -q -P "^\*$"; then
-  mapfile -t scripts < <(find "$WORKDIR/ci/tests" -name "*.sh" -type f)
+  mapfile -t scripts < <(find "$WORKDIR/ci/tests" -name "*.sh" -type f | sort)
 else
   for test in "${tests[@]}"; do
     mapfile -t -O "${#scripts[@]}" scripts < <(find "$WORKDIR/ci/tests" -name "${test}*.sh" -type f)
