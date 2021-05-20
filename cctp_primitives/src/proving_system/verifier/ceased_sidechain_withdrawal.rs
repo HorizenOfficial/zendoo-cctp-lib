@@ -14,6 +14,7 @@ pub const PHANTOM_CERT_DATA_HASH: FieldElement =
     ])
 );
 
+#[derive(Clone)]
 pub struct CSWProofUserInputs<'a> {
     pub amount:                                     u64,
     pub sc_id:                                      &'a FieldElement,

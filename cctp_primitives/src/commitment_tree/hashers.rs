@@ -54,7 +54,7 @@ pub fn hash_bwtr(
 pub fn hash_cert(
     epoch_number: u32,
     quality: u64,
-    bt_list: &[BackwardTransfer],
+    bt_list: Option<&[BackwardTransfer]>,
     custom_fields: Option<Vec<&FieldElement>>, //aka proof_data - includes custom_field_elements and bit_vectors merkle roots
     end_cumulative_sc_tx_commitment_tree_root: &FieldElement,
     btr_fee: u64,
@@ -75,11 +75,11 @@ pub fn hash_scc(
     out_idx: u32,
     withdrawal_epoch_length: u32,
     mc_btr_request_data_length: u8,
-    custom_field_elements_configs: &[u8],
-    custom_bitvector_elements_configs: &[BitVectorElementsConfig],
+    custom_field_elements_configs: Option<&[u8]>,
+    custom_bitvector_elements_configs: Option<&[BitVectorElementsConfig]>,
     btr_fee: u64,
     ft_min_amount: u64,
-    custom_creation_data: &[u8],
+    custom_creation_data: Option<&[u8]>,
     constant: Option<&FieldElement>,
     cert_verification_key: &[u8],
     csw_verification_key: Option<&[u8]>
@@ -99,7 +99,6 @@ pub fn hash_scc(
     debug_assert!(tx_data_fes.len() == 3);
     fes.append(&mut tx_data_fes);
 
-
     // Convert sc base configuration data into field elements
     let mut sc_base_conf_fes = {
         let mut accumulator = ByteAccumulator::init();
@@ -111,11 +110,21 @@ pub fn hash_scc(
     fes.append(&mut sc_base_conf_fes);
 
     // Convert custom configuration data into field elements
-    let mut custom_conf_data_fes = ByteAccumulator::init()
-        .update(custom_field_elements_configs)?
-        .update(custom_bitvector_elements_configs)?
-        .get_field_elements()?;
-    fes.append(&mut custom_conf_data_fes);
+    if custom_field_elements_configs.is_some() || custom_bitvector_elements_configs.is_some() {
+        let mut digest = ByteAccumulator::init();
+
+        if custom_field_elements_configs.is_some() {
+            digest.update(custom_field_elements_configs.unwrap())?;
+        }
+
+        if custom_bitvector_elements_configs.is_some() {
+            digest.update(custom_bitvector_elements_configs.unwrap())?;
+        }
+
+        let mut custom_conf_data_fes = digest.get_field_elements()?;
+
+        fes.append(&mut custom_conf_data_fes);
+    }
 
     // Pack btr_fee and ft_min_amount into a single field element
     let mut fees_field_elements = ByteAccumulator::init()
@@ -126,11 +135,13 @@ pub fn hash_scc(
     fes.append(&mut fees_field_elements);
 
     // Compute custom_creation_data hash and add it to fes
-    fes.push(
-        ByteAccumulator::init()
-            .update(custom_creation_data)?
-            .compute_field_hash_constant_length()?
-    );
+    if custom_creation_data.is_some() {
+        fes.push(
+            ByteAccumulator::init()
+                .update(custom_creation_data.unwrap())?
+                .compute_field_hash_constant_length()?
+        );
+    }
 
     if constant.is_some() { fes.push(*constant.unwrap()); }
 
@@ -213,8 +224,20 @@ mod test {
             hash_cert(
                 rng.gen(),
                 rng.gen(),
-                &vec![BackwardTransfer::default(); 10],
+                Some(&vec![BackwardTransfer::default(); 10]),
                 Some(rand_fe_vec(2).iter().collect()),
+                &rand_fe(),
+                rng.gen(),
+                rng.gen(),
+            ).is_ok()
+        );
+
+        assert!(
+            hash_cert(
+                rng.gen(),
+                rng.gen(),
+                None,
+                None,
                 &rand_fe(),
                 rng.gen(),
                 rng.gen(),
@@ -229,14 +252,33 @@ mod test {
                 rng.gen(),
                 rng.gen(),
                 rng.gen(),
-                &rand_vec(10),
-                &vec![BitVectorElementsConfig::default(); 10],
+                Some(&rand_vec(10)),
+                Some(&vec![BitVectorElementsConfig::default(); 10]),
                 rng.gen(),
                 rng.gen(),
-                &rand_vec(100),
+                Some(&rand_vec(100)),
                 Some(&rand_fe()),
                 &rand_vec(100),
                 Some(&rand_vec(100))
+            ).is_ok()
+        );
+
+        assert!(
+            hash_scc(
+                rng.gen(),
+                &rand_vec(32).try_into().unwrap(),
+                &rand_vec(32).try_into().unwrap(),
+                rng.gen(),
+                rng.gen(),
+                rng.gen(),
+                None,
+                None,
+                rng.gen(),
+                rng.gen(),
+                None,
+                None,
+                &rand_vec(100),
+                None
             ).is_ok()
         );
 
