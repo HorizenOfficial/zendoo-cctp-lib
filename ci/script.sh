@@ -14,8 +14,9 @@ image="${DOCKER_ORG}/${IMAGE_NAME}:${IMAGE_TAG}"
 # run tests in docker or natively
 if [ -n "${TESTS:-}" ]; then
   if [ "$have_docker" = "true" ]; then
-    docker run --rm -t -v "$workdir":/build --entrypoint /build/ci/docker/entrypoint.sh -e TESTS -e RUSTFLAGS -e CARGOARGS \
-      -e RUST_CROSS_TARGETS -e RUSTUP_TOOLCHAIN -e LOCAL_USER_ID="$(id -u)" -e LOCAL_GRP_ID="$(id -g)" "$image" /build/ci/run_tests.sh
+    docker run --rm -t -v "$workdir":/build --entrypoint /build/ci/docker/entrypoint.sh -e TESTS -e LOCAL_USER_ID="$(id -u)" \
+      -e LOCAL_GRP_ID="$(id -g)" --env-file <(env | grep -E '^(RUSTFLAGS=|CARGOARGS=|RUST_CROSS_TARGETS=|RUSTUP_TOOLCHAIN=).+$') \
+      "$image" /build/ci/run_tests.sh
   else
     "${workdir:-.}/ci/run_tests.sh"
   fi

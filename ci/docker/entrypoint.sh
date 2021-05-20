@@ -35,7 +35,7 @@ for toolchain in $(tr " " "\n" <<< "${CARGOARGS:-}" | sed 's/^+//g') "${RUSTUP_T
     toolchain_have="$(rustup toolchain list | grep 'default' | cut -d ' ' -f 1)"
     if ! grep -q "$toolchain" <<< "$toolchain_have"; then
       rustup toolchain install "$toolchain"
-      for target in $(tr "," "\n" <<< "$RUST_CROSS_TARGETS"); do
+      for target in $(tr "," "\n" <<< "${RUST_CROSS_TARGETS:-}"); do
         rustup target add --toolchain "$toolchain" "$target"
       done
     fi
@@ -43,7 +43,7 @@ for toolchain in $(tr " " "\n" <<< "${CARGOARGS:-}" | sed 's/^+//g') "${RUSTUP_T
   fi
 done
 # this installs all targets from RUST_CROSS_TARGETS for the default toolchain
-for target in $(tr "," "\n" <<< "$RUST_CROSS_TARGETS"); do
+for target in $(tr "," "\n" <<< "${RUST_CROSS_TARGETS:-}"); do
   rustup target add "$target"
 done
 

@@ -1,11 +1,17 @@
 #!/bin/bash
 
+# start with a clean environment
+[ -n "${RUSTFLAGS:-}" ] ||
+[ -n "${CARGOARGS:-}" ] ||
+[ -n "${RUST_CROSS_TARGETS:-}" ] ||
+[ -n "${RUSTUP_TOOLCHAIN:-}" ] &&
+exec -c $0
+
 workdir="$( cd "$( dirname "${BASH_SOURCE[0]}" )/../.." &> /dev/null && pwd )"
-globals="$(docker run --rm -v "$workdir":/workdir mikefarah/yq e '.env.global | join(" ")' .travis.yml)"
-mapfile -t jobs < <(docker run --rm -v "$workdir":/workdir mikefarah/yq e '.env.jobs.[]' .travis.yml)
+mapfile -t globals < <(docker run --rm -v "$workdir":/workdir mikefarah/yq e '.env.global.[]' .travis.yml)
+mapfile -t jobs < <(docker run --rm -v "$workdir":/workdir mikefarah/yq e '.jobs.include.[].env' .travis.yml)
 
 for i in "${!jobs[@]}"; do
-  # shellcheck disable=SC2086
-  eval $globals ${jobs[$i]} "$workdir"/ci/script.sh 2>&1 | tee -a "$workdir/ci/devtools/job-$i.log"
-  break
+  ( source <(for var in "${globals[@]}"; do echo "export $var"; done; for var in "${jobs[$i]}"; do echo "export $var"; done); \
+  "$workdir"/ci/script.sh 2>&1 | tee -a "$workdir/ci/devtools/job-$i.log" )
 done
