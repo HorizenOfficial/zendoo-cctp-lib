@@ -32,14 +32,14 @@ jobs:
       env: IMAGE_TAG=bionic_rust-1.42.0_latest TESTS='001,002' CARGOARGS='+1.42.0'
     - name: bionic_rust-1.51.0_latest
       env: IMAGE_TAG=bionic_rust-1.51.0_latest TESTS='001,002'
-    - name: bionic_rust-nightly_latest
-      env: IMAGE_TAG=bionic_rust-nightly_latest TESTS='*' CARGOARGS='+nightly'
-    - name: focal_rust-1.42.0_latest
-      env: IMAGE_TAG=focal_rust-1.42.0_latest TESTS='001,002' CARGOARGS='+1.42.0'
-    - name: focal_rust-1.51.0_latest
-      env: IMAGE_TAG=focal_rust-1.51.0_latest TESTS='001,002'
-    - name: focal_rust-nightly_latest
-      env: IMAGE_TAG=focal_rust-nightly_latest TESTS='*' CARGOARGS='+nightly'
+    - name: bionic_rust-nightly_2021-04-25
+      env: IMAGE_TAG=bionic_rust-nightly_2021-04-25 TESTS='*' CARGOARGS='+nightly-2021-04-25
+#    - name: focal_rust-1.42.0_latest
+#      env: IMAGE_TAG=focal_rust-1.42.0_latest TESTS='001,002' CARGOARGS='+1.42.0'
+#    - name: focal_rust-1.51.0_latest
+#      env: IMAGE_TAG=focal_rust-1.51.0_latest TESTS='001,002'
+#    - name: focal_rust-nightly_2021-04-25
+#      env: IMAGE_TAG=focal_rust-nightly_2021-04-25 TESTS='*' CARGOARGS='+nightly-2021-04-25'
   allow_failures:
     - name: bionic_rust-1.42.0_latest
       env: IMAGE_TAG=bionic_rust-1.42.0_latest TESTS='001,002' CARGOARGS='+1.42.0'
