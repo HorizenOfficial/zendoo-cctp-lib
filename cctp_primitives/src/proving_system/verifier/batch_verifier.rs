@@ -205,11 +205,12 @@ mod test {
         g1_ck_path.push("ck_g1");
 
         let committer_key_g1 = {
-            load_g1_committer_key(segment_size - 1, &g1_ck_path).unwrap();
+            load_g1_committer_key(segment_size - 1, segment_size - 1, &g1_ck_path).unwrap();
             get_g1_committer_key().unwrap()
         }.as_ref().unwrap().clone();
 
         let params_g1 = UniversalParams::<G1> {
+            hash: committer_key_g1.hash.clone(),
             comm_key: committer_key_g1.comm_key.clone(),
             h: committer_key_g1.h.clone(),
             s: committer_key_g1.s.clone(),
@@ -219,11 +220,12 @@ mod test {
         g2_ck_path.push("ck_g2");
 
         let committer_key_g2 = {
-            load_g2_committer_key(segment_size - 1, &g2_ck_path).unwrap();
+            load_g2_committer_key(segment_size - 1, segment_size - 1,  &g2_ck_path).unwrap();
             get_g2_committer_key().unwrap()
         }.as_ref().unwrap().clone();
 
         let params_g2 = UniversalParams::<G2> {
+            hash: committer_key_g2.hash.clone(),
             comm_key: committer_key_g2.comm_key.clone(),
             h: committer_key_g2.h.clone(),
             s: committer_key_g2.s.clone(),
