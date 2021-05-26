@@ -547,6 +547,7 @@ mod test {
         let csw_usr_ins = CSWProofUserInputs {
             amount: 0,
             sc_id: &rand_fe(),
+            nullifier: &rand_fe(),
             pub_key_hash: &rand_vec(MC_PK_SIZE).try_into().unwrap(),
             cert_data_hash: &rand_fe(),
             end_cumulative_sc_tx_commitment_tree_root: &rand_fe()
