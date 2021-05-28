@@ -14,9 +14,11 @@ pub const PHANTOM_CERT_DATA_HASH: FieldElement =
     ])
 );
 
+#[derive(Clone)]
 pub struct CSWProofUserInputs<'a> {
     pub amount:                                     u64,
     pub sc_id:                                      &'a FieldElement,
+    pub nullifier:                                  &'a FieldElement,
     pub pub_key_hash:                               &'a [u8; MC_PK_SIZE],
     pub cert_data_hash:                             &'a FieldElement,
     pub end_cumulative_sc_tx_commitment_tree_root:  &'a FieldElement,
@@ -31,7 +33,7 @@ impl<'a> UserInputs for CSWProofUserInputs<'a> {
             .get_field_elements().map_err(|e| ProvingSystemError::Other(format!("{:?}", e)))?;
 
         fes.append(&mut vec![
-            *self.sc_id, *self.cert_data_hash, *self.end_cumulative_sc_tx_commitment_tree_root
+            *self.sc_id, *self.nullifier, *self.cert_data_hash, *self.end_cumulative_sc_tx_commitment_tree_root
         ]);
 
         Ok(vec![hash_vec(fes).map_err(|e| ProvingSystemError::Other(format!("{:?}", e)))?])

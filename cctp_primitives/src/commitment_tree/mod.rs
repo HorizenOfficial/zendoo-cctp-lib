@@ -94,7 +94,7 @@ impl CommitmentTree {
         sc_id: &FieldElement,
         epoch_number: u32,
         quality: u64,
-        bt_list: &[BackwardTransfer],
+        bt_list: Option<&[BackwardTransfer]>,
         custom_fields: Option<Vec<&FieldElement>>, //aka proof_data - includes custom_field_elements and bit_vectors merkle roots
         end_cumulative_sc_tx_commitment_tree_root: &FieldElement,
         btr_fee: u64,
@@ -122,11 +122,11 @@ impl CommitmentTree {
         out_idx: u32,
         withdrawal_epoch_length: u32,
         mc_btr_request_data_length: u8,
-        custom_field_elements_configs: &[u8],
-        custom_bitvector_elements_configs: &[BitVectorElementsConfig],
+        custom_field_elements_configs: Option<&[u8]>,
+        custom_bitvector_elements_configs: Option<&[BitVectorElementsConfig]>,
         btr_fee: u64,
         ft_min_amount: u64,
-        custom_creation_data: &[u8],
+        custom_creation_data: Option<&[u8]>,
         constant: Option<&FieldElement>,
         cert_verification_key: &[u8],
         csw_verification_key: Option<&[u8]>
@@ -914,7 +914,7 @@ mod test {
                 &rand_fe(),
                 rng.gen(),
                 rng.gen(),
-                &vec![BackwardTransfer::default(); 10],
+                Some(&vec![BackwardTransfer::default(); 10]),
                 Some(rand_fe_vec(2).iter().collect()),
                 &rand_fe(),
                 rng.gen(),
@@ -926,6 +926,22 @@ mod test {
         assert_ne!(comm2, comm3);
 
         assert!(
+            cmt.add_cert(
+                &rand_fe(),
+                rng.gen(),
+                rng.gen(),
+                None,
+                Some(rand_fe_vec(2).iter().collect()),
+                &rand_fe(),
+                rng.gen(),
+                rng.gen(),
+            )
+        );
+
+        let comm4 = cmt.get_commitment();
+        assert_ne!(comm3, comm4);
+
+        assert!(
             cmt.add_scc(
                 &rand_fe(),
                 rng.gen(),
@@ -934,19 +950,42 @@ mod test {
                 rng.gen(),
                 rng.gen(),
                 rng.gen(),
-                &rand_vec(10),
-                &vec![BitVectorElementsConfig::default(); 10],
+                Some(&rand_vec(10)),
+                Some(&vec![BitVectorElementsConfig::default(); 10]),
                 rng.gen(),
                 rng.gen(),
-                &rand_vec(100),
+                Some(&rand_vec(100)),
                 Some(&rand_fe()),
                 &rand_vec(100),
                 Some(&rand_vec(100))
             )
         );
 
-        let comm4 = cmt.get_commitment();
-        assert_ne!(comm3, comm4);
+        let comm5 = cmt.get_commitment();
+        assert_ne!(comm4, comm5);
+
+        assert!(
+            cmt.add_scc(
+                &rand_fe(),
+                rng.gen(),
+                &rand_vec(32).try_into().unwrap(),
+                &rand_vec(32).try_into().unwrap(),
+                rng.gen(),
+                rng.gen(),
+                rng.gen(),
+                None,
+                None,
+                rng.gen(),
+                rng.gen(),
+                None,
+                None,
+                &rand_vec(100),
+                None
+            )
+        );
+
+        let comm6 = cmt.get_commitment();
+        assert_ne!(comm5, comm6);
 
         assert!(
             cmt.add_csw(
@@ -957,6 +996,6 @@ mod test {
             )
         );
 
-        assert_ne!(comm4, cmt.get_commitment());
+        assert_ne!(comm6, cmt.get_commitment());
     }
 }

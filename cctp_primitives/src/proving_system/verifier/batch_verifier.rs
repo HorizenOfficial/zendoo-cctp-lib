@@ -160,17 +160,19 @@ mod test {
         proving_system::{
             init::{load_g1_committer_key, get_g1_committer_key, load_g2_committer_key, get_g2_committer_key},
             error::ProvingSystemError,
-            verifier::{UserInputs, certificate::CertificateProofUserInputs},
+            verifier::{UserInputs, certificate::CertificateProofUserInputs, ceased_sidechain_withdrawal::CSWProofUserInputs},
         },
         type_mapping::{FieldElement, G1, G2},
         utils::{
-            commitment_tree::rand_fe,
+            commitment_tree::{rand_fe, rand_vec},
             data_structures::BackwardTransfer
         }
     };
     use poly_commit::ipa_pc::UniversalParams;
     use rand::{thread_rng, Rng};
-    use std::path::PathBuf;
+    use std::{
+        path::PathBuf, convert::TryInto,
+    };
     use serial_test::serial;
 
     // ***********************Tests with real test circuit*************************
@@ -203,11 +205,12 @@ mod test {
         g1_ck_path.push("ck_g1");
 
         let committer_key_g1 = {
-            load_g1_committer_key(segment_size - 1, &g1_ck_path).unwrap();
+            load_g1_committer_key(segment_size - 1, segment_size - 1, &g1_ck_path).unwrap();
             get_g1_committer_key().unwrap()
         }.as_ref().unwrap().clone();
 
         let params_g1 = UniversalParams::<G1> {
+            hash: committer_key_g1.hash.clone(),
             comm_key: committer_key_g1.comm_key.clone(),
             h: committer_key_g1.h.clone(),
             s: committer_key_g1.s.clone(),
@@ -217,11 +220,12 @@ mod test {
         g2_ck_path.push("ck_g2");
 
         let committer_key_g2 = {
-            load_g2_committer_key(segment_size - 1, &g2_ck_path).unwrap();
+            load_g2_committer_key(segment_size - 1, segment_size - 1,  &g2_ck_path).unwrap();
             get_g2_committer_key().unwrap()
         }.as_ref().unwrap().clone();
 
         let params_g2 = UniversalParams::<G2> {
+            hash: committer_key_g2.hash.clone(),
             comm_key: committer_key_g2.comm_key.clone(),
             h: committer_key_g2.h.clone(),
             s: committer_key_g2.s.clone(),
@@ -424,31 +428,32 @@ mod test {
 
     // ************Tests with mocks for certificate and csw proofs batch verifier***************
 
-    struct TestZendooCertificateBatchVerifier<'a> {
-        verifier_data: HashMap<u32, (ZendooProof, ZendooVerifierKey, CertificateProofUserInputs<'a>, bool)>,
+    struct TestZendooBatchVerifier {
+        verifier_data: HashMap<u32, (ZendooProof, ZendooVerifierKey, Vec<FieldElement>, bool)>,
     }
 
-    impl<'a> TestZendooCertificateBatchVerifier<'a> {
+    impl TestZendooBatchVerifier {
         fn create() -> Self {
             Self {
                 verifier_data: HashMap::new(),
             }
         }
 
-        fn add_zendoo_proof_verifier_data(
+        fn add_zendoo_proof_verifier_data<I: UserInputs>(
             &mut self,
             id: u32,
-            inputs: CertificateProofUserInputs<'a>,
+            inputs: I,
             proof: ZendooProof,
             vk: ZendooVerifierKey,
             should_fail: bool, // Used here for testing
         ) -> Result<(), ProvingSystemError> {
-            self.verifier_data.insert(id, (proof, vk, inputs, should_fail));
+            let usr_ins = inputs.get_circuit_inputs()?;
+            self.verifier_data.insert(id, (proof, vk, usr_ins, should_fail));
             Ok(())
         }
 
         fn batch_verify_proofs<R: RngCore>(
-            proofs_vks_ins: Vec<(ZendooProof, ZendooVerifierKey, CertificateProofUserInputs<'a>, bool)>,
+            proofs_vks_ins: Vec<(ZendooProof, ZendooVerifierKey, Vec<FieldElement>, bool)>,
             _g1_ck: &CommitterKeyG1,
             _g2_ck: &CommitterKeyG2,
             _rng: &mut R,
@@ -513,10 +518,10 @@ mod test {
 
     #[serial]
     #[test]
-    fn dummy_certificate_batch_verifier_test() {
+    fn dummy_batch_verifier_test() {
         let num_proofs = 100;
         let generation_rng = &mut thread_rng();
-        let mut batch_verifier = TestZendooCertificateBatchVerifier::create();
+        let mut batch_verifier = TestZendooBatchVerifier::create();
         let (
             params_g1,
             params_g2,
@@ -527,15 +532,25 @@ mod test {
         ) = get_params();
         let num_constraints = segment_size;
 
-        let usr_ins = CertificateProofUserInputs {
+        let bt_list = vec![BackwardTransfer::default()];
+        let cert_usr_ins = CertificateProofUserInputs {
             constant: None,
             epoch_number: 0,
             quality: 0,
-            bt_list: &vec![BackwardTransfer::default()],
+            bt_list: Some(&bt_list),
             custom_fields: None,
             end_cumulative_sc_tx_commitment_tree_root: &rand_fe(),
             btr_fee: 0,
             ft_min_amount: 0
+        };
+
+        let csw_usr_ins = CSWProofUserInputs {
+            amount: 0,
+            sc_id: &rand_fe(),
+            nullifier: &rand_fe(),
+            pub_key_hash: &rand_vec(MC_PK_SIZE).try_into().unwrap(),
+            cert_data_hash: &rand_fe(),
+            end_cumulative_sc_tx_commitment_tree_root: &rand_fe()
         };
 
         // Generate test CoboundaryMarlinProof and CoboundaryMarlinVk
@@ -564,29 +579,40 @@ mod test {
         };
 
         for i in 0..num_proofs {
+
             // Randomly choose if to generate a SimpleMarlinProof or a FinalDarlinProof
             let simple: bool = generation_rng.gen();
-            let (proof, vk, usr_ins) = if simple {
+            let (proof, vk) = if simple {
                 (
                     ZendooProof::CoboundaryMarlin(coboundary_marlin_proof.clone()),
                     ZendooVerifierKey::CoboundaryMarlin(coboundary_marlin_vk.clone()),
-                    usr_ins.clone()
                 )
             } else {
                 (
                     ZendooProof::Darlin(darlin_proof.clone()),
                     ZendooVerifierKey::Darlin(darlin_vk.clone()),
-                    usr_ins.clone()
                 )
             };
 
-            batch_verifier.add_zendoo_proof_verifier_data(
-                i,
-                usr_ins,
-                proof,
-                vk,
-                false,
-            ).unwrap();
+            // Randomly choose if to add a CertificateProof or CSWProof
+            let cert: bool = generation_rng.gen();
+            if cert {
+                batch_verifier.add_zendoo_proof_verifier_data(
+                    i,
+                    cert_usr_ins.clone(),
+                    proof,
+                    vk,
+                    false,
+                ).unwrap();
+            } else {
+                batch_verifier.add_zendoo_proof_verifier_data(
+                    i,
+                    csw_usr_ins.clone(),
+                    proof,
+                    vk,
+                    false,
+                ).unwrap();
+            }
         }
 
         // Verify all proofs

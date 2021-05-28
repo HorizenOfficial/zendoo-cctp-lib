@@ -15,7 +15,7 @@ pub struct CertificateProofUserInputs<'a> {
     pub constant:                                   Option<&'a FieldElement>,
     pub epoch_number:                               u32,
     pub quality:                                    u64,
-    pub bt_list:                                    &'a [BackwardTransfer],
+    pub bt_list:                                    Option<&'a [BackwardTransfer]>,
     pub custom_fields:                              Option<Vec<&'a FieldElement>>,
     pub end_cumulative_sc_tx_commitment_tree_root:  &'a FieldElement,
     pub btr_fee:                                    u64,

@@ -5,14 +5,14 @@ authors = [""]
 edition = "2018"
 
 [dependencies]
-algebra = { git = "https://github.com/HorizenOfficial/ginger-lib", branch = "development_tmp", features = ["parallel", "tweedle", "derive"] }
-bench-utils = { git = "https://github.com/HorizenOfficial/ginger-lib.git", branch = "development_tmp" }
-primitives = { git = "https://github.com/HorizenOfficial/ginger-lib.git", branch = "development_tmp", features = ["merkle_tree", "tweedle"]}
-proof-systems = { git = "https://github.com/HorizenOfficial/ginger-lib.git", branch = "development_tmp", features = ["darlin"]}
-r1cs-core = { git = "https://github.com/HorizenOfficial/ginger-lib.git", branch = "development_tmp" }
+algebra = { git = "https://github.com/HorizenOfficial/ginger-lib", branch = "development_tmp_fixes", features = ["parallel", "tweedle", "derive"] }
+bench-utils = { git = "https://github.com/HorizenOfficial/ginger-lib.git", branch = "development_tmp_fixes" }
+primitives = { git = "https://github.com/HorizenOfficial/ginger-lib.git", branch = "development_tmp_fixes", features = ["merkle_tree", "tweedle"]}
+proof-systems = { git = "https://github.com/HorizenOfficial/ginger-lib.git", branch = "development_tmp_fixes", features = ["darlin"]}
+r1cs-core = { git = "https://github.com/HorizenOfficial/ginger-lib.git", branch = "development_tmp_fixes" }
 
-marlin = { git = "https://github.com/HorizenLabs/marlin", branch = "dev" }
-poly-commit = { git = "https://github.com/HorizenLabs/poly-commit", branch = "dev" }
+marlin = { git = "https://github.com/HorizenLabs/marlin", branch = "dev_tmp" }
+poly-commit = { git = "https://github.com/HorizenLabs/poly-commit", branch = "dev_tmp" }
 
 rand = { version = "0.7" }
 byteorder = "1.4.2"

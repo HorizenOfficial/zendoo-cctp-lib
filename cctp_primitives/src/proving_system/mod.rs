@@ -224,7 +224,8 @@ impl SemanticallyValid for ZendooProverKey {
 /// and G2CommitterKey (iff ProvingSystem::Darlin).
 pub fn init_dlog_keys(
     proving_system: ProvingSystem,
-    segment_size: usize,
+    max_segment_size: usize,
+    supported_segment_size: usize,
     ck_g1_path: &Path,
     ck_g2_path: &Path,
 ) -> Result<(), Error> {
@@ -233,10 +234,10 @@ pub fn init_dlog_keys(
         return Err(ProvingSystemError::UndefinedProvingSystem)?
     }
 
-    load_g1_committer_key(segment_size - 1, ck_g1_path)?;
+    load_g1_committer_key(max_segment_size - 1, supported_segment_size - 1, ck_g1_path)?;
 
     if matches!(proving_system, ProvingSystem::Darlin) {
-        load_g2_committer_key(segment_size - 1, ck_g2_path)?
+        load_g2_committer_key(max_segment_size - 1, supported_segment_size - 1, ck_g2_path)?
     }
 
     Ok(())
