@@ -147,6 +147,20 @@ pub fn decompress_bit_vector(compressed_bit_vector: &[u8], expected_size: usize)
     Ok(raw_bit_vector_result)
 }
 
+#[allow(unused_variables)]
+pub fn decompress_bit_vector_without_checks(compressed_bit_vector: &[u8]) -> Result<Vec<u8>, Error> {
+
+    let mut raw_bit_vector_result =  match compressed_bit_vector[0].try_into() {
+        Ok(CompressionAlgorithm::Uncompressed) => Ok(compressed_bit_vector[1..].to_vec()),
+        Ok(CompressionAlgorithm::Bzip2) => bzip2_decompress(&compressed_bit_vector[1..]),
+        Ok(CompressionAlgorithm::Gzip) => gzip_decompress(&compressed_bit_vector[1..]),
+        Err(_) => Err("Compression algorithm not supported")?
+    }?;
+
+    raw_bit_vector_result.shrink_to_fit();
+    Ok(raw_bit_vector_result)
+}
+
 fn bzip2_compress(bit_vector: &[u8]) -> Result<Vec<u8>, Error> {
     let mut compressor = BzEncoder::new(bit_vector, bzip2::Compression::best());
     let mut bzip_compressed = Vec::new();
