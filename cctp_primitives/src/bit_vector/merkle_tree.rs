@@ -102,7 +102,7 @@ mod test {
     fn expected_size() {
         let mut bit_vector: Vec<u8> = vec![0; 63];
 
-        // Expect for an error because if the different expected uncompressed size.
+        // Expect for an error because of the different uncompressed size.
         assert!(merkle_root_from_compressed_bytes(&bit_vector, bit_vector.len()).is_err());
         // No errors expected if the uncompressed size is fine.
         assert!(merkle_root_from_compressed_bytes(&bit_vector, bit_vector.len() - 1).is_ok());
