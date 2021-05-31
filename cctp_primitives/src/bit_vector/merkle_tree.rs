@@ -102,8 +102,10 @@ mod test {
     fn expected_size() {
         let mut bit_vector: Vec<u8> = vec![0; 63];
 
-        // Since the first byte specifies the compression algorithm, an error is expected.
+        // Expect for an error because if the different expected uncompressed size.
         assert!(merkle_root_from_compressed_bytes(&bit_vector, bit_vector.len()).is_err());
+        // No errors expected if the uncompressed size is fine.
+        assert!(merkle_root_from_compressed_bytes(&bit_vector, bit_vector.len() - 1).is_ok());
 
         bit_vector.clear();
         bit_vector.push(0);
@@ -118,7 +120,10 @@ mod test {
 
     #[test]
     fn without_size_checks() {
-        let mut bit_vector: Vec<u8> = vec!();
+        let mut bit_vector: Vec<u8> = vec![0; 63];
+        assert!(merkle_root_from_compressed_bytes_without_checks(&bit_vector).is_ok());
+
+        bit_vector.clear();
         bit_vector.push(0);
 
         for i in 0..63 {

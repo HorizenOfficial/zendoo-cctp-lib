@@ -125,30 +125,24 @@ pub fn compress_bit_vector(raw_bit_vector: &[u8], algorithm: CompressionAlgorith
 /// ```
 #[allow(unused_variables)]
 pub fn decompress_bit_vector(compressed_bit_vector: &[u8], expected_size: usize) -> Result<Vec<u8>, Error> {
-    
-    printlndbg!("Decompressing bit vector...");
-    printlndbg!("Algorithm: {}, size: {}, expected decompressed size: {}, address: {:p}", compressed_bit_vector[0], compressed_bit_vector.len(), expected_size, compressed_bit_vector);
-
-    printlndbg!("Bit vector content:");
-    printlndbg!("{:x?}", compressed_bit_vector);
-        
-    let mut raw_bit_vector_result =  match compressed_bit_vector[0].try_into() {
-        Ok(CompressionAlgorithm::Uncompressed) => Ok(compressed_bit_vector[1..].to_vec()),
-        Ok(CompressionAlgorithm::Bzip2) => bzip2_decompress(&compressed_bit_vector[1..]),
-        Ok(CompressionAlgorithm::Gzip) => gzip_decompress(&compressed_bit_vector[1..]),
-        Err(_) => Err("Compression algorithm not supported")?
-    }?;
-
-    if raw_bit_vector_result.len() != expected_size {
-        Err(format!("Wrong bit vector size. Expected {} bytes, found {} bytes", expected_size, raw_bit_vector_result.len()))?
-    }
-
-    raw_bit_vector_result.shrink_to_fit();
-    Ok(raw_bit_vector_result)
+    decompress_bit_vector_with_opt_checks(compressed_bit_vector, Some(expected_size))
 }
 
 #[allow(unused_variables)]
 pub fn decompress_bit_vector_without_checks(compressed_bit_vector: &[u8]) -> Result<Vec<u8>, Error> {
+    decompress_bit_vector_with_opt_checks(compressed_bit_vector, None)
+}
+
+#[allow(unused_variables)]
+fn decompress_bit_vector_with_opt_checks(compressed_bit_vector: &[u8], expected_size_opt: Option<usize>) -> Result<Vec<u8>, Error> {
+
+    printlndbg!("Decompressing bit vector...");
+    printlndbg!("Algorithm: {}, size: {}, expected decompressed size: {} (check: {}), address: {:p}",
+    compressed_bit_vector[0], compressed_bit_vector.len(),
+    expected_size_opt.unwrap_or_default(), expected_size_opt.is_some(), compressed_bit_vector);
+
+    printlndbg!("Bit vector content:");
+    printlndbg!("{:x?}", compressed_bit_vector);
 
     let mut raw_bit_vector_result =  match compressed_bit_vector[0].try_into() {
         Ok(CompressionAlgorithm::Uncompressed) => Ok(compressed_bit_vector[1..].to_vec()),
@@ -156,6 +150,13 @@ pub fn decompress_bit_vector_without_checks(compressed_bit_vector: &[u8]) -> Res
         Ok(CompressionAlgorithm::Gzip) => gzip_decompress(&compressed_bit_vector[1..]),
         Err(_) => Err("Compression algorithm not supported")?
     }?;
+
+    if expected_size_opt.is_some() {
+        let expected_size = expected_size_opt.unwrap();
+        if raw_bit_vector_result.len() != expected_size {
+            Err(format!("Wrong bit vector size. Expected {} bytes, found {} bytes", expected_size, raw_bit_vector_result.len()))?
+        }
+    }
 
     raw_bit_vector_result.shrink_to_fit();
     Ok(raw_bit_vector_result)
