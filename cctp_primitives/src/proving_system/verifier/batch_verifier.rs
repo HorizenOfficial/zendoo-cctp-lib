@@ -170,9 +170,6 @@ mod test {
     };
     use poly_commit::ipa_pc::UniversalParams;
     use rand::{thread_rng, Rng};
-    use std::{
-        path::PathBuf, convert::TryInto,
-    };
     use serial_test::serial;
 
     // ***********************Tests with real test circuit*************************
@@ -193,19 +190,14 @@ mod test {
         UniversalParams<G2>,
         usize,
         usize,
-        PathBuf,
-        PathBuf,
     ) {
 
         let max_pow = 7usize;
         let segment_size = 1 << max_pow;
 
         // Init committer keys
-        let mut g1_ck_path = std::env::temp_dir();
-        g1_ck_path.push("ck_g1");
-
         let committer_key_g1 = {
-            load_g1_committer_key(segment_size - 1, segment_size - 1, &g1_ck_path).unwrap();
+            load_g1_committer_key(segment_size - 1, segment_size - 1).unwrap();
             get_g1_committer_key().unwrap()
         }.as_ref().unwrap().clone();
 
@@ -216,11 +208,8 @@ mod test {
             s: committer_key_g1.s.clone(),
         };
 
-        let mut g2_ck_path = std::env::temp_dir();
-        g2_ck_path.push("ck_g2");
-
         let committer_key_g2 = {
-            load_g2_committer_key(segment_size - 1, segment_size - 1,  &g2_ck_path).unwrap();
+            load_g2_committer_key(segment_size - 1, segment_size - 1).unwrap();
             get_g2_committer_key().unwrap()
         }.as_ref().unwrap().clone();
 
@@ -231,7 +220,7 @@ mod test {
             s: committer_key_g2.s.clone(),
         };
 
-        (params_g1, params_g2, max_pow, segment_size, g1_ck_path, g2_ck_path)
+        (params_g1, params_g2, max_pow, segment_size)
     }
 
     #[test]
@@ -245,8 +234,6 @@ mod test {
             params_g2,
             max_pow,
             segment_size,
-            g1_ck_path,
-            g2_ck_path
         ) = get_params();
         let num_constraints = segment_size;
 
@@ -308,10 +295,6 @@ mod test {
             let res = verify_zendoo_proof(wrong_usr_ins, &proof, &vk, Some(generation_rng));
             assert!(res.is_err() || !res.unwrap());
         }
-
-        // Cleanup
-        let _ = std::fs::remove_file(&g1_ck_path);
-        let _ = std::fs::remove_file(&g2_ck_path);
     }
 
     #[test]
@@ -327,8 +310,6 @@ mod test {
             params_g2,
             max_pow,
             segment_size,
-            g1_ck_path,
-            g2_ck_path
         ) = get_params();
         let num_constraints = segment_size;
 
@@ -420,10 +401,6 @@ mod test {
             },
             _ => panic!(),
         }
-
-        // Cleanup
-        let _ = std::fs::remove_file(&g1_ck_path);
-        let _ = std::fs::remove_file(&g2_ck_path);
     }
 
     // ************Tests with mocks for certificate and csw proofs batch verifier***************
@@ -519,6 +496,8 @@ mod test {
     #[serial]
     #[test]
     fn dummy_batch_verifier_test() {
+        use std::convert::TryInto;
+
         let num_proofs = 100;
         let generation_rng = &mut thread_rng();
         let mut batch_verifier = TestZendooBatchVerifier::create();
@@ -527,8 +506,6 @@ mod test {
             params_g2,
             _,
             segment_size,
-            g1_ck_path,
-            g2_ck_path
         ) = get_params();
         let num_constraints = segment_size;
 
@@ -644,9 +621,5 @@ mod test {
             },
             _ => panic!(),
         }
-
-        // Cleanup
-        let _ = std::fs::remove_file(&g1_ck_path);
-        let _ = std::fs::remove_file(&g2_ck_path);
     }
 }

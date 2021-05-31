@@ -9,7 +9,6 @@ use crate::{
         error::ProvingSystemError
     }
 };
-use std::path::Path;
 
 pub mod init;
 pub mod verifier;
@@ -226,18 +225,16 @@ pub fn init_dlog_keys(
     proving_system: ProvingSystem,
     max_segment_size: usize,
     supported_segment_size: usize,
-    ck_g1_path: &Path,
-    ck_g2_path: &Path,
 ) -> Result<(), Error> {
 
     if matches!(proving_system, ProvingSystem::Undefined) {
         return Err(ProvingSystemError::UndefinedProvingSystem)?
     }
 
-    load_g1_committer_key(max_segment_size - 1, supported_segment_size - 1, ck_g1_path)?;
+    load_g1_committer_key(max_segment_size - 1, supported_segment_size - 1)?;
 
     if matches!(proving_system, ProvingSystem::Darlin) {
-        load_g2_committer_key(max_segment_size - 1, supported_segment_size - 1, ck_g2_path)?
+        load_g2_committer_key(max_segment_size - 1, supported_segment_size - 1)?
     }
 
     Ok(())
