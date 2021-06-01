@@ -60,7 +60,7 @@ impl ZendooBatchVerifier {
         g1_ck:           &CommitterKeyG1,
         g2_ck:           &CommitterKeyG2,
         rng:             &mut R,
-    ) -> Result<bool, Option<usize>>
+    ) -> Result<bool, Option<Vec<usize>>>
     {
         let batch_len = proofs_vks_ins.len();
 
@@ -127,7 +127,10 @@ impl ZendooBatchVerifier {
             // Return the id of the first failing proof if it's possible to determine it
             if res.is_err() {
                 match res.unwrap_err() {
-                    Some(idx) => return Err(ProvingSystemError::FailedBatchVerification(Some(ids[idx].clone()))),
+                    Some(indices) => {
+                        let offending_ids = indices.into_iter().map(|idx| ids[idx]).collect::<Vec<_>>();
+                        return Err(ProvingSystemError::FailedBatchVerification(Some(offending_ids)))
+                    },
                     None => return Err(ProvingSystemError::FailedBatchVerification(None))
                 }
             }
@@ -297,11 +300,43 @@ mod test {
         }
     }
 
+    use std::collections::HashSet;
+
+    fn randomize_batch_verifier_data<R: RngCore>(
+        batch_verifier: &mut ZendooBatchVerifier,
+        num_proofs: u32,
+        ids_offset: u32,
+        rng: &mut R
+    ) -> HashSet<u32>
+    {
+        // Select num proofs to randomize
+        let num_proofs_to_randomize = rng.gen_range(1, num_proofs);
+
+        // Select ids
+        let ids = (0..num_proofs_to_randomize)
+            .map(|_| rng.gen_range(0, num_proofs) + ids_offset)
+            .collect::<HashSet<u32>>();
+
+        // Replace inputs at generated ids with wrong ones
+        ids.iter().for_each(|id| {
+            let wrong_ins = vec![
+                FieldElement::rand(rng),
+                FieldElement::rand(rng)
+            ];
+            let (_, _, ins) = batch_verifier.verifier_data.get_mut(&id).unwrap();
+            *ins = wrong_ins;
+        });
+
+        // Return ids
+        ids
+    }
+
     #[test]
     #[serial]
     fn random_batch_verifier_test() {
 
         let num_proofs = 100;
+        let ids_offset = 100;
         let generation_rng = &mut thread_rng();
         let mut batch_verifier = ZendooBatchVerifier::create();
 
@@ -313,6 +348,7 @@ mod test {
         ) = get_params();
         let num_constraints = segment_size;
 
+        let mut total_ids = HashSet::<u32>::new();
         for i in 0..num_proofs {
 
             // Randomly choose segment size
@@ -360,44 +396,43 @@ mod test {
             };
 
             batch_verifier.add_zendoo_proof_verifier_data(
-                i,
+                i + ids_offset,
                 usr_ins,
                 proof,
                 vk,
             ).unwrap();
+
+            assert!(total_ids.insert(i + ids_offset));
         }
 
         // Verify all proofs
         assert!(batch_verifier.batch_verify_all(generation_rng).unwrap());
 
-        // Replace the inputs of one of the proof at random and check that the
+        // Replace the inputs of some proofs at random and check that the
         // batch verification fails
-        let index: u32 = generation_rng.gen_range(num_proofs/2, num_proofs);
-        let wrong_ins = vec![
-            FieldElement::rand(generation_rng),
-            FieldElement::rand(generation_rng)
-        ];
-        let (_, _, ins) = batch_verifier.verifier_data.get_mut(&index).unwrap();
-        *ins = wrong_ins;
+        let failing_ids = randomize_batch_verifier_data(&mut batch_verifier, num_proofs, ids_offset, generation_rng);
+        let succeeding_ids = total_ids.difference(&failing_ids).into_iter().map(|id| *id).collect::<HashSet<u32>>();
+        let mut failing_ids_vec = failing_ids.into_iter().collect::<Vec<u32>>();
+        failing_ids_vec.sort();
 
-        // Assert that the batch verification of all the proofs prior to that index is ok
+        // Assert that the batch verification of all the succeeding_proofs is ok
         assert!(batch_verifier.batch_verify_subset(
-            (0..num_proofs/2).collect::<Vec<_>>(),
+            succeeding_ids.into_iter().collect::<Vec<u32>>(),
             generation_rng,
         ).unwrap());
 
-        // Assert that the batch verification of all the proofs following that index fails
+        // Assert that the batch verification of all the failing proofs is err
         let res = batch_verifier.batch_verify_subset(
-            (num_proofs/2..num_proofs).collect::<Vec<_>>(),
+            failing_ids_vec.clone(),
             generation_rng,
         );
         assert!(res.is_err());
 
         // We are able to get the index of the failing proof:
         match res.unwrap_err() {
-            ProvingSystemError::FailedBatchVerification(id) => {
-                let id = id.unwrap();
-                assert_eq!(id, index);
+            ProvingSystemError::FailedBatchVerification(ids) => {
+                let ids = ids.unwrap();
+                assert_eq!(ids, failing_ids_vec);
             },
             _ => panic!(),
         }
@@ -434,15 +469,20 @@ mod test {
             _g1_ck: &CommitterKeyG1,
             _g2_ck: &CommitterKeyG2,
             _rng: &mut R,
-        ) -> Result<bool, Option<usize>>
+        ) -> Result<bool, Option<Vec<usize>>>
         {
+            let mut failing_indices = Vec::new();
             for (i, (_, _, _, should_fail)) in proofs_vks_ins.into_iter().enumerate() {
                 if should_fail {
-                    return Err(Some(i))
+                    failing_indices.push(i);
                 }
             }
 
-            Ok(true)
+            if failing_indices.is_empty() {
+                Ok(true)
+            } else {
+                Err(Some(failing_indices))
+            }
         }
 
         fn batch_verify_subset<R: RngCore>(
@@ -474,7 +514,10 @@ mod test {
                 // Return the id of the first failing proof if it's possible to determine it
                 if res.is_err() {
                     match res.unwrap_err() {
-                        Some(idx) => return Err(ProvingSystemError::FailedBatchVerification(Some(ids[idx].clone()))),
+                        Some(indices) => {
+                            let offending_ids = indices.into_iter().map(|idx| ids[idx]).collect::<Vec<_>>();
+                            return Err(ProvingSystemError::FailedBatchVerification(Some(offending_ids)))
+                        },
                         None => return Err(ProvingSystemError::FailedBatchVerification(None))
                     }
                 }
@@ -492,6 +535,30 @@ mod test {
         }
     }
 
+    fn randomize_test_batch_verifier_data<R: RngCore>(
+        batch_verifier: &mut TestZendooBatchVerifier,
+        num_proofs: u32,
+        ids_offset: u32,
+        rng: &mut R
+    ) -> HashSet<u32>
+    {
+        // Select num proofs to randomize
+        let num_proofs_to_randomize = rng.gen_range(1, num_proofs);
+
+        // Select ids
+        let ids = (0..num_proofs_to_randomize)
+            .map(|_| rng.gen_range(0, num_proofs) + ids_offset)
+            .collect::<HashSet<u32>>();
+
+        // Make proof at generated ids fail
+        ids.iter().for_each(|id| {
+            let (_, _, _, should_fail) = batch_verifier.verifier_data.get_mut(&id).unwrap();
+            *should_fail = true;
+        });
+
+        // Return ids
+        ids
+    }
 
     #[serial]
     #[test]
@@ -555,6 +622,8 @@ mod test {
             (pcds[0].final_darlin_proof.clone(), vks[0].clone())
         };
 
+        let ids_offset = 100;
+        let mut total_ids = HashSet::<u32>::new();
         for i in 0..num_proofs {
 
             // Randomly choose if to generate a SimpleMarlinProof or a FinalDarlinProof
@@ -575,7 +644,7 @@ mod test {
             let cert: bool = generation_rng.gen();
             if cert {
                 batch_verifier.add_zendoo_proof_verifier_data(
-                    i,
+                    i + ids_offset,
                     cert_usr_ins.clone(),
                     proof,
                     vk,
@@ -583,41 +652,44 @@ mod test {
                 ).unwrap();
             } else {
                 batch_verifier.add_zendoo_proof_verifier_data(
-                    i,
+                    i + ids_offset,
                     csw_usr_ins.clone(),
                     proof,
                     vk,
                     false,
                 ).unwrap();
             }
+            assert!(total_ids.insert(i + ids_offset));
         }
 
         // Verify all proofs
         assert!(batch_verifier.batch_verify_all(generation_rng).unwrap());
 
-        // Trigger proof verification failure of one of the proofs at random index
-        let index: u32 = generation_rng.gen_range(num_proofs/2, num_proofs);
-        let (_, _, _, should_fail) = batch_verifier.verifier_data.get_mut(&index).unwrap();
-        *should_fail = true;
+        // Replace the inputs of some proofs at random and check that the
+        // batch verification fails
+        let failing_ids = randomize_test_batch_verifier_data(&mut batch_verifier, num_proofs, ids_offset, generation_rng);
+        let succeeding_ids = total_ids.difference(&failing_ids).into_iter().map(|id| *id).collect::<HashSet<u32>>();
+        let mut failing_ids_vec = failing_ids.into_iter().collect::<Vec<u32>>();
+        failing_ids_vec.sort();
 
-        // Assert that the batch verification of all the proofs prior to that index is ok
+        // Assert that the batch verification of all the succeeding_proofs is ok
         assert!(batch_verifier.batch_verify_subset(
-            (0..num_proofs/2).collect::<Vec<_>>(),
+            succeeding_ids.into_iter().collect::<Vec<u32>>(),
             generation_rng,
         ).unwrap());
 
-        // Assert that the batch verification of all the proofs following that index fails
+        // Assert that the batch verification of all the failing proofs is err
         let res = batch_verifier.batch_verify_subset(
-            (num_proofs/2..num_proofs).collect::<Vec<_>>(),
+            failing_ids_vec.clone(),
             generation_rng,
         );
         assert!(res.is_err());
 
         // We are able to get the index of the failing proof:
         match res.unwrap_err() {
-            ProvingSystemError::FailedBatchVerification(id) => {
-                let id = id.unwrap();
-                assert_eq!(id, index);
+            ProvingSystemError::FailedBatchVerification(ids) => {
+                let ids = ids.unwrap();
+                assert_eq!(ids, failing_ids_vec);
             },
             _ => panic!(),
         }

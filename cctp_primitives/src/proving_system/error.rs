@@ -11,7 +11,7 @@ pub enum ProvingSystemError {
     SetupFailed(String),
     ProofCreationFailed(String),
     ProofVerificationFailed(String),
-    FailedBatchVerification(Option<u32>),
+    FailedBatchVerification(Option<Vec<u32>>),
     NoProofsToVerify,
     ProofAlreadyExists(u32),
     ProofNotPresent(u32),
@@ -27,10 +27,10 @@ impl Display for ProvingSystemError {
             ProvingSystemError::SetupFailed(err) => write!(f, "Failed to generate pk and vk {}", err),
             ProvingSystemError::ProofCreationFailed(err) => write!(f, "Failed to create proof {}", err),
             ProvingSystemError::ProofVerificationFailed(err) => write!(f, "Failed to verify proof {}", err),
-            ProvingSystemError::FailedBatchVerification(maybe_id) => {
-                match maybe_id {
-                    Some(id) => write!(f, "Batch verification failed due to proof with id: {}", id),
-                    None => write!(f, "Batch verification failed. Unable to determine the offending proof"),
+            ProvingSystemError::FailedBatchVerification(maybe_ids) => {
+                match maybe_ids {
+                    Some(ids) => write!(f, "Batch verification failed due to proofs with ids: {:?}", ids),
+                    None => write!(f, "Batch verification failed. Unable to determine the offending proofs"),
                 }
             },
             ProvingSystemError::NoProofsToVerify => write!(f, "There is no proof to verify"),
