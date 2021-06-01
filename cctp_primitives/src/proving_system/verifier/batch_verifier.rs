@@ -128,7 +128,8 @@ impl ZendooBatchVerifier {
             if res.is_err() {
                 match res.unwrap_err() {
                     Some(indices) => {
-                        let offending_ids = indices.into_iter().map(|idx| ids[idx]).collect::<Vec<_>>();
+                        let mut offending_ids = indices.into_iter().map(|idx| ids[idx]).collect::<Vec<_>>();
+                        offending_ids.sort();
                         return Err(ProvingSystemError::FailedBatchVerification(Some(offending_ids)))
                     },
                     None => return Err(ProvingSystemError::FailedBatchVerification(None))
