@@ -336,8 +336,8 @@ mod test {
     fn random_batch_verifier_test() {
 
         let num_proofs = 100;
-        let ids_offset = 100;
         let generation_rng = &mut thread_rng();
+        let ids_offset  = generation_rng.gen::<u32>() - num_proofs;
         let mut batch_verifier = ZendooBatchVerifier::create();
 
         let (
@@ -622,7 +622,7 @@ mod test {
             (pcds[0].final_darlin_proof.clone(), vks[0].clone())
         };
 
-        let ids_offset = 100;
+        let ids_offset = generation_rng.gen::<u32>() - num_proofs;
         let mut total_ids = HashSet::<u32>::new();
         for i in 0..num_proofs {
 
