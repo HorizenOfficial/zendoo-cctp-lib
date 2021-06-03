@@ -83,6 +83,13 @@ pub fn merkle_root_from_compressed_bytes(compressed_bit_vector: &[u8], expected_
 
 }
 
+pub fn merkle_root_from_compressed_bytes_without_checks(compressed_bit_vector: &[u8]) -> Result<algebra::Fp256<algebra::fields::tweedle::FrParameters>, Error> {
+
+    let uncompressed_bit_vector = compression::decompress_bit_vector_without_checks(compressed_bit_vector)?;
+    merkle_root_from_bytes(&uncompressed_bit_vector)
+
+}
+
 #[cfg(test)]
 mod test {
 
@@ -95,8 +102,10 @@ mod test {
     fn expected_size() {
         let mut bit_vector: Vec<u8> = vec![0; 63];
 
-        // Since the first byte specifies the compression algorithm, an error is expected.
+        // Expect for an error because of the different uncompressed size.
         assert!(merkle_root_from_compressed_bytes(&bit_vector, bit_vector.len()).is_err());
+        // No errors expected if the uncompressed size is fine.
+        assert!(merkle_root_from_compressed_bytes(&bit_vector, bit_vector.len() - 1).is_ok());
 
         bit_vector.clear();
         bit_vector.push(0);
@@ -107,6 +116,21 @@ mod test {
         
         assert!(merkle_root_from_compressed_bytes(&bit_vector, bit_vector.len() - 1).is_ok());
 
+    }
+
+    #[test]
+    fn without_size_checks() {
+        let mut bit_vector: Vec<u8> = vec![0; 63];
+        assert!(merkle_root_from_compressed_bytes_without_checks(&bit_vector).is_ok());
+
+        bit_vector.clear();
+        bit_vector.push(0);
+
+        for i in 0..63 {
+            bit_vector.push(i);
+        }
+
+        assert!(merkle_root_from_compressed_bytes_without_checks(&bit_vector).is_ok());
     }
 
     #[test]
