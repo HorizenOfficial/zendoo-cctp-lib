@@ -580,6 +580,7 @@ mod test {
         let bt_list = vec![BackwardTransfer::default()];
         let cert_usr_ins = CertificateProofUserInputs {
             constant: None,
+            sc_id: &rand_fe(),
             epoch_number: 0,
             quality: 0,
             bt_list: Some(&bt_list),
