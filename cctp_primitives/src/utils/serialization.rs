@@ -16,9 +16,44 @@ pub fn deserialize_from_buffer_checked<T: CanonicalDeserialize + SemanticallyVal
     Ok(elem)
 }
 
+pub fn deserialize_from_buffer_debug<T: CanonicalDeserialize + SemanticallyValid>(
+    buffer: &[u8],
+    semantic_checks:        bool,
+    deserialization_checks: bool,
+    compressed:             bool,
+) ->  Result<T, SerializationError>
+{
+    let t = match (deserialization_checks, compressed) {
+        (true, true) => T::deserialize(buffer),
+        (true, false) => T::deserialize_uncompressed(buffer),
+        (false, false) => T::deserialize_uncompressed_unchecked(buffer),
+        (false, true) => T::deserialize_unchecked(buffer)
+    }?;
+
+    if semantic_checks && !t.is_valid() {
+        return Err(SerializationError::InvalidData)
+    }
+
+    Ok(t)
+}
+
 pub fn serialize_to_buffer<T: CanonicalSerialize>(to_write: &T) -> Result<Vec<u8>, SerializationError> {
     let mut buffer = Vec::with_capacity(to_write.serialized_size());
     CanonicalSerialize::serialize(to_write, &mut buffer)?;
+    Ok(buffer)
+}
+
+pub fn serialize_to_buffer_debug<T: CanonicalSerialize>(
+    to_write:               &T,
+    compressed:             bool,
+) ->  Result<Vec<u8>, SerializationError>
+{
+    let mut buffer = Vec::with_capacity(to_write.serialized_size());
+    if compressed {
+        CanonicalSerialize::serialize(to_write, &mut buffer)?;
+    } else {
+        CanonicalSerialize::serialize_uncompressed(to_write, &mut buffer)?;
+    }
     Ok(buffer)
 }
 
