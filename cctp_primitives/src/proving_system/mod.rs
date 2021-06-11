@@ -48,6 +48,11 @@ impl CanonicalDeserialize for ProvingSystem {
     }
 }
 
+// Dummy implementation
+impl SemanticallyValid for ProvingSystem {
+    fn is_valid(&self) -> bool { true }
+}
+
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum ZendooProof {
     CoboundaryMarlin(CoboundaryMarlinProof),
