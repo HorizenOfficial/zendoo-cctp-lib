@@ -155,7 +155,7 @@ impl ZendooBatchVerifier {
 #[cfg(test)]
 mod test {
     use super::*;
-    use algebra::UniformRand;
+    use algebra::{UniformRand, test_canonical_serialize_deserialize};
     use proof_systems::darlin::tests::{
         simple_marlin::generate_test_data as generate_simple_marlin_test_data,
         final_darlin::generate_test_data as generate_final_darlin_test_data,
@@ -287,6 +287,9 @@ mod test {
                 )
             };
 
+            test_canonical_serialize_deserialize(true, &proof);
+            test_canonical_serialize_deserialize(true, &vk);
+
             // Verification success
             assert!(verify_zendoo_proof(usr_ins, &proof, &vk, Some(generation_rng)).unwrap());
 
@@ -395,6 +398,9 @@ mod test {
                     }
                 )
             };
+
+            test_canonical_serialize_deserialize(true, &proof);
+            test_canonical_serialize_deserialize(true, &vk);
 
             batch_verifier.add_zendoo_proof_verifier_data(
                 i + ids_offset,
@@ -641,6 +647,9 @@ mod test {
                     ZendooVerifierKey::Darlin(darlin_vk.clone()),
                 )
             };
+
+            test_canonical_serialize_deserialize(true, &proof);
+            test_canonical_serialize_deserialize(true, &vk);
 
             // Randomly choose if to add a CertificateProof or CSWProof
             let cert: bool = generation_rng.gen();
