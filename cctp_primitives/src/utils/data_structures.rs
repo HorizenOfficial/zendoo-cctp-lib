@@ -66,13 +66,16 @@ mod test {
 
         {
             let test_bvec = BitVectorElementsConfig::default();
-            assert_eq!(serialize_to_buffer(&test_bvec).unwrap().len(), 8);
+            assert_eq!(serialize_to_buffer(&test_bvec, true).unwrap().len(), 8);
+            assert_eq!(serialize_to_buffer(&test_bvec, false).unwrap().len(), 8);
             test_canonical_serialize_deserialize(true, &test_bvec);
         }
 
         {
             let test_bt = BackwardTransfer::default();
-            assert_eq!(serialize_to_buffer(&test_bt).unwrap().len(), test_bt.serialized_size());
+            assert_eq!(serialize_to_buffer(&test_bt, true).unwrap().len(), test_bt.serialized_size());
+            assert_eq!(serialize_to_buffer(&test_bt, false).unwrap().len(), test_bt.uncompressed_size());
+
             test_canonical_serialize_deserialize(true, &test_bt);
         }
     }
