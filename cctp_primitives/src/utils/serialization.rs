@@ -2,14 +2,19 @@ use algebra::{serialize::*, SemanticallyValid};
 use std::{path::Path, fs::File, io::{BufReader, BufWriter}};
 
 /// Deserialize from `buffer` a compressed or uncompressed element, depending on the value of
-/// `compressed` flag, and perform checks on it, depending on the value of
-/// `semantic_checks` flag.
+/// `compressed` flag, and perform checks on it, depending on the value of `semantic_checks` flag.
+/// `compressed` can be optional, due to some types being uncompressable;
+/// `semantic_checks` can be optional, due to some types having no checks to be performed,
+/// or trivial checks already performed a priori during serialization.
 pub fn deserialize_from_buffer<T: CanonicalDeserialize + SemanticallyValid>(
     buffer: &[u8],
-    semantic_checks:        bool,
-    compressed:             bool,
+    semantic_checks:        Option<bool>,
+    compressed:             Option<bool>,
 ) ->  Result<T, SerializationError>
 {
+    let semantic_checks = semantic_checks.unwrap_or(false);
+    let compressed = compressed.unwrap_or(false);
+
     let t = if compressed {
         T::deserialize_unchecked(buffer)
     } else {
@@ -25,11 +30,14 @@ pub fn deserialize_from_buffer<T: CanonicalDeserialize + SemanticallyValid>(
 
 /// Serialize to buffer, choosing whether to use compressed representation or not,
 /// depending on the value of `compressed` flag.
+/// `compressed` can be optional, due to some types being uncompressable.
 pub fn serialize_to_buffer<T: CanonicalSerialize>(
     to_write:               &T,
-    compressed:             bool,
+    compressed:             Option<bool>,
 ) ->  Result<Vec<u8>, SerializationError>
 {
+    let compressed = compressed.unwrap_or(false);
+
     let mut buffer;
     if compressed {
         buffer = Vec::with_capacity(to_write.serialized_size());
@@ -47,12 +55,18 @@ pub const DEFAULT_BUF_SIZE: usize = 1 << 20;
 /// Deserialize from the file at `file_path` a compressed or uncompressed element,
 /// depending on the value of `compressed` flag, and perform checks on it, depending
 /// on the value of `semantic_checks` flag.
+/// `compressed` can be optional, due to some types being uncompressable;
+/// `semantic_checks` can be optional, due to some types having no checks to be performed,
+/// or trivial checks already performed a priori during serialization.
 pub fn read_from_file<T: CanonicalDeserialize + SemanticallyValid>(
     file_path: &Path,
-    semantic_checks:        bool,
-    compressed:             bool,
+    semantic_checks:        Option<bool>,
+    compressed:             Option<bool>,
 ) ->  Result<T, SerializationError>
 {
+    let semantic_checks = semantic_checks.unwrap_or(false);
+    let compressed = compressed.unwrap_or(false);
+
     let fs = File::open(file_path)
         .map_err(|e| SerializationError::IoError(e))?;
     let reader = BufReader::with_capacity(DEFAULT_BUF_SIZE, fs);
@@ -72,12 +86,15 @@ pub fn read_from_file<T: CanonicalDeserialize + SemanticallyValid>(
 
 /// Serialize to file, choosing whether to use compressed representation or not,
 /// depending on the value of `compressed` flag.
+/// `compressed` can be optional, due to some types being uncompressable.
 pub fn write_to_file<T: CanonicalSerialize>(
     to_write:               &T,
     file_path:              &Path,
-    compressed:             bool,
+    compressed:             Option<bool>,
 ) ->  Result<(), SerializationError>
 {
+    let compressed = compressed.unwrap_or(false);
+
     let fs = File::create(file_path)
         .map_err(|e| SerializationError::IoError(e))?;
     let mut writer = BufWriter::with_capacity(DEFAULT_BUF_SIZE, fs);
