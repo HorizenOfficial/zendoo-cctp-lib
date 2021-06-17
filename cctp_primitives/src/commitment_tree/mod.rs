@@ -101,7 +101,7 @@ impl CommitmentTree {
         ft_min_amount: u64
     )-> bool {
         if let Ok(cert_leaf) = hash_cert(
-            epoch_number, quality, bt_list, custom_fields,
+            sc_id, epoch_number, quality, bt_list, custom_fields,
             end_cumulative_sc_tx_commitment_tree_root, btr_fee, ft_min_amount
         ){
             self.add_cert_leaf(sc_id, &cert_leaf)

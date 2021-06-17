@@ -52,6 +52,7 @@ pub fn hash_bwtr(
 
 // Computes FieldElement-based hash on the given Certificate data
 pub fn hash_cert(
+    sc_id: &FieldElement,
     epoch_number: u32,
     quality: u64,
     bt_list: Option<&[BackwardTransfer]>,
@@ -62,7 +63,7 @@ pub fn hash_cert(
 ) -> Result<FieldElement, Error>
 {
     get_cert_data_hash(
-        epoch_number, quality, bt_list, custom_fields,
+        sc_id, epoch_number, quality, bt_list, custom_fields,
         end_cumulative_sc_tx_commitment_tree_root, btr_fee, ft_min_amount
     )
 }
@@ -222,6 +223,7 @@ mod test {
 
         assert!(
             hash_cert(
+                &rand_fe(),
                 rng.gen(),
                 rng.gen(),
                 Some(&vec![BackwardTransfer::default(); 10]),
@@ -234,6 +236,7 @@ mod test {
 
         assert!(
             hash_cert(
+                &rand_fe(),
                 rng.gen(),
                 rng.gen(),
                 None,
