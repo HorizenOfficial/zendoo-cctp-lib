@@ -461,8 +461,7 @@ pub fn check_proof_vk_size(
 }
 
 /// Compute size of proof and vk.
-/// TODO: Currently, zk = false, gives 33 bytes more and vk size is 7 bytes more. Fix it. 
-pub(crate) fn compute_proof_vk_size(
+pub fn compute_proof_vk_size(
     segment_size: usize,
     info: IndexInfo<FieldElement>,
     zk: bool,
@@ -472,18 +471,20 @@ pub(crate) fn compute_proof_vk_size(
     // Compute config data
     let zk_bound: usize = if zk { 1 } else { 0 };
     let segment_size = segment_size.next_power_of_two();
-    let h = std::cmp::max(info.num_constraints.next_power_of_two(), info.num_variables.next_power_of_two());
+    let num_inputs = info.num_inputs.next_power_of_two();
+    let h = std::cmp::max(info.num_constraints.next_power_of_two(), (info.num_witness + info.num_inputs).next_power_of_two());
     let k = info.num_non_zero.next_power_of_two();
 
     // Compute num segments
-    let w_z_a_b_segs = ((h + 2 * zk_bound) as f64/segment_size as f64).ceil() as usize;
+    let w_segs = ((h + 2 * zk_bound - num_inputs) as f64/segment_size as f64).ceil() as usize;
+    let z_a_b_segs = ((h + 2 * zk_bound) as f64/segment_size as f64).ceil() as usize;
     let t_segs = ((h as f64/segment_size as f64)).ceil() as usize;
     let z_1_segs = ((h + 3 * zk_bound) as f64/segment_size as f64).ceil() as usize;
     let h_1_segs = ((2 * h + 4 * zk_bound - 2) as f64/segment_size as f64).ceil() as usize;
     let z_2_segs = (k as f64/segment_size as f64).ceil() as usize;
     let h_2_segs =  ((3 * k - 3) as f64/segment_size as f64).ceil() as usize;
 
-    let num_segments = 3 * w_z_a_b_segs + t_segs + z_1_segs + h_1_segs + h_2_segs + z_2_segs;
+    let num_segments = w_segs + 2 * z_a_b_segs + t_segs + z_1_segs + h_1_segs + h_2_segs + z_2_segs;
 
     // Compute sizes
     let num_evaluations = 22; // indexer polys (12) + prover polys (8) + 2 (z_1 and z_2 are queried at 2 different points) 
@@ -522,7 +523,7 @@ pub(crate) fn compute_proof_vk_size(
         } as usize;
 
     let indexer_polys_num_segs = (k as f64/segment_size as f64).ceil() as usize;
-    let vk_size = 24 // index_info
+    let vk_size = 32 // index_info
         + 1 // indexer comms vec len
         + indexer_polys_num_segs * 33 * 12 // segment commitments for each indexer poly
         + 12 // comms vec len for each indexer poly
@@ -533,40 +534,48 @@ pub(crate) fn compute_proof_vk_size(
 }
 
 #[allow(dead_code)]
-/// Given segment_size, density, zk, proof_type, return the log2 of the maximum value of |H|
+/// Given segment_size, density, zk, num_inputs, proof_type, return the
 /// s.t. proof size is <= max_proof_size and vk size is <= max_vk_size, and the
 /// corresponding values of proof size and vk size
-pub(crate) fn compute_max_domain_h_size(
+pub(crate) fn compute_max_constraints_and_variables(
     segment_size: usize,
     density: usize,
     zk: bool,
+    num_inputs: usize,
     max_proof_size: usize,
     max_vk_size: usize,
     proof_type: ProvingSystem
-) -> (usize, usize, usize)
+) -> (usize, usize, usize, usize)
 {
     let segment_size = segment_size.next_power_of_two();
-    let mut max_supported_h_size = 0;
+    let num_inputs = num_inputs.next_power_of_two();
+    let mut max_supported_num_constraints = 0;
     let mut max_supported_proof_size = 0;
     let mut max_supported_vk_size = 0;
+    let mut k_ctr = algebra::log2(num_inputs * density);
 
     loop {
-        let h = 1 << max_supported_h_size;
-        let k = (h * density).next_power_of_two(); // |K|/|H| = density
+
+        let k = 1 << k_ctr;
+        let num_constraints = k/density;
+        let h = num_constraints.next_power_of_two();
+
         let mut info = IndexInfo::<FieldElement>::default();
-        info.num_constraints = h;
-        info.num_variables = h;
+        info.num_constraints = k/density;
+        info.num_witness = h - num_inputs;
+        info.num_inputs = num_inputs;
         info.num_non_zero = k;
-        
-        let (proof_size, vk_size) = compute_proof_vk_size(segment_size, info, zk, proof_type); 
+
+        let (proof_size, vk_size) = compute_proof_vk_size(segment_size, info, zk, proof_type);
 
         if proof_size > max_proof_size || vk_size > max_vk_size {
-            break (max_supported_h_size - 1, max_supported_proof_size, max_supported_vk_size)
+            break (max_supported_num_constraints, max_supported_num_constraints.next_power_of_two(), max_supported_proof_size, max_supported_vk_size)
         }
 
         max_supported_proof_size = proof_size;
         max_supported_vk_size = vk_size;
-        max_supported_h_size += 1;
+        max_supported_num_constraints = num_constraints;
+        k_ctr += 1;
     }
 }
 
@@ -574,29 +583,34 @@ pub(crate) fn compute_max_domain_h_size(
 fn test_check_proof_vk_size() {
     let max_proof_size = 7000;
     let max_vk_size = 4000;
+    let num_inputs = 32;
     
-    for density in 2..5 {
+    for density in 2..=5 {
         for proof_type in vec![ProvingSystem::CoboundaryMarlin, ProvingSystem::Darlin].into_iter() {
             for zk in vec![true, false].into_iter() {
                 for size in 15..19 {
                     let segment_size = 1 << size;
-                    let (h, proof_size, vk_size) = compute_max_domain_h_size(segment_size, density, zk, max_proof_size, max_vk_size, proof_type);
+
+                    let (max_num_constraints, max_num_variables, proof_size, vk_size) = compute_max_constraints_and_variables(segment_size, density, zk, num_inputs, max_proof_size, max_vk_size, proof_type);
                     println!(
-                        "For Density: {}, MaxProofSize: {}, MaxVkSize: {}, ProofType: {:?}, Zk: {}, SegmentSize: 1 << {}, Max supported H size is: 1 << {}, Proof size: {} bytes, Vk size: {} bytes",
-                        density, max_proof_size, max_vk_size, proof_type, zk, size, h, proof_size, vk_size
+                        "For Density: {}, MaxProofSize: {}, MaxVkSize: {}, ProofType: {:?}, Zk: {}, SegmentSize: 1 << {}, Num inputs: {}, Max supported constraints are: {}, Max supported variables are: {}, Proof size: {} bytes, Vk size: {} bytes",
+                        density, max_proof_size, max_vk_size, proof_type, zk, size, num_inputs, max_num_constraints, max_num_variables, proof_size, vk_size
                     );
 
                     let mut info = IndexInfo::<FieldElement>::default();
-                    let h = 1 << h;
-                    info.num_constraints = h;
-                    info.num_variables = h;
-                    info.num_non_zero = (h * density).next_power_of_two();
+                    let h = max_num_variables;
+                    info.num_constraints = max_num_constraints;
+                    info.num_witness = h - num_inputs;
+                    info.num_inputs = num_inputs;
+                    info.num_non_zero = (max_num_constraints * density).next_power_of_two();
                     assert!(check_proof_vk_size(segment_size, info, zk, proof_type, max_proof_size, max_vk_size));
 
                     let h = h * 2;
-                    info.num_constraints = h;
-                    info.num_variables = h;
-                    info.num_non_zero = (h * density).next_power_of_two();
+                    let max_num_constraints = max_num_constraints * 2;
+                    info.num_constraints = max_num_constraints;
+                    info.num_witness = h - num_inputs;
+                    info.num_inputs = num_inputs;
+                    info.num_non_zero = (max_num_constraints * density).next_power_of_two();
                     assert!(!check_proof_vk_size(segment_size, info, zk, proof_type, max_proof_size, max_vk_size))
                 }
             }
