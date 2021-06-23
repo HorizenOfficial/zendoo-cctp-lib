@@ -244,7 +244,7 @@ mod test {
         for _ in 0..num_proofs {
 
             // Randomly choose segment size
-            let iteration_segment_size = 1 << (generation_rng.gen_range(2, max_pow));
+            let iteration_segment_size = 1 << (generation_rng.gen_range(2..max_pow));
 
             // Randomly choose if to generate a SimpleMarlinProof or a FinalDarlinProof
             let simple: bool = generation_rng.gen();
@@ -314,11 +314,11 @@ mod test {
     ) -> HashSet<u32>
     {
         // Select num proofs to randomize
-        let num_proofs_to_randomize = rng.gen_range(1, num_proofs);
+        let num_proofs_to_randomize = rng.gen_range(1..num_proofs);
 
         // Select ids
         let ids = (0..num_proofs_to_randomize)
-            .map(|_| rng.gen_range(0, num_proofs) + ids_offset)
+            .map(|_| rng.gen_range(0..num_proofs) + ids_offset)
             .collect::<HashSet<u32>>();
 
         // Replace inputs at generated ids with wrong ones
@@ -356,7 +356,7 @@ mod test {
         for i in 0..num_proofs {
 
             // Randomly choose segment size
-            let iteration_segment_size = 1 << (generation_rng.gen_range(2, max_pow));
+            let iteration_segment_size = 1 << (generation_rng.gen_range(2..max_pow));
 
             // Randomly choose if to generate a SimpleMarlinProof or a FinalDarlinProof
             let simple: bool = generation_rng.gen();
@@ -550,11 +550,11 @@ mod test {
     ) -> HashSet<u32>
     {
         // Select num proofs to randomize
-        let num_proofs_to_randomize = rng.gen_range(1, num_proofs);
+        let num_proofs_to_randomize = rng.gen_range(1..num_proofs);
 
         // Select ids
         let ids = (0..num_proofs_to_randomize)
-            .map(|_| rng.gen_range(0, num_proofs) + ids_offset)
+            .map(|_| rng.gen_range(0..num_proofs) + ids_offset)
             .collect::<HashSet<u32>>();
 
         // Make proof at generated ids fail
