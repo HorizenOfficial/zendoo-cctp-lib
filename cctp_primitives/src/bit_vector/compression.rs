@@ -14,6 +14,12 @@ use crate::{
     type_mapping::Error,
 };
 
+/// The chunk size used in the decompression functions.
+const DECOMPRESSION_CHUNK_SIZE: usize = 1024;
+
+/// The maximum size [bytes] allowed for decompressed buffers.
+/// When decompressing, if the size exceeds this threshold, an error is returned. 
+const MAX_DECOMPRESSION_SIZE: usize = 1024 * 260; // 260 KB
 
 /// Available compression algorithms.
 /// The ffi repr(C) tag has been added here because this enum must be exported from mc-cryptolib.
@@ -72,9 +78,6 @@ pub fn compress_bit_vector(raw_bit_vector: &[u8], algorithm: CompressionAlgorith
 
     printlndbg!("Compressing bit vector...");
     printlndbg!("Algorithm: {}, size: {}, address: {:p}", algorithm as u8, raw_bit_vector.len(), raw_bit_vector);
-
-    printlndbg!("Bit vector content:");
-    printlndbg!("{:x?}", raw_bit_vector);
 
 
     match algorithm {
@@ -137,19 +140,29 @@ pub fn decompress_bit_vector_without_checks(compressed_bit_vector: &[u8]) -> Res
 fn decompress_bit_vector_with_opt_checks(compressed_bit_vector: &[u8], expected_size_opt: Option<usize>) -> Result<Vec<u8>, Error> {
 
     printlndbg!("Decompressing bit vector...");
-    printlndbg!("Algorithm: {}, size: {}, expected decompressed size: {} (check: {}), address: {:p}",
+    printlndbg!("Algorithm: {}, size: {}, expected decompressed size: {:?} (check: {}), address: {:p}",
     compressed_bit_vector[0], compressed_bit_vector.len(),
-    expected_size_opt.unwrap_or_default(), expected_size_opt.is_some(), compressed_bit_vector);
+    expected_size_opt, expected_size_opt.is_some(), compressed_bit_vector);
 
-    printlndbg!("Bit vector content:");
-    printlndbg!("{:x?}", compressed_bit_vector);
+    let mut max_decompressed_size: usize = MAX_DECOMPRESSION_SIZE;
+    printlndbg!("MAX_DECOMPRESSION_SIZE: {}, expected: {:?}", MAX_DECOMPRESSION_SIZE, expected_size_opt);
+
+    if expected_size_opt.is_some() {
+        max_decompressed_size = expected_size_opt.unwrap();
+
+        if max_decompressed_size > MAX_DECOMPRESSION_SIZE {
+            Err(format!("The expected uncompressed size {} exceeds the maximum allowed size {}", max_decompressed_size, MAX_DECOMPRESSION_SIZE))?
+        }
+    }
 
     let mut raw_bit_vector_result =  match compressed_bit_vector[0].try_into() {
         Ok(CompressionAlgorithm::Uncompressed) => Ok(compressed_bit_vector[1..].to_vec()),
-        Ok(CompressionAlgorithm::Bzip2) => bzip2_decompress(&compressed_bit_vector[1..]),
-        Ok(CompressionAlgorithm::Gzip) => gzip_decompress(&compressed_bit_vector[1..]),
+        Ok(CompressionAlgorithm::Bzip2) => bzip2_decompress(&compressed_bit_vector[1..], max_decompressed_size),
+        Ok(CompressionAlgorithm::Gzip) => gzip_decompress(&compressed_bit_vector[1..], max_decompressed_size),
         Err(_) => Err("Compression algorithm not supported")?
     }?;
+
+    printlndbg!("Decompressed size: {}", raw_bit_vector_result.len());
 
     if expected_size_opt.is_some() {
         let expected_size = expected_size_opt.unwrap();
@@ -170,11 +183,23 @@ fn bzip2_compress(bit_vector: &[u8]) -> Result<Vec<u8>, Error> {
     Ok(bzip_compressed)
 }
 
-fn bzip2_decompress(compressed_bit_vector: &[u8]) -> Result<Vec<u8>, Error> {
-    let mut uncompressed_bitvector = Vec::new();
+fn bzip2_decompress(compressed_bit_vector: &[u8], max_decompressed_size: usize) -> Result<Vec<u8>, Error> {
+    let mut uncompressed_bitvector = Vec::with_capacity(max_decompressed_size);
     let mut decompressor = BzDecoder::new(compressed_bit_vector);
-    decompressor.read_to_end(&mut uncompressed_bitvector)?;
-    
+    let mut fixed_array = [0; DECOMPRESSION_CHUNK_SIZE];
+
+    loop {
+        let result = decompressor.read(&mut fixed_array);
+        let read_size = result?;
+        uncompressed_bitvector.extend_from_slice(&fixed_array[..read_size]);
+
+        if read_size == 0 { break; }
+
+        if uncompressed_bitvector.len() > max_decompressed_size { Err(format!("Max decompressed size {} exceeded {} while processing [Bzip2]", max_decompressed_size, uncompressed_bitvector.len()))? }
+    }
+
+    if uncompressed_bitvector.len() > max_decompressed_size { Err(format!("Max decompressed size {} exceeded {} while processing [Gzip]", max_decompressed_size, uncompressed_bitvector.len()))? }
+
     Ok(uncompressed_bitvector)
 }
 
@@ -186,10 +211,22 @@ fn gzip_compress(bit_vector: &[u8]) -> Result<Vec<u8>, Error> {
     Ok(result)
 }
 
-fn gzip_decompress(compressed_bit_vector: &[u8]) -> Result<Vec<u8>, Error> {
-    let mut uncompressed_bitvector = Vec::new();
-    let mut e = GzDecoder::new(compressed_bit_vector);
-    e.read_to_end(&mut uncompressed_bitvector)?;
+fn gzip_decompress(compressed_bit_vector: &[u8], max_decompressed_size: usize) -> Result<Vec<u8>, Error> {
+    let mut uncompressed_bitvector = Vec::with_capacity(max_decompressed_size);
+    let mut decompressor = GzDecoder::new(compressed_bit_vector);
+    let mut fixed_array = [0; DECOMPRESSION_CHUNK_SIZE];
+
+    loop {
+        let result = decompressor.read(&mut fixed_array);
+        let read_size = result?;
+        uncompressed_bitvector.extend_from_slice(&fixed_array[..read_size]);
+
+        if read_size == 0 { break; }
+
+        if uncompressed_bitvector.len() > max_decompressed_size { Err(format!("Max decompressed size {} exceeded {} while processing [Gzip]", max_decompressed_size, uncompressed_bitvector.len()))? }
+    }
+
+    if uncompressed_bitvector.len() > max_decompressed_size { Err(format!("Max decompressed size {} exceeded {} while processing [Gzip]", max_decompressed_size, uncompressed_bitvector.len()))? }
 
     return Ok(uncompressed_bitvector);
 }
@@ -203,6 +240,7 @@ mod test {
     fn generate_random_bit_vector(seed: u64) -> Vec<u8> {
         let mut random_generator = rand::rngs::StdRng::seed_from_u64(seed);
         let bit_vector_size: u16 = random_generator.gen();
+        assert!(bit_vector_size as usize <= MAX_DECOMPRESSION_SIZE);
 
         let mut bit_vector: Vec<u8> = Vec::with_capacity(bit_vector_size as usize);
 
@@ -241,13 +279,12 @@ mod test {
 
     #[test]
     fn expected_bit_vector_size() {
-        let seed: u64 = rand::thread_rng().gen();
-        let original_bit_vector: Vec<u8> = generate_random_bit_vector(seed);
+        let mut seed: u64 = 0;
+        let mut original_bit_vector: Vec<u8> = Vec::new();
 
-        let mut wrong_bit_vector_size: usize = original_bit_vector.len();
-
-        while wrong_bit_vector_size != original_bit_vector.len() {
-            wrong_bit_vector_size = rand::thread_rng().gen();
+        while original_bit_vector.len() <= 0 || original_bit_vector.len() > MAX_DECOMPRESSION_SIZE {
+            seed = rand::thread_rng().gen();
+            original_bit_vector = generate_random_bit_vector(seed);
         }
 
         let compressed_bit_vector = compress_bit_vector(&original_bit_vector, CompressionAlgorithm::Uncompressed).unwrap();
@@ -284,5 +321,43 @@ mod test {
         compressed_bit_vector[0] = CompressionAlgorithm::Bzip2 as u8;
         assert!(decompress_bit_vector(&compressed_bit_vector, original_bit_vector.len()).is_err());
         assert_eq!(compressed_bit_vector.len(), compressed_bit_vector.capacity());
+    }
+
+    /// Checks that the decompression function doesn't crash when provided with a small compressed bit vector
+    /// that once decompressed "expands" to a huge size.
+    #[test]
+    fn huge_bit_vector_decompression() {
+
+        // The input file contains a compressed bit vector of around 10 KB whose decompressed size is around 16 GB.
+        let mut compressed_bit_vector =  std::fs::read("./test/compression/16gb_bitvector_bzip2.dat").unwrap();
+        assert!(decompress_bit_vector_with_opt_checks(&compressed_bit_vector, Some(MAX_DECOMPRESSION_SIZE)).is_err(), "Bzip2 error");
+        assert!(decompress_bit_vector_without_checks(&compressed_bit_vector).is_err(), "Bzip2 error");
+
+        // The input file contains a compressed bit vector of around 10 KB whose decompressed size is around 10 MB.
+        compressed_bit_vector = std::fs::read("./test/compression/10mb_bitvector_gzip.dat").unwrap();
+        assert!(decompress_bit_vector_with_opt_checks(&compressed_bit_vector, Some(MAX_DECOMPRESSION_SIZE)).is_err(), "Gzip error");
+        assert!(decompress_bit_vector_without_checks(&compressed_bit_vector).is_err(), "Gzip error");
+
+        // The input file contains a compressed bit vector whose decompressed size is 260 KB plus 1 byte.
+        compressed_bit_vector =  std::fs::read("./test/compression/160kb_plus_one_bitvector_bzip2.dat").unwrap();
+        assert!(decompress_bit_vector_with_opt_checks(&compressed_bit_vector, Some(MAX_DECOMPRESSION_SIZE + 1)).is_err(), "Bzip2 error");
+        assert!(decompress_bit_vector_with_opt_checks(&compressed_bit_vector, Some(MAX_DECOMPRESSION_SIZE)).is_err(), "Bzip2 error");
+        assert!(decompress_bit_vector_without_checks(&compressed_bit_vector).is_err(), "Bzip2 error");
+
+        // The input file contains a compressed bit vector whose decompressed size is 260 KB plus 1 byte.
+        compressed_bit_vector = std::fs::read("./test/compression/160kb_plus_one_bitvector_gzip.dat").unwrap();
+        assert!(decompress_bit_vector_with_opt_checks(&compressed_bit_vector, Some(MAX_DECOMPRESSION_SIZE + 1)).is_err(), "Gzip error");
+        assert!(decompress_bit_vector_with_opt_checks(&compressed_bit_vector, Some(MAX_DECOMPRESSION_SIZE)).is_err(), "Gzip error");
+        assert!(decompress_bit_vector_without_checks(&compressed_bit_vector).is_err(), "Gzip error");
+
+        // The input file contains a compressed bit vector whose decompressed size is 260 KB.
+        compressed_bit_vector =  std::fs::read("./test/compression/160kb_bitvector_bzip2.dat").unwrap();
+        assert!(decompress_bit_vector_with_opt_checks(&compressed_bit_vector, Some(MAX_DECOMPRESSION_SIZE)).is_ok(), "Bzip2 error");
+        assert!(decompress_bit_vector_without_checks(&compressed_bit_vector).is_ok(), "Bzip2 error");
+
+        // The input file contains a compressed bit vector whose decompressed size is 260 KB.
+        compressed_bit_vector = std::fs::read("./test/compression/160kb_bitvector_gzip.dat").unwrap();
+        assert!(decompress_bit_vector_with_opt_checks(&compressed_bit_vector, Some(MAX_DECOMPRESSION_SIZE)).is_ok(), "Gzip error");
+        assert!(decompress_bit_vector_without_checks(&compressed_bit_vector).is_ok(), "Gzip error");
     }
 }
