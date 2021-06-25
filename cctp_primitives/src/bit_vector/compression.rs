@@ -19,6 +19,8 @@ const DECOMPRESSION_CHUNK_SIZE: usize = 1024;
 
 /// The maximum size [bytes] allowed for decompressed buffers.
 /// When decompressing, if the size exceeds this threshold, an error is returned. 
+/// This value is set around to the double of the size limit for uncompressed
+/// bit vectors on mainchain side.
 const MAX_DECOMPRESSION_SIZE: usize = 1024 * 260; // 260 KB
 
 /// Available compression algorithms.
@@ -193,12 +195,9 @@ fn bzip2_decompress(compressed_bit_vector: &[u8], max_decompressed_size: usize) 
         let read_size = result?;
         uncompressed_bitvector.extend_from_slice(&fixed_array[..read_size]);
 
-        if read_size == 0 { break; }
-
         if uncompressed_bitvector.len() > max_decompressed_size { Err(format!("Max decompressed size {} exceeded {} while processing [Bzip2]", max_decompressed_size, uncompressed_bitvector.len()))? }
+        if read_size == 0 { break; }
     }
-
-    if uncompressed_bitvector.len() > max_decompressed_size { Err(format!("Max decompressed size {} exceeded {} while processing [Gzip]", max_decompressed_size, uncompressed_bitvector.len()))? }
 
     Ok(uncompressed_bitvector)
 }
@@ -221,12 +220,9 @@ fn gzip_decompress(compressed_bit_vector: &[u8], max_decompressed_size: usize) -
         let read_size = result?;
         uncompressed_bitvector.extend_from_slice(&fixed_array[..read_size]);
 
-        if read_size == 0 { break; }
-
         if uncompressed_bitvector.len() > max_decompressed_size { Err(format!("Max decompressed size {} exceeded {} while processing [Gzip]", max_decompressed_size, uncompressed_bitvector.len()))? }
+        if read_size == 0 { break; }
     }
-
-    if uncompressed_bitvector.len() > max_decompressed_size { Err(format!("Max decompressed size {} exceeded {} while processing [Gzip]", max_decompressed_size, uncompressed_bitvector.len()))? }
 
     return Ok(uncompressed_bitvector);
 }
@@ -239,8 +235,7 @@ mod test {
 
     fn generate_random_bit_vector(seed: u64) -> Vec<u8> {
         let mut random_generator = rand::rngs::StdRng::seed_from_u64(seed);
-        let bit_vector_size: u16 = random_generator.gen();
-        assert!(bit_vector_size as usize <= MAX_DECOMPRESSION_SIZE);
+        let bit_vector_size: u32 = random_generator.gen_range(0, MAX_DECOMPRESSION_SIZE as u32);
 
         let mut bit_vector: Vec<u8> = Vec::with_capacity(bit_vector_size as usize);
 
@@ -279,13 +274,8 @@ mod test {
 
     #[test]
     fn expected_bit_vector_size() {
-        let mut seed: u64 = 0;
-        let mut original_bit_vector: Vec<u8> = Vec::new();
-
-        while original_bit_vector.len() <= 0 || original_bit_vector.len() > MAX_DECOMPRESSION_SIZE {
-            seed = rand::thread_rng().gen();
-            original_bit_vector = generate_random_bit_vector(seed);
-        }
+        let seed: u64 = rand::thread_rng().gen();
+        let original_bit_vector: Vec<u8> = generate_random_bit_vector(seed);
 
         let compressed_bit_vector = compress_bit_vector(&original_bit_vector, CompressionAlgorithm::Uncompressed).unwrap();
         assert!(decompress_bit_vector(&compressed_bit_vector, original_bit_vector.len()).is_ok(), "Decompression error using seed={}", seed);
