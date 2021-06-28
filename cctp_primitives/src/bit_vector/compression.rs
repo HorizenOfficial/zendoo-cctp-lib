@@ -74,7 +74,6 @@ impl TryFrom<u8> for CompressionAlgorithm {
 /// let decompressed_bit_vector = decompress_bit_vector(&compressed_bit_vector, bit_vector.len()).unwrap();
 /// assert_eq!(bit_vector, decompressed_bit_vector);
 /// ```
-#[allow(unused_variables)]
 pub fn compress_bit_vector(raw_bit_vector: &[u8], algorithm: CompressionAlgorithm) -> Result<Vec<u8>, Error> {
     let compressed_bit_vector_result;
 
@@ -128,17 +127,14 @@ pub fn compress_bit_vector(raw_bit_vector: &[u8], algorithm: CompressionAlgorith
 /// let decompressed_bit_vector = decompress_bit_vector(&compressed_bit_vector, bit_vector.len()).unwrap();
 /// assert_eq!(bit_vector, decompressed_bit_vector);
 /// ```
-#[allow(unused_variables)]
 pub fn decompress_bit_vector(compressed_bit_vector: &[u8], expected_size: usize) -> Result<Vec<u8>, Error> {
     decompress_bit_vector_with_opt_checks(compressed_bit_vector, Some(expected_size))
 }
 
-#[allow(unused_variables)]
 pub fn decompress_bit_vector_without_checks(compressed_bit_vector: &[u8]) -> Result<Vec<u8>, Error> {
     decompress_bit_vector_with_opt_checks(compressed_bit_vector, None)
 }
 
-#[allow(unused_variables)]
 fn decompress_bit_vector_with_opt_checks(compressed_bit_vector: &[u8], expected_size_opt: Option<usize>) -> Result<Vec<u8>, Error> {
 
     printlndbg!("Decompressing bit vector...");
@@ -190,9 +186,10 @@ fn bzip2_decompress(compressed_bit_vector: &[u8], max_decompressed_size: usize) 
     let mut decompressor = BzDecoder::new(compressed_bit_vector);
     let mut fixed_array = [0; DECOMPRESSION_CHUNK_SIZE];
 
+    // Uncompress data in chunks of "DECOMPRESSION_CHUNK_SIZE" bytes, so that the processing can be stopped
+    // as soon as the uncompressed size exceeds the "max_decompressed_size" threshold.
     loop {
-        let result = decompressor.read(&mut fixed_array);
-        let read_size = result?;
+        let read_size = decompressor.read(&mut fixed_array)?;
         uncompressed_bitvector.extend_from_slice(&fixed_array[..read_size]);
 
         if uncompressed_bitvector.len() > max_decompressed_size { Err(format!("Max decompressed size {} exceeded {} while processing [Bzip2]", max_decompressed_size, uncompressed_bitvector.len()))? }
@@ -215,9 +212,10 @@ fn gzip_decompress(compressed_bit_vector: &[u8], max_decompressed_size: usize) -
     let mut decompressor = GzDecoder::new(compressed_bit_vector);
     let mut fixed_array = [0; DECOMPRESSION_CHUNK_SIZE];
 
+    // Uncompress data in chunks of "DECOMPRESSION_CHUNK_SIZE" bytes, so that the processing can be stopped
+    // as soon as the uncompressed size exceeds the "max_decompressed_size" threshold.
     loop {
-        let result = decompressor.read(&mut fixed_array);
-        let read_size = result?;
+        let read_size = decompressor.read(&mut fixed_array)?;
         uncompressed_bitvector.extend_from_slice(&fixed_array[..read_size]);
 
         if uncompressed_bitvector.len() > max_decompressed_size { Err(format!("Max decompressed size {} exceeded {} while processing [Gzip]", max_decompressed_size, uncompressed_bitvector.len()))? }
