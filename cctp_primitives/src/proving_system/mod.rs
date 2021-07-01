@@ -549,7 +549,6 @@ pub(crate) fn compute_max_constraints_and_variables(
 {
     let segment_size = segment_size.next_power_of_two();
     let num_inputs = num_inputs.next_power_of_two();
-    let mut max_supported_num_constraints = 0;
     let mut max_supported_proof_size = 0;
     let mut max_supported_vk_size = 0;
     let mut k_ctr = algebra::log2(num_inputs * density);
@@ -558,23 +557,48 @@ pub(crate) fn compute_max_constraints_and_variables(
 
         let k = 1 << k_ctr;
         let num_constraints = k/density;
+        // the smallest domain h possible
         let h = num_constraints.next_power_of_two();
 
         let mut info = IndexInfo::<FieldElement>::default();
-        info.num_constraints = k/density;
+        info.num_constraints = num_constraints;
+        // we choose the most greedy setting, 
         info.num_witness = h - num_inputs;
         info.num_inputs = num_inputs;
         info.num_non_zero = k;
 
+        // we compute proof_size and vk_size in the most conservative setting for num_variables.
         let (proof_size, vk_size) = compute_proof_vk_size(segment_size, info, zk, proof_type);
 
-        if proof_size > max_proof_size || vk_size > max_vk_size {
-            break (max_supported_num_constraints, max_supported_num_constraints.next_power_of_two(), max_supported_proof_size, max_supported_vk_size)
+        // If we exceed one of the two thresholds, we exceeded the domain k size but maybe we can still increase the num_variables
+        // without increasing num_constraints and domain_k_size (thus without increasing vk_size).
+        if (vk_size > max_vk_size) || (proof_size > max_proof_size) {
+            // we take the previous domain_k_size and iterate over domain_h_size
+            // starting from min_domain_h_size = max_supported_num_constraints.next_power_of_two() and increase by factor 2 until
+            // we exceed the max_proof_size (then we break)
+            let k = 1 << (k_ctr - 1);
+            let num_constraints = k/density;
+            let mut info = IndexInfo::<FieldElement>::default();
+            info.num_constraints = num_constraints;
+            info.num_inputs = num_inputs;
+            info.num_non_zero = k;
+
+            // even though we know that the conservative num_variables (vk_size,proof_size) is below the thresholds 
+            // for the previous domain_k_size, we start again from it. 
+            let mut h = num_constraints.next_power_of_two();
+            loop {
+                info.num_witness = h - num_inputs;
+                let (proof_size, _) = compute_proof_vk_size(segment_size, info, zk, proof_type);
+                if proof_size > max_proof_size {
+                    return (info.num_constraints, h/2, max_supported_proof_size, max_supported_vk_size);
+                }
+                max_supported_proof_size = proof_size;
+                h *= 2;
+            };
         }
 
         max_supported_proof_size = proof_size;
         max_supported_vk_size = vk_size;
-        max_supported_num_constraints = num_constraints;
         k_ctr += 1;
     }
 }
@@ -605,13 +629,23 @@ fn test_check_proof_vk_size() {
                     info.num_non_zero = (max_num_constraints * density).next_power_of_two();
                     assert!(check_proof_vk_size(segment_size, info, zk, proof_type, max_proof_size, max_vk_size));
 
-                    let h = h * 2;
-                    let max_num_constraints = max_num_constraints * 2;
-                    info.num_constraints = max_num_constraints;
+                    info.num_constraints = max_num_constraints + 1;
                     info.num_witness = h - num_inputs;
                     info.num_inputs = num_inputs;
+                    info.num_non_zero = ((max_num_constraints + 1) * density).next_power_of_two();
+                    assert!(!check_proof_vk_size(segment_size, info, zk, proof_type, max_proof_size, max_vk_size));
+
+                    info.num_constraints = max_num_constraints;
+                    info.num_witness = h - num_inputs + 1;
+                    info.num_inputs = num_inputs;
                     info.num_non_zero = (max_num_constraints * density).next_power_of_two();
-                    assert!(!check_proof_vk_size(segment_size, info, zk, proof_type, max_proof_size, max_vk_size))
+                    assert!(!check_proof_vk_size(segment_size, info, zk, proof_type, max_proof_size, max_vk_size));
+
+                    info.num_constraints = max_num_constraints;
+                    info.num_witness = h - num_inputs;
+                    info.num_inputs = num_inputs + 1;
+                    info.num_non_zero = (max_num_constraints * density).next_power_of_two();
+                    assert!(!check_proof_vk_size(segment_size, info, zk, proof_type, max_proof_size, max_vk_size));
                 }
             }
         }
