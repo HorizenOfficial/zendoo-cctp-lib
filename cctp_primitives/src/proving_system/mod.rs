@@ -534,9 +534,10 @@ pub fn compute_proof_vk_size(
 }
 
 #[allow(dead_code)]
-/// Given segment_size, density, zk, num_inputs, proof_type, return the
-/// s.t. proof size is <= max_proof_size and vk size is <= max_vk_size, and the
-/// corresponding values of proof size and vk size
+/// Given segment_size, density, zk, num_inputs, proof_type, return the maximum
+/// number of constraints and variables a circuit can have s.t.
+/// proof size <= max_proof_size and vk size is <= max_vk_size, and return the
+/// corresponding values of proof size and vk size too.
 pub(crate) fn compute_max_constraints_and_variables(
     segment_size: usize,
     density: usize,
@@ -604,6 +605,7 @@ pub(crate) fn compute_max_constraints_and_variables(
 }
 
 #[test]
+/// Test consistency between check_proof_vk_size and compute_max_constraints_and_variables function.
 fn test_check_proof_vk_size() {
     let max_proof_size = 7000;
     let max_vk_size = 4000;
