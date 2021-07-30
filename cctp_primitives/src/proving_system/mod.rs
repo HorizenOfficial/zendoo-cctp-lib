@@ -14,6 +14,10 @@ pub mod init;
 pub mod verifier;
 pub mod error;
 
+pub const UNDEFINED_PS_BYTE: u8 = 0u8;
+pub const DARLIN_PS_BYTE: u8 = 1u8;
+pub const COBOUNDARY_MARLIN_PS_BYTE: u8 = 2u8;
+
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
 #[repr(C)]
 pub enum ProvingSystem {
@@ -25,9 +29,9 @@ pub enum ProvingSystem {
 impl CanonicalSerialize for ProvingSystem {
     fn serialize<W: Write>(&self, writer: W) -> Result<(), SerializationError> {
         match self {
-            ProvingSystem::Undefined => CanonicalSerialize::serialize(&0u8, writer),
-            ProvingSystem::Darlin => CanonicalSerialize::serialize(&1u8, writer),
-            ProvingSystem::CoboundaryMarlin => CanonicalSerialize::serialize(&2u8, writer)
+            ProvingSystem::Undefined => CanonicalSerialize::serialize(&UNDEFINED_PS_BYTE, writer),
+            ProvingSystem::Darlin => CanonicalSerialize::serialize(&DARLIN_PS_BYTE, writer),
+            ProvingSystem::CoboundaryMarlin => CanonicalSerialize::serialize(&COBOUNDARY_MARLIN_PS_BYTE, writer)
         }
     }
 
@@ -40,9 +44,9 @@ impl CanonicalDeserialize for ProvingSystem {
     fn deserialize<R: Read>(reader: R) -> Result<Self, SerializationError> {
         let ps_type_byte: u8 = CanonicalDeserialize::deserialize(reader)?;
         match ps_type_byte {
-            0u8 => Ok(ProvingSystem::Undefined),
-            1u8 => Ok(ProvingSystem::Darlin),
-            2u8 => Ok(ProvingSystem::CoboundaryMarlin),
+            UNDEFINED_PS_BYTE => Ok(ProvingSystem::Undefined),
+            DARLIN_PS_BYTE => Ok(ProvingSystem::Darlin),
+            COBOUNDARY_MARLIN_PS_BYTE => Ok(ProvingSystem::CoboundaryMarlin),
             _ => Err(SerializationError::InvalidData),
         }
     }
@@ -72,11 +76,11 @@ impl CanonicalSerialize for ZendooProof {
     fn serialize<W: Write>(&self, mut writer: W) -> Result<(), SerializationError> {
         match self {
             ZendooProof::Darlin(proof) => {
-                CanonicalSerialize::serialize(&1u8, &mut writer)?;
+                CanonicalSerialize::serialize(&DARLIN_PS_BYTE, &mut writer)?;
                 CanonicalSerialize::serialize(&proof, writer)
             },
             ZendooProof::CoboundaryMarlin(proof) => {
-                CanonicalSerialize::serialize(&2u8, &mut writer)?;
+                CanonicalSerialize::serialize(&COBOUNDARY_MARLIN_PS_BYTE, &mut writer)?;
                 CanonicalSerialize::serialize(&proof, writer)
             },
         }
@@ -104,11 +108,11 @@ impl CanonicalSerialize for ZendooProof {
     fn serialize_uncompressed<W: Write>(&self, mut writer: W) -> Result<(), SerializationError> {
         match self {
             ZendooProof::Darlin(proof) => {
-                CanonicalSerialize::serialize_uncompressed(&1u8, &mut writer)?;
+                CanonicalSerialize::serialize_uncompressed(&DARLIN_PS_BYTE, &mut writer)?;
                 CanonicalSerialize::serialize_uncompressed(&proof, writer)
             },
             ZendooProof::CoboundaryMarlin(proof) => {
-                CanonicalSerialize::serialize_uncompressed(&2u8, &mut writer)?;
+                CanonicalSerialize::serialize_uncompressed(&COBOUNDARY_MARLIN_PS_BYTE, &mut writer)?;
                 CanonicalSerialize::serialize_uncompressed(&proof, writer)
             },
         }
@@ -127,8 +131,8 @@ impl CanonicalDeserialize for ZendooProof {
     fn deserialize<R: Read>(mut reader: R) -> Result<Self, SerializationError> {
         let ps_type_byte: u8 = CanonicalDeserialize::deserialize(&mut reader)?;
         match ps_type_byte {
-            1u8 => Ok(ZendooProof::Darlin(<DarlinProof as CanonicalDeserialize>::deserialize(reader)?)),
-            2u8 => Ok(ZendooProof::CoboundaryMarlin(<CoboundaryMarlinProof as CanonicalDeserialize>::deserialize(reader)?)),
+            DARLIN_PS_BYTE => Ok(ZendooProof::Darlin(<DarlinProof as CanonicalDeserialize>::deserialize(reader)?)),
+            COBOUNDARY_MARLIN_PS_BYTE => Ok(ZendooProof::CoboundaryMarlin(<CoboundaryMarlinProof as CanonicalDeserialize>::deserialize(reader)?)),
             _ => Err(SerializationError::InvalidData),
         }
     }
@@ -136,8 +140,8 @@ impl CanonicalDeserialize for ZendooProof {
     fn deserialize_unchecked<R: Read>(mut reader: R) -> Result<Self, SerializationError> {
         let ps_type_byte: u8 = CanonicalDeserialize::deserialize_unchecked(&mut reader)?;
         match ps_type_byte {
-            1u8 => Ok(ZendooProof::Darlin(<DarlinProof as CanonicalDeserialize>::deserialize_unchecked(reader)?)),
-            2u8 => Ok(ZendooProof::CoboundaryMarlin(<CoboundaryMarlinProof as CanonicalDeserialize>::deserialize_unchecked(reader)?)),
+            DARLIN_PS_BYTE => Ok(ZendooProof::Darlin(<DarlinProof as CanonicalDeserialize>::deserialize_unchecked(reader)?)),
+            COBOUNDARY_MARLIN_PS_BYTE => Ok(ZendooProof::CoboundaryMarlin(<CoboundaryMarlinProof as CanonicalDeserialize>::deserialize_unchecked(reader)?)),
             _ => Err(SerializationError::InvalidData),
         }
     }
@@ -146,8 +150,8 @@ impl CanonicalDeserialize for ZendooProof {
     fn deserialize_uncompressed<R: Read>(mut reader: R) -> Result<Self, SerializationError> {
         let ps_type_byte: u8 = CanonicalDeserialize::deserialize_uncompressed(&mut reader)?;
         match ps_type_byte {
-            1u8 => Ok(ZendooProof::Darlin(<DarlinProof as CanonicalDeserialize>::deserialize_uncompressed(reader)?)),
-            2u8 => Ok(ZendooProof::CoboundaryMarlin(<CoboundaryMarlinProof as CanonicalDeserialize>::deserialize_uncompressed(reader)?)),
+            DARLIN_PS_BYTE => Ok(ZendooProof::Darlin(<DarlinProof as CanonicalDeserialize>::deserialize_uncompressed(reader)?)),
+            COBOUNDARY_MARLIN_PS_BYTE => Ok(ZendooProof::CoboundaryMarlin(<CoboundaryMarlinProof as CanonicalDeserialize>::deserialize_uncompressed(reader)?)),
             _ => Err(SerializationError::InvalidData),
         }
     }
@@ -156,8 +160,8 @@ impl CanonicalDeserialize for ZendooProof {
     fn deserialize_uncompressed_unchecked<R: Read>(mut reader: R) -> Result<Self, SerializationError> {
         let ps_type_byte: u8 = CanonicalDeserialize::deserialize_uncompressed_unchecked(&mut reader)?;
         match ps_type_byte {
-            1u8 => Ok(ZendooProof::Darlin(<DarlinProof as CanonicalDeserialize>::deserialize_uncompressed_unchecked(reader)?)),
-            2u8 => Ok(ZendooProof::CoboundaryMarlin(<CoboundaryMarlinProof as CanonicalDeserialize>::deserialize_uncompressed_unchecked(reader)?)),
+            DARLIN_PS_BYTE => Ok(ZendooProof::Darlin(<DarlinProof as CanonicalDeserialize>::deserialize_uncompressed_unchecked(reader)?)),
+            COBOUNDARY_MARLIN_PS_BYTE => Ok(ZendooProof::CoboundaryMarlin(<CoboundaryMarlinProof as CanonicalDeserialize>::deserialize_uncompressed_unchecked(reader)?)),
             _ => Err(SerializationError::InvalidData),
         }
     }
@@ -191,11 +195,11 @@ impl CanonicalSerialize for ZendooVerifierKey {
     fn serialize<W: Write>(&self, mut writer: W) -> Result<(), SerializationError> {
         match self {
             ZendooVerifierKey::Darlin(vk) => {
-                CanonicalSerialize::serialize(&1u8, &mut writer)?;
+                CanonicalSerialize::serialize(&DARLIN_PS_BYTE, &mut writer)?;
                 CanonicalSerialize::serialize(&vk, writer)
             },
             ZendooVerifierKey::CoboundaryMarlin(vk) => {
-                CanonicalSerialize::serialize(&2u8, &mut writer)?;
+                CanonicalSerialize::serialize(&COBOUNDARY_MARLIN_PS_BYTE, &mut writer)?;
                 CanonicalSerialize::serialize(&vk, writer)
             },
         }
@@ -223,11 +227,11 @@ impl CanonicalSerialize for ZendooVerifierKey {
     fn serialize_uncompressed<W: Write>(&self, mut writer: W) -> Result<(), SerializationError> {
         match self {
             ZendooVerifierKey::Darlin(vk) => {
-                CanonicalSerialize::serialize_uncompressed(&1u8, &mut writer)?;
+                CanonicalSerialize::serialize_uncompressed(&DARLIN_PS_BYTE, &mut writer)?;
                 CanonicalSerialize::serialize_uncompressed(&vk, writer)
             },
             ZendooVerifierKey::CoboundaryMarlin(vk) => {
-                CanonicalSerialize::serialize_uncompressed(&2u8, &mut writer)?;
+                CanonicalSerialize::serialize_uncompressed(&COBOUNDARY_MARLIN_PS_BYTE, &mut writer)?;
                 CanonicalSerialize::serialize_uncompressed(&vk, writer)
             },
         }
@@ -246,8 +250,8 @@ impl CanonicalDeserialize for ZendooVerifierKey {
     fn deserialize<R: Read>(mut reader: R) -> Result<Self, SerializationError> {
         let ps_type_byte: u8 = CanonicalDeserialize::deserialize(&mut reader)?;
         match ps_type_byte {
-            1u8 => Ok(ZendooVerifierKey::Darlin(<DarlinVerifierKey as CanonicalDeserialize>::deserialize(reader)?)),
-            2u8 => Ok(ZendooVerifierKey::CoboundaryMarlin(<CoboundaryMarlinVerifierKey as CanonicalDeserialize>::deserialize(reader)?)),
+            DARLIN_PS_BYTE => Ok(ZendooVerifierKey::Darlin(<DarlinVerifierKey as CanonicalDeserialize>::deserialize(reader)?)),
+            COBOUNDARY_MARLIN_PS_BYTE => Ok(ZendooVerifierKey::CoboundaryMarlin(<CoboundaryMarlinVerifierKey as CanonicalDeserialize>::deserialize(reader)?)),
             _ => Err(SerializationError::InvalidData),
         }
     }
@@ -255,8 +259,8 @@ impl CanonicalDeserialize for ZendooVerifierKey {
     fn deserialize_unchecked<R: Read>(mut reader: R) -> Result<Self, SerializationError> {
         let ps_type_byte: u8 = CanonicalDeserialize::deserialize_unchecked(&mut reader)?;
         match ps_type_byte {
-            1u8 => Ok(ZendooVerifierKey::Darlin(<DarlinVerifierKey as CanonicalDeserialize>::deserialize_unchecked(reader)?)),
-            2u8 => Ok(ZendooVerifierKey::CoboundaryMarlin(<CoboundaryMarlinVerifierKey as CanonicalDeserialize>::deserialize_unchecked(reader)?)),
+            DARLIN_PS_BYTE => Ok(ZendooVerifierKey::Darlin(<DarlinVerifierKey as CanonicalDeserialize>::deserialize_unchecked(reader)?)),
+            COBOUNDARY_MARLIN_PS_BYTE => Ok(ZendooVerifierKey::CoboundaryMarlin(<CoboundaryMarlinVerifierKey as CanonicalDeserialize>::deserialize_unchecked(reader)?)),
             _ => Err(SerializationError::InvalidData),
         }
     }
@@ -265,8 +269,8 @@ impl CanonicalDeserialize for ZendooVerifierKey {
     fn deserialize_uncompressed<R: Read>(mut reader: R) -> Result<Self, SerializationError> {
         let ps_type_byte: u8 = CanonicalDeserialize::deserialize_uncompressed(&mut reader)?;
         match ps_type_byte {
-            1u8 => Ok(ZendooVerifierKey::Darlin(<DarlinVerifierKey as CanonicalDeserialize>::deserialize_uncompressed(reader)?)),
-            2u8 => Ok(ZendooVerifierKey::CoboundaryMarlin(<CoboundaryMarlinVerifierKey as CanonicalDeserialize>::deserialize_uncompressed(reader)?)),
+            DARLIN_PS_BYTE => Ok(ZendooVerifierKey::Darlin(<DarlinVerifierKey as CanonicalDeserialize>::deserialize_uncompressed(reader)?)),
+            COBOUNDARY_MARLIN_PS_BYTE => Ok(ZendooVerifierKey::CoboundaryMarlin(<CoboundaryMarlinVerifierKey as CanonicalDeserialize>::deserialize_uncompressed(reader)?)),
             _ => Err(SerializationError::InvalidData),
         }
     }
@@ -275,8 +279,8 @@ impl CanonicalDeserialize for ZendooVerifierKey {
     fn deserialize_uncompressed_unchecked<R: Read>(mut reader: R) -> Result<Self, SerializationError> {
         let ps_type_byte: u8 = CanonicalDeserialize::deserialize_uncompressed_unchecked(&mut reader)?;
         match ps_type_byte {
-            1u8 => Ok(ZendooVerifierKey::Darlin(<DarlinVerifierKey as CanonicalDeserialize>::deserialize_uncompressed_unchecked(reader)?)),
-            2u8 => Ok(ZendooVerifierKey::CoboundaryMarlin(<CoboundaryMarlinVerifierKey as CanonicalDeserialize>::deserialize_uncompressed_unchecked(reader)?)),
+            DARLIN_PS_BYTE => Ok(ZendooVerifierKey::Darlin(<DarlinVerifierKey as CanonicalDeserialize>::deserialize_uncompressed_unchecked(reader)?)),
+            COBOUNDARY_MARLIN_PS_BYTE => Ok(ZendooVerifierKey::CoboundaryMarlin(<CoboundaryMarlinVerifierKey as CanonicalDeserialize>::deserialize_uncompressed_unchecked(reader)?)),
             _ => Err(SerializationError::InvalidData),
         }
     }
@@ -310,11 +314,11 @@ impl CanonicalSerialize for ZendooProverKey {
     fn serialize<W: Write>(&self, mut writer: W) -> Result<(), SerializationError> {
         match self {
             ZendooProverKey::Darlin(pk) => {
-                CanonicalSerialize::serialize(&1u8, &mut writer)?;
+                CanonicalSerialize::serialize(&DARLIN_PS_BYTE, &mut writer)?;
                 CanonicalSerialize::serialize(&pk, writer)
             },
             ZendooProverKey::CoboundaryMarlin(pk) => {
-                CanonicalSerialize::serialize(&2u8, &mut writer)?;
+                CanonicalSerialize::serialize(&COBOUNDARY_MARLIN_PS_BYTE, &mut writer)?;
                 CanonicalSerialize::serialize(&pk, writer)
             },
         }
@@ -342,11 +346,11 @@ impl CanonicalSerialize for ZendooProverKey {
     fn serialize_uncompressed<W: Write>(&self, mut writer: W) -> Result<(), SerializationError> {
         match self {
             ZendooProverKey::Darlin(pk) => {
-                CanonicalSerialize::serialize_uncompressed(&1u8, &mut writer)?;
+                CanonicalSerialize::serialize_uncompressed(&DARLIN_PS_BYTE, &mut writer)?;
                 CanonicalSerialize::serialize_uncompressed(&pk, writer)
             },
             ZendooProverKey::CoboundaryMarlin(pk) => {
-                CanonicalSerialize::serialize_uncompressed(&2u8, &mut writer)?;
+                CanonicalSerialize::serialize_uncompressed(&COBOUNDARY_MARLIN_PS_BYTE, &mut writer)?;
                 CanonicalSerialize::serialize_uncompressed(&pk, writer)
             },
         }
@@ -365,8 +369,8 @@ impl CanonicalDeserialize for ZendooProverKey {
     fn deserialize<R: Read>(mut reader: R) -> Result<Self, SerializationError> {
         let ps_type_byte: u8 = CanonicalDeserialize::deserialize(&mut reader)?;
         match ps_type_byte {
-            1u8 => Ok(ZendooProverKey::Darlin(<DarlinProverKey as CanonicalDeserialize>::deserialize(reader)?)),
-            2u8 => Ok(ZendooProverKey::CoboundaryMarlin(<CoboundaryMarlinProverKey as CanonicalDeserialize>::deserialize(reader)?)),
+            DARLIN_PS_BYTE => Ok(ZendooProverKey::Darlin(<DarlinProverKey as CanonicalDeserialize>::deserialize(reader)?)),
+            COBOUNDARY_MARLIN_PS_BYTE => Ok(ZendooProverKey::CoboundaryMarlin(<CoboundaryMarlinProverKey as CanonicalDeserialize>::deserialize(reader)?)),
             _ => Err(SerializationError::InvalidData),
         }
     }
@@ -374,8 +378,8 @@ impl CanonicalDeserialize for ZendooProverKey {
     fn deserialize_unchecked<R: Read>(mut reader: R) -> Result<Self, SerializationError> {
         let ps_type_byte: u8 = CanonicalDeserialize::deserialize_unchecked(&mut reader)?;
         match ps_type_byte {
-            1u8 => Ok(ZendooProverKey::Darlin(<DarlinProverKey as CanonicalDeserialize>::deserialize_unchecked(reader)?)),
-            2u8 => Ok(ZendooProverKey::CoboundaryMarlin(<CoboundaryMarlinProverKey as CanonicalDeserialize>::deserialize_unchecked(reader)?)),
+            DARLIN_PS_BYTE => Ok(ZendooProverKey::Darlin(<DarlinProverKey as CanonicalDeserialize>::deserialize_unchecked(reader)?)),
+            COBOUNDARY_MARLIN_PS_BYTE => Ok(ZendooProverKey::CoboundaryMarlin(<CoboundaryMarlinProverKey as CanonicalDeserialize>::deserialize_unchecked(reader)?)),
             _ => Err(SerializationError::InvalidData),
         }
     }
@@ -384,8 +388,8 @@ impl CanonicalDeserialize for ZendooProverKey {
     fn deserialize_uncompressed<R: Read>(mut reader: R) -> Result<Self, SerializationError> {
         let ps_type_byte: u8 = CanonicalDeserialize::deserialize_uncompressed(&mut reader)?;
         match ps_type_byte {
-            1u8 => Ok(ZendooProverKey::Darlin(<DarlinProverKey as CanonicalDeserialize>::deserialize_uncompressed(reader)?)),
-            2u8 => Ok(ZendooProverKey::CoboundaryMarlin(<CoboundaryMarlinProverKey as CanonicalDeserialize>::deserialize_uncompressed(reader)?)),
+            DARLIN_PS_BYTE => Ok(ZendooProverKey::Darlin(<DarlinProverKey as CanonicalDeserialize>::deserialize_uncompressed(reader)?)),
+            COBOUNDARY_MARLIN_PS_BYTE => Ok(ZendooProverKey::CoboundaryMarlin(<CoboundaryMarlinProverKey as CanonicalDeserialize>::deserialize_uncompressed(reader)?)),
             _ => Err(SerializationError::InvalidData),
         }
     }
@@ -394,8 +398,8 @@ impl CanonicalDeserialize for ZendooProverKey {
     fn deserialize_uncompressed_unchecked<R: Read>(mut reader: R) -> Result<Self, SerializationError> {
         let ps_type_byte: u8 = CanonicalDeserialize::deserialize(&mut reader)?;
         match ps_type_byte {
-            1u8 => Ok(ZendooProverKey::Darlin(<DarlinProverKey as CanonicalDeserialize>::deserialize_uncompressed_unchecked(reader)?)),
-            2u8 => Ok(ZendooProverKey::CoboundaryMarlin(<CoboundaryMarlinProverKey as CanonicalDeserialize>::deserialize_uncompressed_unchecked(reader)?)),
+            DARLIN_PS_BYTE => Ok(ZendooProverKey::Darlin(<DarlinProverKey as CanonicalDeserialize>::deserialize_uncompressed_unchecked(reader)?)),
+            COBOUNDARY_MARLIN_PS_BYTE => Ok(ZendooProverKey::CoboundaryMarlin(<CoboundaryMarlinProverKey as CanonicalDeserialize>::deserialize_uncompressed_unchecked(reader)?)),
             _ => Err(SerializationError::InvalidData),
         }
     }
