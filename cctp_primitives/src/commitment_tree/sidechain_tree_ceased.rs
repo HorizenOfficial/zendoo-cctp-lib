@@ -18,7 +18,7 @@ impl SidechainTreeCeased {
         Ok(
             Self{
                 sc_id:   (*sc_id).clone(),
-                csw_mt:  new_mt(CSW_MT_HEIGHT),
+                csw_mt:  new_mt(CSW_MT_HEIGHT)?,
             }
         )
     }

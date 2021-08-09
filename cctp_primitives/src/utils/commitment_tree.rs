@@ -11,7 +11,7 @@ pub const fn pow2(power: usize) -> usize { 1 << power }
 //--------------------------------------------------------------------------------------------------
 
 /// Creates new FieldElement-based MT
-pub fn new_mt(height: usize) -> GingerMHT {
+pub fn new_mt(height: usize) -> Result<GingerMHT, Error> {
     new_ginger_mht(height, 2usize.pow(height as u32))
 }
 

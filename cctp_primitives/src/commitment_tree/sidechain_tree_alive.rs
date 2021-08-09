@@ -35,9 +35,9 @@ impl SidechainTreeAlive {
                 scc:      FieldElement::zero(),
 
                 // Default leaves values of an empty GingerMHT are also FieldElement::zero(); They are specified in MHT_PARAMETERS as 0-level nodes
-                fwt_mt:  new_mt(FWT_MT_HEIGHT),
-                bwtr_mt: new_mt(BWTR_MT_HEIGHT),
-                cert_mt: new_mt(CERT_MT_HEIGHT),
+                fwt_mt:  new_mt(FWT_MT_HEIGHT)?,
+                bwtr_mt: new_mt(BWTR_MT_HEIGHT)?,
+                cert_mt: new_mt(CERT_MT_HEIGHT)?
             }
         )
     }

@@ -39,7 +39,7 @@ pub fn merkle_root_from_bytes(uncompressed_bit_vector: &[u8]) -> Result<algebra:
     let mut mt = GingerMHT::init(
         merkle_tree_height,
         num_leaves,
-    );
+    )?;
 
     let leaves = bool_vector[..real_bit_vector_size].to_field_elements()?;
 

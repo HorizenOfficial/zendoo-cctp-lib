@@ -16,7 +16,7 @@ fn _get_root_from_field_vec(field_vec: Vec<FieldElement>, height: usize) -> Resu
     assert!(height <= GINGER_MHT_POSEIDON_PARAMETERS.nodes.len());
     if field_vec.len() > 0 {
         let mut mt =
-            GingerMHT::init(height, 2usize.pow(height as u32));
+            GingerMHT::init(height, 2usize.pow(height as u32))?;
         for fe in field_vec.into_iter(){
             mt.append(fe)?;
         }

@@ -597,7 +597,10 @@ impl CommitmentTree {
 
     // Build MT with ID-ordered SC-commitments as its leafs
     fn build_commitments_tree(&mut self) -> Option<GingerMHT> {
-        let mut cmt = new_mt(CMT_MT_HEIGHT);
+        let mut cmt = match new_mt(CMT_MT_HEIGHT) {
+            Ok(v) => v,
+            Err(_) => { return None; }
+        };
         let ids = self.get_indexed_sc_ids().into_iter().map(|s| *s.1).collect::<Vec<FieldElement>>();
         for id in ids {
             // SCTAs/SCTCs with such IDs exist, so unwrap() is safe here

@@ -3,7 +3,7 @@
 use crate::type_mapping::{GingerMHT, FieldElement, GingerMHTPath, Error};
 use primitives::{FieldBasedMerkleTree, FieldBasedMerkleTreePath};
 
-pub fn new_ginger_mht(height: usize, processing_step: usize) -> GingerMHT {
+pub fn new_ginger_mht(height: usize, processing_step: usize) -> Result<GingerMHT, Error> {
     GingerMHT::init(height, processing_step)
 }
 
