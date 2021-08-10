@@ -53,7 +53,10 @@ pub fn verify_zendoo_proof<I: UserInputs, R: RngCore>(
                 ck_g2.as_ref().unwrap(),
                 usr_ins.as_slice(),
                 proof,
-                rng.unwrap()
+                match rng {
+                    Some(v) => v,
+                    None => Err(ProvingSystemError::Other(format!("rng not set")))?,
+                }
             ).map_err(|e| ProvingSystemError::ProofVerificationFailed(format!("{:?}", e)))?
         },
         _ => unreachable!()

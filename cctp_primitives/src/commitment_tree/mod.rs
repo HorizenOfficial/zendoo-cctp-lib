@@ -510,9 +510,18 @@ impl CommitmentTree {
         if let Some(sc_tree) = self.get_scta_mut(sc_id){
             Some(
                 match subtree_type {
-                    SidechainAliveSubtreeType::FWT  => sc_tree.get_fwt_commitment(),
-                    SidechainAliveSubtreeType::BWTR => sc_tree.get_bwtr_commitment(),
-                    SidechainAliveSubtreeType::CERT => sc_tree.get_cert_commitment(),
+                    SidechainAliveSubtreeType::FWT  => match sc_tree.get_fwt_commitment() {
+                        Some(v) => v,
+                        None => return None,
+                    },
+                    SidechainAliveSubtreeType::BWTR => match sc_tree.get_bwtr_commitment() {
+                        Some(v) => v,
+                        None => return None,
+                    },
+                    SidechainAliveSubtreeType::CERT => match sc_tree.get_cert_commitment() {
+                        Some(v) => v,
+                        None => return None,
+                    },
                     SidechainAliveSubtreeType::SCC  => sc_tree.get_scc() // just SCC value instead of commitment
                 }
             )
@@ -525,7 +534,7 @@ impl CommitmentTree {
     // Returns None if get_sctc couldn't get SidechainTreeCeased with a specified ID
     fn sctc_get_subtree_commitment(&mut self, sc_id: &FieldElement) -> Option<FieldElement> {
         if let Some(sctc) = self.get_sctc_mut(sc_id){
-            Some(sctc.get_csw_commitment())
+            sctc.get_csw_commitment()
         } else {
             None
         }
@@ -554,16 +563,28 @@ impl CommitmentTree {
         if let Some(sct) = self.get_scta_mut(sc_id){
             Some(
                 ScCommitmentData::create_alive(
-                    sct.get_fwt_commitment(),
-                    sct.get_bwtr_commitment(),
-                    sct.get_cert_commitment(),
+                    match sct.get_fwt_commitment() {
+                        Some(v) => v,
+                        None => return None,
+                    },
+                    match sct.get_bwtr_commitment() {
+                        Some(v) => v,
+                        None => return None,
+                    },
+                    match sct.get_cert_commitment() {
+                        Some(v) => v,
+                        None => return None,
+                    },
                     sct.get_scc()
                 )
             )
         } else if let Some(sctc) = self.get_sctc_mut(sc_id){
             Some(
                 ScCommitmentData::create_ceased(
-                    sctc.get_csw_commitment()
+                    match sctc.get_csw_commitment() {
+                        Some(v) => v,
+                        None => return None,
+                    }
                 )
             )
         } else {
@@ -575,9 +596,9 @@ impl CommitmentTree {
     // Returns None if SidechainTreeAlive/SidechainTreeCeased with a specified ID doesn't exist in a current CommitmentTree
     fn get_sc_commitment_internal(&mut self, sc_id: &FieldElement) -> Option<FieldElement> {
         if let Some(sct) = self.get_scta_mut(sc_id){
-            Some(sct.get_commitment())
+            sct.get_commitment()
         } else if let Some(sctc) = self.get_sctc_mut(sc_id){
-            Some(sctc.get_commitment())
+            sctc.get_commitment()
         } else {
             None
         }
@@ -604,7 +625,10 @@ impl CommitmentTree {
         let ids = self.get_indexed_sc_ids().into_iter().map(|s| *s.1).collect::<Vec<FieldElement>>();
         for id in ids {
             // SCTAs/SCTCs with such IDs exist, so unwrap() is safe here
-            if cmt.append(self.get_sc_commitment_internal(&id).unwrap()).is_err() {
+            if cmt.append(match self.get_sc_commitment_internal(&id) {
+                Some(v) => v,
+                None => return None,
+            }).is_err() {
                 return None;
             }
         }

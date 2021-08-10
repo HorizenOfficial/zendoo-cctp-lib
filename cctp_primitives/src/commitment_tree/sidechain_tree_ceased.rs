@@ -32,22 +32,31 @@ impl SidechainTreeCeased {
     }
 
     // Gets commitment of the Ceased Sidechain Withdrawals tree
-    pub fn get_csw_commitment(&mut self) -> FieldElement {
-        self.csw_mt.borrow_mut().finalize().root().unwrap()
+    pub fn get_csw_commitment(&mut self) -> Option<FieldElement> {
+        self.csw_mt.borrow_mut().finalize().root()
     }
 
     // Gets commitment of a SidechainTreeCeased
-    pub fn get_commitment(&mut self) -> FieldElement {
+    pub fn get_commitment(&mut self) -> Option<FieldElement> {
         SidechainTreeCeased::build_commitment(
             self.sc_id,
-            self.get_csw_commitment()
+            match self.get_csw_commitment() {
+                Some(v) => v,
+                None => return None,
+            }
         )
     }
 
     // Builds commitment for SidechainTreeCeased as: hash( csw_root | SC_ID )
     pub fn build_commitment(sc_id: FieldElement,
-                            csw_mr: FieldElement) -> FieldElement {
-        hash_vec(vec![csw_mr, sc_id]).unwrap()
+                            csw_mr: FieldElement) -> Option<FieldElement> {
+        match hash_vec(vec![csw_mr, sc_id]) {
+            Ok(v) => Some(v),
+            Err(e) => {
+                eprintln!("{}", e);
+                return None;
+            }
+        }
     }
 }
 

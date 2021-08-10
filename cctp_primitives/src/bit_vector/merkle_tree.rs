@@ -43,7 +43,9 @@ pub fn merkle_root_from_bytes(uncompressed_bit_vector: &[u8]) -> Result<algebra:
 
     let leaves = bool_vector[..real_bit_vector_size].to_field_elements()?;
 
-    assert_eq!(leaves.len(), num_leaves);
+    if leaves.len() != num_leaves {
+        Err(format!("Merkle tree leaves count check failed"))?
+    }
 
     for leaf in leaves.into_iter() {
         mt.append(leaf)?;
