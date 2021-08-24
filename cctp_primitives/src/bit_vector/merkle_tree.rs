@@ -51,7 +51,7 @@ pub fn merkle_root_from_bytes(uncompressed_bit_vector: &[u8]) -> Result<algebra:
         mt.append(leaf)?;
     }
 
-    match mt.finalize_in_place().root() {
+    match mt.finalize_in_place()?.root() {
         Some(x) => Ok(x),
         None => Err("Unable to compute the merkle tree root hash")?
     }

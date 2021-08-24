@@ -28,7 +28,7 @@ fn _get_root_from_field_vec(field_vec: Vec<FieldElement>, height: usize) -> Resu
         for fe in field_vec.into_iter(){
             mt.append(fe)?;
         }
-        mt.finalize_in_place();
+        mt.finalize_in_place()?;
         mt.root().ok_or(Error::from("Failed to compute Merkle Tree root"))
 
     } else {

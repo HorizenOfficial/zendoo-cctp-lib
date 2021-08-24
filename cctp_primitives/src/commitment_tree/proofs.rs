@@ -162,7 +162,7 @@ mod test {
         let mut rng = rand::thread_rng();
 
         let id = FieldElement::rand(&mut rng);
-        let mpath = new_mt(CMT_MT_HEIGHT).unwrap().finalize().get_merkle_path(0).unwrap();
+        let mpath = new_mt(CMT_MT_HEIGHT).unwrap().finalize().unwrap().get_merkle_path(0).unwrap();
         let sc_data = ScCommitmentData::create_alive(
             FieldElement::rand(&mut rng),
             FieldElement::rand(&mut rng),

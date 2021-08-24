@@ -251,7 +251,10 @@ impl CommitmentTree {
     // Note: The commitment value is computed as a root of MT with SCT-commitments leafs ordered by corresponding SCT-IDs
     pub fn get_commitment(&mut self) -> Option<FieldElement> {
         if let Some(cmt) = self.get_commitments_tree() {
-            cmt.finalize().root()
+            match cmt.finalize() {
+                Ok(tree) => tree.root(),
+                Err(_) => None
+            }
         } else {
             None
         }
@@ -262,12 +265,15 @@ impl CommitmentTree {
     //              if get_commitments_tree or get_merkle_path returned None
     pub fn get_sc_existence_proof(&mut self, sc_id: &FieldElement) -> Option<ScExistenceProof> {
         if let Some(index) = self.sc_id_to_index(sc_id){
-            if let Some(tree) = self.get_commitments_tree(){
-                Some(
-                    ScExistenceProof::create(
-                        tree.finalize().get_merkle_path(index)?
-                    )
-                )
+            if let Some(tree) = self.get_commitments_tree() {
+                match tree.finalize() {
+                    Ok(finalized_tree) => Some(
+                        ScExistenceProof::create(
+                            finalized_tree.get_merkle_path(index)?
+                        )
+                    ),
+                    Err(_) => None
+                }
             } else {
                 None
             }
@@ -282,7 +288,10 @@ impl CommitmentTree {
     //              if some internal error occurred
     pub fn get_sc_absence_proof(&mut self, absent_id: &FieldElement) -> Option<ScAbsenceProof> {
         let (left, right) = self.get_neighbours_for_absent(absent_id)?;
-        let tree = self.get_commitments_tree()?.finalize();
+        let tree = match self.get_commitments_tree()?.finalize() {
+            Ok(finalized_tree) => finalized_tree,
+            Err(_) => return None
+        };
 
         let mut get_neighbour = |index_id: Option<(usize, FieldElement)>|{
             if let Some((index, id)) = index_id {

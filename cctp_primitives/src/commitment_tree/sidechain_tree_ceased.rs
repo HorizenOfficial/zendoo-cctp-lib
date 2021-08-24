@@ -33,7 +33,10 @@ impl SidechainTreeCeased {
 
     // Gets commitment of the Ceased Sidechain Withdrawals tree
     pub fn get_csw_commitment(&mut self) -> Option<FieldElement> {
-        self.csw_mt.borrow_mut().finalize().root()
+        match self.csw_mt.borrow_mut().finalize() {
+            Ok(finalized_tree) => finalized_tree.root(),
+            Err(_) => None
+        }
     }
 
     // Gets commitment of a SidechainTreeCeased
