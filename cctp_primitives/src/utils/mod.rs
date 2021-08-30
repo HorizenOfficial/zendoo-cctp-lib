@@ -46,9 +46,7 @@ pub fn get_bt_merkle_root(bt_list: Option<&[BackwardTransfer]>) -> Result<FieldE
             let bt_fes = ByteAccumulator::init()
                 .update(bt)?
                 .get_field_elements()?;
-            if bt_fes.len() != 1 {
-                Err(format!("Backward transfer elements count not equal to 1"))?
-            }
+            assert_eq!(bt_fes.len(), 1);
             leaves.push(bt_fes[0]);
         }
         leaves
@@ -77,9 +75,7 @@ pub fn get_cert_data_hash(
         .update(ft_min_amount)?
         .get_field_elements()?;
 
-    if fees_field_elements.len() != 1 {
-        Err(format!("Fees elements count not equal to 1"))?
-    }
+    assert_eq!(fees_field_elements.len(), 1);
 
     // Pack epoch_number and quality into separate field elements (for simplicity of treatment in
     // the circuit)

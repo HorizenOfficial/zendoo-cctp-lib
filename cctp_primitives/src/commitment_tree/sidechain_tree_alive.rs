@@ -82,7 +82,7 @@ impl SidechainTreeAlive {
     // Gets commitment (root) of the Forward Transfer Transactions tree
     pub fn get_fwt_commitment(&mut self) -> Option<FieldElement> {
         match self.fwt_mt.borrow_mut().finalize() {
-            Ok(finzlized_tree) => finzlized_tree.root(),
+            Ok(finalized_tree) => finalized_tree.root(),
             Err(_) => None
         }
     }
@@ -90,7 +90,7 @@ impl SidechainTreeAlive {
     // Gets commitment (root) of the Backward Transfer Requests Transactions tree
     pub fn get_bwtr_commitment(&mut self) -> Option<FieldElement> {
         match self.bwtr_mt.borrow_mut().finalize() {
-            Ok(finzlized_tree) => finzlized_tree.root(),
+            Ok(finalized_tree) => finalized_tree.root(),
             Err(_) => None
         }
     }
@@ -98,7 +98,7 @@ impl SidechainTreeAlive {
     // Gets commitment (root) of the Certificates tree
     pub fn get_cert_commitment(&mut self) -> Option<FieldElement> {
         match self.cert_mt.borrow_mut().finalize() {
-            Ok(finzlized_tree) => finzlized_tree.root(),
+            Ok(finalized_tree) => finalized_tree.root(),
             Err(_) => None
         }
     }
