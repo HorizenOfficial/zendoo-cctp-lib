@@ -26,6 +26,12 @@ pub enum ProvingSystem {
     CoboundaryMarlin,
 }
 
+impl Default for ProvingSystem {
+    fn default() -> Self {
+        ProvingSystem::Undefined
+    }
+}
+
 impl CanonicalSerialize for ProvingSystem {
     fn serialize<W: Write>(&self, writer: W) -> Result<(), SerializationError> {
         match self {
