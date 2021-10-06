@@ -598,6 +598,7 @@ mod test {
 
         let csw_usr_ins = CSWProofUserInputs {
             amount: 0,
+            constant: None,
             sc_id: &rand_fe(),
             nullifier: &rand_fe(),
             pub_key_hash: &rand_vec(MC_PK_SIZE).try_into().unwrap(),

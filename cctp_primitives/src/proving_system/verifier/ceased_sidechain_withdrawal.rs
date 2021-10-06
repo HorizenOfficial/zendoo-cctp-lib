@@ -17,6 +17,7 @@ pub const PHANTOM_CERT_DATA_HASH: FieldElement =
 #[derive(Clone)]
 pub struct CSWProofUserInputs<'a> {
     pub amount:                                     u64,
+    pub constant:                                   Option<&'a FieldElement>,
     pub sc_id:                                      &'a FieldElement,
     pub nullifier:                                  &'a FieldElement,
     pub pub_key_hash:                               &'a [u8; MC_PK_SIZE],
@@ -27,6 +28,12 @@ pub struct CSWProofUserInputs<'a> {
 impl<'a> UserInputs for CSWProofUserInputs<'a> {
     fn get_circuit_inputs(&self) -> Result<Vec<FieldElement>, ProvingSystemError> {
 
+        let mut inputs = Vec::new();
+
+        if self.constant.is_some() {
+            inputs.push(*self.constant.unwrap());
+        }
+
         let mut fes = ByteAccumulator::init()
             .update(self.amount).map_err(|e| ProvingSystemError::Other(format!("{:?}", e)))?
             .update(&self.pub_key_hash[..]).map_err(|e| ProvingSystemError::Other(format!("{:?}", e)))?
@@ -36,7 +43,10 @@ impl<'a> UserInputs for CSWProofUserInputs<'a> {
             *self.sc_id, *self.nullifier, *self.cert_data_hash, *self.end_cumulative_sc_tx_commitment_tree_root
         ]);
 
-        Ok(vec![hash_vec(fes).map_err(|e| ProvingSystemError::Other(format!("{:?}", e)))?])
+
+        inputs.push(hash_vec(fes).map_err(|e| ProvingSystemError::Other(format!("{:?}", e)))?);
+
+        Ok(inputs)
     }
 }
 
