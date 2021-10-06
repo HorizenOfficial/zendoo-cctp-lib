@@ -26,6 +26,12 @@ pub enum ProvingSystem {
     CoboundaryMarlin,
 }
 
+impl Default for ProvingSystem {
+    fn default() -> Self {
+        ProvingSystem::Undefined
+    }
+}
+
 impl CanonicalSerialize for ProvingSystem {
     fn serialize<W: Write>(&self, writer: W) -> Result<(), SerializationError> {
         match self {
@@ -502,10 +508,8 @@ pub fn compute_proof_vk_size(
         + 1 // Rand is Some or None
         + if zk { 32 } else { 0 }; // If zk we will have the rand
 
-    let batch_poly_segs = ((3 * k - 4) as f64/segment_size as f64).ceil() as usize;
-    let pc_batch_proof_size = (num_evaluations - 2) * 32 // 32 bytes to serialize 1 field element
-        + 1 // 1 byte to encode length of evaluations vec
-        + 33 * batch_poly_segs // num segs of the highest degree polynomial as the batch poly will have this degree too
+    let h_poly_segs = ((3 * k - 4) as f64/segment_size as f64).ceil() as usize;
+    let pc_batch_proof_size = 33 * h_poly_segs // num segs of the highest degree polynomial as the h poly will have this degree too
         + 1 // 1 byte to encode length of segments vec
         + pc_proof_size as usize;
 

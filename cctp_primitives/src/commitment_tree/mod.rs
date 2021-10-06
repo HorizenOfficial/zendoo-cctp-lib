@@ -53,11 +53,12 @@ impl CommitmentTree {
         sc_id: &FieldElement,
         amount: u64,
         pub_key: &[u8; 32],
+        mc_return_address: &[u8; 20],
         tx_hash: &[u8; 32],
         out_idx: u32
     ) -> bool {
         if let Ok(fwt_leaf) = hash_fwt(
-            amount, pub_key, tx_hash, out_idx
+            amount, pub_key, mc_return_address, tx_hash, out_idx
         ){
             self.add_fwt_leaf(sc_id, &fwt_leaf)
         } else {
@@ -251,7 +252,10 @@ impl CommitmentTree {
     // Note: The commitment value is computed as a root of MT with SCT-commitments leafs ordered by corresponding SCT-IDs
     pub fn get_commitment(&mut self) -> Option<FieldElement> {
         if let Some(cmt) = self.get_commitments_tree() {
-            cmt.finalize().root()
+            match cmt.finalize() {
+                Ok(tree) => tree.root(),
+                Err(_) => None
+            }
         } else {
             None
         }
@@ -262,12 +266,15 @@ impl CommitmentTree {
     //              if get_commitments_tree or get_merkle_path returned None
     pub fn get_sc_existence_proof(&mut self, sc_id: &FieldElement) -> Option<ScExistenceProof> {
         if let Some(index) = self.sc_id_to_index(sc_id){
-            if let Some(tree) = self.get_commitments_tree(){
-                Some(
-                    ScExistenceProof::create(
-                        tree.finalize().get_merkle_path(index)?
-                    )
-                )
+            if let Some(tree) = self.get_commitments_tree() {
+                match tree.finalize() {
+                    Ok(finalized_tree) => Some(
+                        ScExistenceProof::create(
+                            finalized_tree.get_merkle_path(index)?
+                        )
+                    ),
+                    Err(_) => None
+                }
             } else {
                 None
             }
@@ -282,7 +289,10 @@ impl CommitmentTree {
     //              if some internal error occurred
     pub fn get_sc_absence_proof(&mut self, absent_id: &FieldElement) -> Option<ScAbsenceProof> {
         let (left, right) = self.get_neighbours_for_absent(absent_id)?;
-        let tree = self.get_commitments_tree()?.finalize();
+        let tree = match self.get_commitments_tree()?.finalize() {
+            Ok(finalized_tree) => finalized_tree,
+            Err(_) => return None
+        };
 
         let mut get_neighbour = |index_id: Option<(usize, FieldElement)>|{
             if let Some((index, id)) = index_id {
@@ -510,9 +520,18 @@ impl CommitmentTree {
         if let Some(sc_tree) = self.get_scta_mut(sc_id){
             Some(
                 match subtree_type {
-                    SidechainAliveSubtreeType::FWT  => sc_tree.get_fwt_commitment(),
-                    SidechainAliveSubtreeType::BWTR => sc_tree.get_bwtr_commitment(),
-                    SidechainAliveSubtreeType::CERT => sc_tree.get_cert_commitment(),
+                    SidechainAliveSubtreeType::FWT  => match sc_tree.get_fwt_commitment() {
+                        Some(v) => v,
+                        None => return None,
+                    },
+                    SidechainAliveSubtreeType::BWTR => match sc_tree.get_bwtr_commitment() {
+                        Some(v) => v,
+                        None => return None,
+                    },
+                    SidechainAliveSubtreeType::CERT => match sc_tree.get_cert_commitment() {
+                        Some(v) => v,
+                        None => return None,
+                    },
                     SidechainAliveSubtreeType::SCC  => sc_tree.get_scc() // just SCC value instead of commitment
                 }
             )
@@ -525,7 +544,7 @@ impl CommitmentTree {
     // Returns None if get_sctc couldn't get SidechainTreeCeased with a specified ID
     fn sctc_get_subtree_commitment(&mut self, sc_id: &FieldElement) -> Option<FieldElement> {
         if let Some(sctc) = self.get_sctc_mut(sc_id){
-            Some(sctc.get_csw_commitment())
+            sctc.get_csw_commitment()
         } else {
             None
         }
@@ -554,16 +573,28 @@ impl CommitmentTree {
         if let Some(sct) = self.get_scta_mut(sc_id){
             Some(
                 ScCommitmentData::create_alive(
-                    sct.get_fwt_commitment(),
-                    sct.get_bwtr_commitment(),
-                    sct.get_cert_commitment(),
+                    match sct.get_fwt_commitment() {
+                        Some(v) => v,
+                        None => return None,
+                    },
+                    match sct.get_bwtr_commitment() {
+                        Some(v) => v,
+                        None => return None,
+                    },
+                    match sct.get_cert_commitment() {
+                        Some(v) => v,
+                        None => return None,
+                    },
                     sct.get_scc()
                 )
             )
         } else if let Some(sctc) = self.get_sctc_mut(sc_id){
             Some(
                 ScCommitmentData::create_ceased(
-                    sctc.get_csw_commitment()
+                    match sctc.get_csw_commitment() {
+                        Some(v) => v,
+                        None => return None,
+                    }
                 )
             )
         } else {
@@ -575,9 +606,9 @@ impl CommitmentTree {
     // Returns None if SidechainTreeAlive/SidechainTreeCeased with a specified ID doesn't exist in a current CommitmentTree
     fn get_sc_commitment_internal(&mut self, sc_id: &FieldElement) -> Option<FieldElement> {
         if let Some(sct) = self.get_scta_mut(sc_id){
-            Some(sct.get_commitment())
+            sct.get_commitment()
         } else if let Some(sctc) = self.get_sctc_mut(sc_id){
-            Some(sctc.get_commitment())
+            sctc.get_commitment()
         } else {
             None
         }
@@ -597,11 +628,17 @@ impl CommitmentTree {
 
     // Build MT with ID-ordered SC-commitments as its leafs
     fn build_commitments_tree(&mut self) -> Option<GingerMHT> {
-        let mut cmt = new_mt(CMT_MT_HEIGHT);
+        let mut cmt = match new_mt(CMT_MT_HEIGHT) {
+            Ok(v) => v,
+            Err(_) => { return None; }
+        };
         let ids = self.get_indexed_sc_ids().into_iter().map(|s| *s.1).collect::<Vec<FieldElement>>();
         for id in ids {
             // SCTAs/SCTCs with such IDs exist, so unwrap() is safe here
-            if cmt.append(self.get_sc_commitment_internal(&id).unwrap()).is_err() {
+            if cmt.append(match self.get_sc_commitment_internal(&id) {
+                Some(v) => v,
+                None => return None,
+            }).is_err() {
                 return None;
             }
         }
@@ -886,6 +923,7 @@ mod test {
                 &rand_fe(),
                 rng.gen(),
                 &rand_vec(32).try_into().unwrap(),
+                &rand_vec(20).try_into().unwrap(),
                 &rand_vec(32).try_into().unwrap(),
                 rng.gen()
             )

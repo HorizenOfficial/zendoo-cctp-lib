@@ -41,14 +41,14 @@ zendoo-CCTP-lib should contain references to the following objects:
   since it's common to both sc and mc**
 ```
 aliveScTxCommitmentTree
-   addScC(scId, amount, pubKey,withdrawalEpochLength,
+   addScC(scId, amount, pubKey, withdrawalEpochLength,
           customData, constant,
           CertVerificationKey,
           BtrVerificationKey,
           CswVerificationKey,
-          txHash, outIdx)                              --> bool [Note: BtrVerificationKey and  CswVerificationKey are optional]
-   addFwt(scId, amount, pubKey, txHash, outIdx)        --> bool
-   addBtr(scId, amount, pubKey, txHash, outIdx)        --> bool
+          txHash, outIdx)                                         --> bool [Note: BtrVerificationKey and  CswVerificationKey are optional]
+   addFwt(scId, amount, pubKey, mcReturnAddress, txHash, outIdx)  --> bool
+   addBtr(scId, scFee, scRequestData, mcAddress, txHash, outIdx)  --> bool
    addCrt(scId, epochNumber, quality,
           certDataHash,
           BTList,

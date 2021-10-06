@@ -35,9 +35,9 @@ impl SidechainTreeAlive {
                 scc:      FieldElement::zero(),
 
                 // Default leaves values of an empty GingerMHT are also FieldElement::zero(); They are specified in MHT_PARAMETERS as 0-level nodes
-                fwt_mt:  new_mt(FWT_MT_HEIGHT),
-                bwtr_mt: new_mt(BWTR_MT_HEIGHT),
-                cert_mt: new_mt(CERT_MT_HEIGHT),
+                fwt_mt:  new_mt(FWT_MT_HEIGHT)?,
+                bwtr_mt: new_mt(BWTR_MT_HEIGHT)?,
+                cert_mt: new_mt(CERT_MT_HEIGHT)?
             }
         )
     }
@@ -80,21 +80,45 @@ impl SidechainTreeAlive {
     }
 
     // Gets commitment (root) of the Forward Transfer Transactions tree
-    pub fn get_fwt_commitment(&mut self)  -> FieldElement { self.fwt_mt.borrow_mut().finalize().root().unwrap() }
+    pub fn get_fwt_commitment(&mut self) -> Option<FieldElement> {
+        match self.fwt_mt.borrow_mut().finalize() {
+            Ok(finalized_tree) => finalized_tree.root(),
+            Err(_) => None
+        }
+    }
 
     // Gets commitment (root) of the Backward Transfer Requests Transactions tree
-    pub fn get_bwtr_commitment(&mut self) -> FieldElement { self.bwtr_mt.borrow_mut().finalize().root().unwrap() }
+    pub fn get_bwtr_commitment(&mut self) -> Option<FieldElement> {
+        match self.bwtr_mt.borrow_mut().finalize() {
+            Ok(finalized_tree) => finalized_tree.root(),
+            Err(_) => None
+        }
+    }
 
     // Gets commitment (root) of the Certificates tree
-    pub fn get_cert_commitment(&mut self) -> FieldElement { self.cert_mt.borrow_mut().finalize().root().unwrap() }
+    pub fn get_cert_commitment(&mut self) -> Option<FieldElement> {
+        match self.cert_mt.borrow_mut().finalize() {
+            Ok(finalized_tree) => finalized_tree.root(),
+            Err(_) => None
+        }
+    }
 
     // Gets commitment of a SidechainTreeAlive
-    pub fn get_commitment(&mut self) -> FieldElement {
+    pub fn get_commitment(&mut self) -> Option<FieldElement> {
         SidechainTreeAlive::build_commitment(
             self.sc_id,
-            self.get_fwt_commitment(),
-            self.get_bwtr_commitment(),
-            self.get_cert_commitment(),
+            match self.get_fwt_commitment() {
+                Some(v) => v,
+                None => return None,
+            },
+            match self.get_bwtr_commitment() {
+                Some(v) => v,
+                None => return None,
+            },
+            match self.get_cert_commitment() {
+                Some(v) => v,
+                None => return None,
+            },
             self.scc
         )
     }
@@ -104,8 +128,14 @@ impl SidechainTreeAlive {
                             fwt_mr: FieldElement,
                             bwtr_mr: FieldElement,
                             cert_mr: FieldElement,
-                            scc: FieldElement) -> FieldElement {
-        hash_vec(vec![fwt_mr, bwtr_mr, cert_mr, scc, sc_id]).unwrap()
+                            scc: FieldElement) -> Option<FieldElement> {
+        match hash_vec(vec![fwt_mr, bwtr_mr, cert_mr, scc, sc_id]) {
+            Ok(v) => Some(v),
+            Err(e) => {
+                eprint!("{}", e);
+                return None;
+            }
+        }
     }
 }
 
