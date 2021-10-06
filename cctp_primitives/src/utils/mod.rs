@@ -13,14 +13,22 @@ pub mod mht;
 pub mod data_structures;
 
 fn _get_root_from_field_vec(field_vec: Vec<FieldElement>, height: usize) -> Result<FieldElement, Error> {
-    assert!(height <= GINGER_MHT_POSEIDON_PARAMETERS.nodes.len());
+
+    if height > GINGER_MHT_POSEIDON_PARAMETERS.nodes.len() {
+        Err(format!(
+            "Height {} is bigger then GINGER_MHT_POSEIDON_PARAMETERS nodes len {}",
+            height,
+            GINGER_MHT_POSEIDON_PARAMETERS.nodes.len()
+        ))?
+    }
+
     if field_vec.len() > 0 {
         let mut mt =
-            GingerMHT::init(height, 2usize.pow(height as u32));
+            GingerMHT::init(height, 2usize.pow(height as u32))?;
         for fe in field_vec.into_iter(){
             mt.append(fe)?;
         }
-        mt.finalize_in_place();
+        mt.finalize_in_place()?;
         mt.root().ok_or(Error::from("Failed to compute Merkle Tree root"))
 
     } else {
@@ -66,6 +74,7 @@ pub fn get_cert_data_hash(
         .update(btr_fee)?
         .update(ft_min_amount)?
         .get_field_elements()?;
+
     assert_eq!(fees_field_elements.len(), 1);
 
     // Pack epoch_number and quality into separate field elements (for simplicity of treatment in

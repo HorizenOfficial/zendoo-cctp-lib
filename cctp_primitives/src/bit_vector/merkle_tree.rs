@@ -39,17 +39,19 @@ pub fn merkle_root_from_bytes(uncompressed_bit_vector: &[u8]) -> Result<algebra:
     let mut mt = GingerMHT::init(
         merkle_tree_height,
         num_leaves,
-    );
+    )?;
 
     let leaves = bool_vector[..real_bit_vector_size].to_field_elements()?;
 
-    assert_eq!(leaves.len(), num_leaves);
+    if leaves.len() != num_leaves {
+        Err(format!("Merkle tree leaves count check failed"))?
+    }
 
     for leaf in leaves.into_iter() {
         mt.append(leaf)?;
     }
 
-    match mt.finalize_in_place().root() {
+    match mt.finalize_in_place()?.root() {
         Some(x) => Ok(x),
         None => Err("Unable to compute the merkle tree root hash")?
     }
