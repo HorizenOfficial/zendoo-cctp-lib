@@ -37,7 +37,11 @@ pub fn load_g1_committer_key(
     match load_generators::<G1>(max_degree, supported_degree) {
         // Generation/Loading successfull, assign the key to the lazy_static
         Ok(loaded_key) => {
-            G1_COMMITTER_KEY.write().as_mut().unwrap().replace(loaded_key);
+            G1_COMMITTER_KEY.write().as_mut().map_err(|_| {
+                SerializationError::IoError(
+                    std::io::Error::new(std::io::ErrorKind::Other, "G1_COMMITTER_KEY write failed")
+                )
+            })?.replace(loaded_key);
             Ok(())
         },
         // Error while generating/reading file/writing file
@@ -55,7 +59,11 @@ pub fn load_g2_committer_key(
     match load_generators::<G2>(max_degree, supported_degree) {
         // Generation/Loading successful, assign the key to the lazy_static
         Ok(loaded_key) => {
-            G2_COMMITTER_KEY.write().as_mut().unwrap().replace(loaded_key);
+            G2_COMMITTER_KEY.write().as_mut().map_err(|_| {
+                SerializationError::IoError(
+                    std::io::Error::new(std::io::ErrorKind::Other, "G2_COMMITTER_KEY write failed")
+                )
+            })?.replace(loaded_key);
             Ok(())
         },
         // Error while generating/reading file/writing file

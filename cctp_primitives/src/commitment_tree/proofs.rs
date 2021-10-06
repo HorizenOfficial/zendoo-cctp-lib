@@ -49,9 +49,9 @@ impl ScCommitmentData {
         if self.sc_alive.is_some() && self.sc_ceased.is_some() {
             None // SC can be only one of two types: alive or ceased
         } else if let Some(data) = self.sc_alive.as_ref(){
-            Some(SidechainTreeAlive::build_commitment(*sc_id, data.fwt_mr, data.bwtr_mr, data.cert_mr, data.scc))
+            SidechainTreeAlive::build_commitment(*sc_id, data.fwt_mr, data.bwtr_mr, data.cert_mr, data.scc)
         } else if let Some(data) = self.sc_ceased.as_ref(){
-            Some(SidechainTreeCeased::build_commitment(*sc_id, data.csw_mr))
+            SidechainTreeCeased::build_commitment(*sc_id, data.csw_mr)
         } else {
             None // there is no data for commitment building
         }
@@ -162,7 +162,7 @@ mod test {
         let mut rng = rand::thread_rng();
 
         let id = FieldElement::rand(&mut rng);
-        let mpath = new_mt(CMT_MT_HEIGHT).finalize().get_merkle_path(0).unwrap();
+        let mpath = new_mt(CMT_MT_HEIGHT).unwrap().finalize().unwrap().get_merkle_path(0).unwrap();
         let sc_data = ScCommitmentData::create_alive(
             FieldElement::rand(&mut rng),
             FieldElement::rand(&mut rng),
