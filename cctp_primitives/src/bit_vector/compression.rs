@@ -233,7 +233,7 @@ mod test {
 
     fn generate_random_bit_vector(seed: u64) -> Vec<u8> {
         let mut random_generator = rand::rngs::StdRng::seed_from_u64(seed);
-        let bit_vector_size: u32 = random_generator.gen_range(0, MAX_DECOMPRESSION_SIZE as u32);
+        let bit_vector_size: u32 = random_generator.gen_range(0..MAX_DECOMPRESSION_SIZE as u32);
 
         let mut bit_vector: Vec<u8> = Vec::with_capacity(bit_vector_size as usize);
 
