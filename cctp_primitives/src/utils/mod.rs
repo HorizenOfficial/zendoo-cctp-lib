@@ -51,6 +51,7 @@ pub fn get_bt_merkle_root(bt_list: Option<&[BackwardTransfer]>) -> Result<FieldE
 }
 
 pub fn get_cert_data_hash(
+    sc_id: &FieldElement,
     epoch_number: u32,
     quality: u64,
     bt_list: Option<&[BackwardTransfer]>,
@@ -77,7 +78,7 @@ pub fn get_cert_data_hash(
 
     // Compute cert sysdata hash
     let cert_sysdata_hash = hash_vec(
-        vec![epoch_number_fe, bt_root, quality_fe, *end_cumulative_sc_tx_commitment_tree_root, fees_field_elements[0]]
+        vec![*sc_id, epoch_number_fe, bt_root, quality_fe, *end_cumulative_sc_tx_commitment_tree_root, fees_field_elements[0]]
     )?;
 
     // Final field elements to hash
