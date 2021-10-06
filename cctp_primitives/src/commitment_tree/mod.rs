@@ -53,11 +53,12 @@ impl CommitmentTree {
         sc_id: &FieldElement,
         amount: u64,
         pub_key: &[u8; 32],
+        mc_return_address: &[u8; 20],
         tx_hash: &[u8; 32],
         out_idx: u32
     ) -> bool {
         if let Ok(fwt_leaf) = hash_fwt(
-            amount, pub_key, tx_hash, out_idx
+            amount, pub_key, mc_return_address, tx_hash, out_idx
         ){
             self.add_fwt_leaf(sc_id, &fwt_leaf)
         } else {
@@ -922,6 +923,7 @@ mod test {
                 &rand_fe(),
                 rng.gen(),
                 &rand_vec(32).try_into().unwrap(),
+                &rand_vec(20).try_into().unwrap(),
                 &rand_vec(32).try_into().unwrap(),
                 rng.gen()
             )

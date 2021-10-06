@@ -7,19 +7,21 @@ use crate::type_mapping::*;
 pub fn hash_fwt(
     amount: u64,
     pub_key: &[u8; 32],
+    mc_return_address: &[u8; 20],
     tx_hash: &[u8; 32],
     out_idx: u32
 )-> Result<FieldElement, Error>
 {
-    // ceil(256 + 256 + 96/254) = ceil(608/254) = 3 fes
+    // ceil(256 + 256 + 160 + 96/254) = ceil(768/254) = 4 fes
     let mut accumulator = ByteAccumulator::init();
     accumulator
         .update(amount)?
         .update(&pub_key[..])?
+        .update(&mc_return_address[..])?
         .update(&tx_hash[..])?
         .update(out_idx)?;
 
-    debug_assert!(accumulator.clone().get_field_elements().unwrap().len() == 3);
+    debug_assert!(accumulator.clone().get_field_elements().unwrap().len() == 4);
     accumulator.compute_field_hash_constant_length()
 }
 
@@ -206,6 +208,7 @@ mod test {
             hash_fwt(
                 rng.gen(),
                 &rand_vec(32).try_into().unwrap(),
+                &rand_vec(20).try_into().unwrap(),
                 &rand_vec(32).try_into().unwrap(),
                 rng.gen()
             ).is_ok()
