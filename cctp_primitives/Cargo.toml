@@ -5,14 +5,14 @@ authors = [""]
 edition = "2018"
 
 [dependencies]
-algebra = { git = "https://github.com/HorizenOfficial/ginger-lib", branch = "proof_size_optimization", features = ["parallel", "tweedle", "derive"] }
-bench-utils = { git = "https://github.com/HorizenOfficial/ginger-lib.git", branch = "proof_size_optimization" }
-primitives = { git = "https://github.com/HorizenOfficial/ginger-lib.git", branch = "proof_size_optimization", features = ["merkle_tree", "tweedle"]}
-proof-systems = { git = "https://github.com/HorizenOfficial/ginger-lib.git", branch = "proof_size_optimization", features = ["darlin"]}
-r1cs-core = { git = "https://github.com/HorizenOfficial/ginger-lib.git", branch = "proof_size_optimization" }
+algebra = { git = "https://github.com/HorizenOfficial/ginger-lib", branch = "development_tmp", features = ["parallel", "tweedle", "derive"] }
+bench-utils = { git = "https://github.com/HorizenOfficial/ginger-lib.git", branch = "development_tmp" }
+primitives = { git = "https://github.com/HorizenOfficial/ginger-lib.git", branch = "development_tmp", features = ["merkle_tree", "tweedle"]}
+proof-systems = { git = "https://github.com/HorizenOfficial/ginger-lib.git", branch = "development_tmp", features = ["darlin"]}
+r1cs-core = { git = "https://github.com/HorizenOfficial/ginger-lib.git", branch = "development_tmp" }
 
-marlin = { git = "https://github.com/HorizenLabs/marlin", branch = "proof_size_optimization" }
-poly-commit = { git = "https://github.com/HorizenLabs/poly-commit", branch = "proof_size_optimization" }
+marlin = { git = "https://github.com/HorizenLabs/marlin", branch = "dev" }
+poly-commit = { git = "https://github.com/HorizenLabs/poly-commit", branch = "dev" }
 
 rand = { version = "0.8.4" }
 byteorder = "1.4.2"
