@@ -1,11 +1,8 @@
 use crate::proving_system::{check_matching_proving_system_type, ZendooProof, ZendooVerifierKey};
-use crate::{
-    proving_system::{
-        error::ProvingSystemError,
-        init::{get_g1_committer_key, get_g2_committer_key},
-        verifier::*,
-    },
-    type_mapping::*,
+use crate::proving_system::{
+    error::ProvingSystemError,
+    init::{get_g1_committer_key, get_g2_committer_key},
+    verifier::*,
 };
 use proof_systems::darlin::pcd::{
     final_darlin::FinalDarlinPCD, simple_marlin::SimpleMarlinPCD, GeneralPCD,
