@@ -1,15 +1,25 @@
 [package]
 name = "cctp_primitives"
 version = "0.1.0"
-authors = [""]
+authors = [
+    "Alberto Benegiamo",
+    "Daniele Di Benedetto <daniele@horizenlabs.io>",
+    "Paolo Tagliaferri <paolotagliaferri@horizenlabs.io>",
+    "Andrii Nastenko <andrii.nastenko@iohk.io>",
+    "Oleksandr Iozhytsia <oleksandr@zensystem.io>",
+    "Maksym Vereshchak <phoinic@gmail.com>",
+    "Alberto Sala <alsala@zensystem.io>",
+    "Luigi Varriale <luigi@horizenlabs.io>",
+    "cronicc <cronic@horizenlabs.io>",
+]
 edition = "2018"
 
 [dependencies]
-algebra = { git = "https://github.com/HorizenOfficial/ginger-lib", branch = "development_tmp", features = ["parallel", "tweedle", "derive"] }
-bench-utils = { git = "https://github.com/HorizenOfficial/ginger-lib.git", branch = "development_tmp" }
-primitives = { git = "https://github.com/HorizenOfficial/ginger-lib.git", branch = "development_tmp", features = ["merkle_tree", "tweedle"]}
-proof-systems = { git = "https://github.com/HorizenOfficial/ginger-lib.git", branch = "development_tmp", features = ["darlin"]}
-r1cs-core = { git = "https://github.com/HorizenOfficial/ginger-lib.git", branch = "development_tmp" }
+algebra = { git = "https://github.com/HorizenOfficial/ginger-lib", branch = "development", features = ["parallel", "tweedle", "derive"] }
+bench-utils = { git = "https://github.com/HorizenOfficial/ginger-lib.git", branch = "development" }
+primitives = { git = "https://github.com/HorizenOfficial/ginger-lib.git", branch = "development", features = ["merkle_tree", "tweedle"]}
+proof-systems = { git = "https://github.com/HorizenOfficial/ginger-lib.git", branch = "development", features = ["darlin"]}
+r1cs-core = { git = "https://github.com/HorizenOfficial/ginger-lib.git", branch = "development" }
 
 marlin = { git = "https://github.com/HorizenLabs/marlin", branch = "dev" }
 poly-commit = { git = "https://github.com/HorizenLabs/poly-commit", branch = "dev" }
