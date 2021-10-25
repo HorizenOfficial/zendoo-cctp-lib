@@ -1,10 +1,12 @@
+use crate::type_mapping::{Error, FieldElement, FieldHash, GingerMHT, FIELD_SIZE};
+use crate::utils::mht::{append_leaf_to_ginger_mht, new_ginger_mht};
+use algebra::{CanonicalSerialize, ToConstraintField, UniformRand};
 use primitives::FieldBasedHash;
-use crate::type_mapping::{FieldElement, FieldHash, GingerMHT, Error, FIELD_SIZE};
 use rand::Rng;
-use algebra::{UniformRand, ToConstraintField, CanonicalSerialize};
-use crate::utils::mht::{new_ginger_mht, append_leaf_to_ginger_mht};
 
-pub const fn pow2(power: usize) -> usize { 1 << power }
+pub const fn pow2(power: usize) -> usize {
+    1 << power
+}
 
 //--------------------------------------------------------------------------------------------------
 // Merkle Tree utils
@@ -36,16 +38,26 @@ pub fn hash_vec(data: Vec<FieldElement>) -> Result<FieldElement, Error> {
 }
 
 /// Calculates hash of a sequentially concatenated data elements of fixed size.
-pub fn hash_vec_constant_length(data: Vec<FieldElement>, length: usize) -> Result<FieldElement, Error> {
+pub fn hash_vec_constant_length(
+    data: Vec<FieldElement>,
+    length: usize,
+) -> Result<FieldElement, Error> {
     let mut hasher = FieldHash::init_constant_length(length, None);
-    data.into_iter().for_each(|fe| { hasher.update(fe); });
+    data.into_iter().for_each(|fe| {
+        hasher.update(fe);
+    });
     hasher.finalize()
 }
 
 /// Calculates hash of a sequentially concatenated data elements of variable size.
-pub fn hash_vec_variable_length(data: Vec<FieldElement>, mod_rate: bool) -> Result<FieldElement, Error> {
+pub fn hash_vec_variable_length(
+    data: Vec<FieldElement>,
+    mod_rate: bool,
+) -> Result<FieldElement, Error> {
     let mut hasher = FieldHash::init_variable_length(mod_rate, None);
-    data.into_iter().for_each(|fe| { hasher.update(fe); });
+    data.into_iter().for_each(|fe| {
+        hasher.update(fe);
+    });
     hasher.finalize()
 }
 
@@ -54,16 +66,17 @@ pub fn hash_vec_variable_length(data: Vec<FieldElement>, mod_rate: bool) -> Resu
 pub struct ByteAccumulator {
     /// Each byte buffer is converted into bits: this allows to efficiently
     /// deserialize FieldElements out of them.
-    bit_buffer: Vec<bool>
+    bit_buffer: Vec<bool>,
 }
 
 impl ByteAccumulator {
     /// Initialize an empty accumulator.
-    pub fn init() -> Self { Self {bit_buffer: vec![] } }
+    pub fn init() -> Self {
+        Self { bit_buffer: vec![] }
+    }
 
     /// Update this struct with bytes obtained by serializing the input instance `serializable`.
     pub fn update<T: CanonicalSerialize>(&mut self, serializable: T) -> Result<&mut Self, Error> {
-
         // Serialize serializable without saving any additional info
         let mut buffer = Vec::with_capacity(serializable.serialized_size());
         serializable.serialize_without_metadata(&mut buffer)?;
@@ -89,7 +102,10 @@ impl ByteAccumulator {
 
     /// (Safely) deserialize the accumulated bytes into FieldElements
     /// and then compute their FieldHash.
-    pub fn compute_field_hash_variable_length(&self, mod_rate: bool) -> Result<FieldElement, Error> {
+    pub fn compute_field_hash_variable_length(
+        &self,
+        mod_rate: bool,
+    ) -> Result<FieldElement, Error> {
         let fes = self.get_field_elements()?;
         hash_vec_variable_length(fes, mod_rate)
     }
@@ -102,20 +118,22 @@ impl ByteAccumulator {
 /// Generates vector of random bytes
 pub fn rand_vec(len: usize) -> Vec<u8> {
     let mut rng = rand::thread_rng();
-    (0.. len).map(|_|rng.gen()).collect()
+    (0..len).map(|_| rng.gen()).collect()
 }
 
 /// Get random (but valid) field element
-pub fn rand_fe() -> FieldElement
-{
+pub fn rand_fe() -> FieldElement {
     FieldElement::rand(&mut rand::thread_rng())
 }
 
 /// Get random (but valid) field element bytes
-pub fn rand_fe_bytes() -> [u8; FIELD_SIZE]
-{
+pub fn rand_fe_bytes() -> [u8; FIELD_SIZE] {
     let mut buffer = [0u8; FIELD_SIZE];
-    CanonicalSerialize::serialize(&FieldElement::rand(&mut rand::thread_rng()), &mut buffer[..]).unwrap();
+    CanonicalSerialize::serialize(
+        &FieldElement::rand(&mut rand::thread_rng()),
+        &mut buffer[..],
+    )
+    .unwrap();
     buffer
 }
 

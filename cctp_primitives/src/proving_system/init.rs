@@ -1,17 +1,15 @@
 use crate::type_mapping::*;
 
-use algebra::{AffineCurve, serialize::*};
+use algebra::{serialize::*, AffineCurve};
 
-use poly_commit::PolynomialCommitment;
 use poly_commit::ipa_pc::{CommitterKey, InnerProductArgPC};
+use poly_commit::PolynomialCommitment;
 
 use crate::proving_system::error::ProvingSystemError;
 
 use lazy_static::lazy_static;
 
-use std::sync::{
-    RwLock, RwLockReadGuard
-};
+use std::sync::{RwLock, RwLockReadGuard};
 
 // We need a mutable static variable to store the committer key.
 // To avoid the usage of unsafe code blocks (required when mutating a static variable)
@@ -32,20 +30,24 @@ lazy_static! {
 pub fn load_g1_committer_key(
     max_degree: usize,
     supported_degree: usize,
-) -> Result<(), SerializationError>
-{
+) -> Result<(), SerializationError> {
     match load_generators::<G1>(max_degree, supported_degree) {
         // Generation/Loading successfull, assign the key to the lazy_static
         Ok(loaded_key) => {
-            G1_COMMITTER_KEY.write().as_mut().map_err(|_| {
-                SerializationError::IoError(
-                    std::io::Error::new(std::io::ErrorKind::Other, "G1_COMMITTER_KEY write failed")
-                )
-            })?.replace(loaded_key);
+            G1_COMMITTER_KEY
+                .write()
+                .as_mut()
+                .map_err(|_| {
+                    SerializationError::IoError(std::io::Error::new(
+                        std::io::ErrorKind::Other,
+                        "G1_COMMITTER_KEY write failed",
+                    ))
+                })?
+                .replace(loaded_key);
             Ok(())
-        },
+        }
         // Error while generating/reading file/writing file
-        Err(e) => Err(e)
+        Err(e) => Err(e),
     }
 }
 
@@ -54,28 +56,34 @@ pub fn load_g1_committer_key(
 pub fn load_g2_committer_key(
     max_degree: usize,
     supported_degree: usize,
-) -> Result<(), SerializationError>
-{
+) -> Result<(), SerializationError> {
     match load_generators::<G2>(max_degree, supported_degree) {
         // Generation/Loading successful, assign the key to the lazy_static
         Ok(loaded_key) => {
-            G2_COMMITTER_KEY.write().as_mut().map_err(|_| {
-                SerializationError::IoError(
-                    std::io::Error::new(std::io::ErrorKind::Other, "G2_COMMITTER_KEY write failed")
-                )
-            })?.replace(loaded_key);
+            G2_COMMITTER_KEY
+                .write()
+                .as_mut()
+                .map_err(|_| {
+                    SerializationError::IoError(std::io::Error::new(
+                        std::io::ErrorKind::Other,
+                        "G2_COMMITTER_KEY write failed",
+                    ))
+                })?
+                .replace(loaded_key);
             Ok(())
-        },
+        }
         // Error while generating/reading file/writing file
-        Err(e) => Err(e)
+        Err(e) => Err(e),
     }
 }
 
 /// Return a RwLockGuard containing the G1CommitterKey, if G1CommitterKey has been initialized,
 /// otherwise return Error.
-pub fn get_g1_committer_key<'a>() -> Result<RwLockReadGuard<'a, Option<CommitterKeyG1>>, ProvingSystemError> {
-    let ck_g1_guard = G1_COMMITTER_KEY.read()
-        .map_err(|_| ProvingSystemError::Other("Failed to acquire lock for G1 Committer Key".to_owned()))?;
+pub fn get_g1_committer_key<'a>(
+) -> Result<RwLockReadGuard<'a, Option<CommitterKeyG1>>, ProvingSystemError> {
+    let ck_g1_guard = G1_COMMITTER_KEY.read().map_err(|_| {
+        ProvingSystemError::Other("Failed to acquire lock for G1 Committer Key".to_owned())
+    })?;
     if ck_g1_guard.is_some() {
         Ok(ck_g1_guard)
     } else {
@@ -85,9 +93,11 @@ pub fn get_g1_committer_key<'a>() -> Result<RwLockReadGuard<'a, Option<Committer
 
 /// Return a RwLockGuard containing the G2CommitterKey, if G2CommitterKey has been initialized,
 /// otherwise return Error.
-pub fn get_g2_committer_key<'a>() -> Result<RwLockReadGuard<'a, Option<CommitterKeyG2>>, ProvingSystemError> {
-    let ck_g2_guard = G2_COMMITTER_KEY.read()
-        .map_err(|_| ProvingSystemError::Other("Failed to acquire lock for G2 Committer Key".to_owned()))?;
+pub fn get_g2_committer_key<'a>(
+) -> Result<RwLockReadGuard<'a, Option<CommitterKeyG2>>, ProvingSystemError> {
+    let ck_g2_guard = G2_COMMITTER_KEY.read().map_err(|_| {
+        ProvingSystemError::Other("Failed to acquire lock for G2 Committer Key".to_owned())
+    })?;
     if ck_g2_guard.is_some() {
         Ok(ck_g2_guard)
     } else {
@@ -98,8 +108,7 @@ pub fn get_g2_committer_key<'a>() -> Result<RwLockReadGuard<'a, Option<Committer
 fn load_generators<G: AffineCurve>(
     max_degree: usize,
     supported_degree: usize,
-) -> Result<CommitterKey<G>, SerializationError>
-{
+) -> Result<CommitterKey<G>, SerializationError> {
     let pp = InnerProductArgPC::<G, Digest>::setup(max_degree)
         .map_err(|_| SerializationError::InvalidData)?;
     let (ck, _) = InnerProductArgPC::<G, Digest>::trim(&pp, supported_degree)

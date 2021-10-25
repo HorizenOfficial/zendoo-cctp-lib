@@ -1,6 +1,6 @@
 //! MerkleTree and MerklePath wrappers, used by cryptolibs.
 
-use crate::type_mapping::{GingerMHT, FieldElement, GingerMHTPath, Error};
+use crate::type_mapping::{Error, FieldElement, GingerMHT, GingerMHTPath};
 use primitives::{FieldBasedMerkleTree, FieldBasedMerkleTreePath};
 
 pub fn new_ginger_mht(height: usize, processing_step: usize) -> Result<GingerMHT, Error> {
@@ -16,7 +16,7 @@ pub fn finalize_ginger_mht(tree: &GingerMHT) -> Result<GingerMHT, Error> {
     tree.finalize()
 }
 
-pub fn finalize_ginger_mht_in_place(tree: &mut GingerMHT) -> Result<(), Error>{
+pub fn finalize_ginger_mht_in_place(tree: &mut GingerMHT) -> Result<(), Error> {
     tree.finalize_in_place()?;
     Ok(())
 }
@@ -32,7 +32,7 @@ pub fn get_ginger_mht_path(tree: &GingerMHT, leaf_index: u64) -> Option<GingerMH
     }
 }
 
-pub fn reset_ginger_mht(tree: &mut GingerMHT){
+pub fn reset_ginger_mht(tree: &mut GingerMHT) {
     tree.reset();
 }
 
@@ -40,7 +40,7 @@ pub fn verify_ginger_merkle_path(
     path: &GingerMHTPath,
     height: usize,
     leaf: &FieldElement,
-    root: &FieldElement
+    root: &FieldElement,
 ) -> Result<bool, Error> {
     path.verify(height, leaf, root)
 }
@@ -48,7 +48,7 @@ pub fn verify_ginger_merkle_path(
 pub fn verify_ginger_merkle_path_without_length_check(
     path: &GingerMHTPath,
     leaf: &FieldElement,
-    root: &FieldElement
+    root: &FieldElement,
 ) -> bool {
     path.verify_without_length_check(leaf, root)
 }
@@ -61,13 +61,14 @@ pub fn is_path_rightmost(path: &GingerMHTPath) -> bool {
     path.is_rightmost()
 }
 
-pub fn are_right_leaves_empty(path: &GingerMHTPath) -> bool { path.are_right_leaves_empty() }
+pub fn are_right_leaves_empty(path: &GingerMHTPath) -> bool {
+    path.are_right_leaves_empty()
+}
 
 pub fn get_leaf_index_from_path(path: &GingerMHTPath) -> u64 {
     path.leaf_index() as u64
 }
 
-pub fn get_root_from_path(path: &GingerMHTPath, leaf: &FieldElement) -> FieldElement
-{
+pub fn get_root_from_path(path: &GingerMHTPath, leaf: &FieldElement) -> FieldElement {
     path.compute_root(leaf)
 }

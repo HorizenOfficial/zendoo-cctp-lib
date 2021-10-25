@@ -1,5 +1,5 @@
-use algebra::serialize::*;
 use crate::type_mapping::MC_PK_SIZE;
+use algebra::serialize::*;
 
 #[derive(Clone, Debug, Eq, PartialEq, CanonicalSerialize, CanonicalDeserialize)]
 #[repr(C)]
@@ -12,12 +12,12 @@ impl Default for BitVectorElementsConfig {
     fn default() -> Self {
         Self {
             bit_vector_size_bits: 0u32,
-            max_compressed_byte_size: 0u32
+            max_compressed_byte_size: 0u32,
         }
     }
 }
 
-#[derive(Clone, Debug, Eq, PartialEq,)]
+#[derive(Clone, Debug, Eq, PartialEq)]
 #[repr(C)]
 pub struct BackwardTransfer {
     pub pk_dest: [u8; MC_PK_SIZE],
@@ -28,7 +28,7 @@ impl Default for BackwardTransfer {
     fn default() -> Self {
         Self {
             pk_dest: [0u8; MC_PK_SIZE],
-            amount: 0u64
+            amount: 0u64,
         }
     }
 }
@@ -52,7 +52,7 @@ impl CanonicalDeserialize for BackwardTransfer {
             pk_dest[i] = byte;
         }
         let amount: u64 = CanonicalDeserialize::deserialize(reader)?;
-        Ok(Self {pk_dest, amount})
+        Ok(Self { pk_dest, amount })
     }
 }
 
@@ -63,7 +63,6 @@ mod test {
 
     #[test]
     fn test_serialized_size() {
-
         {
             let test_bvec = BitVectorElementsConfig::default();
             assert_eq!(serialize_to_buffer(&test_bvec, None).unwrap().len(), 8);
@@ -73,8 +72,14 @@ mod test {
 
         {
             let test_bt = BackwardTransfer::default();
-            assert_eq!(serialize_to_buffer(&test_bt, None).unwrap().len(), test_bt.serialized_size());
-            assert_eq!(serialize_to_buffer(&test_bt, None).unwrap().len(), test_bt.uncompressed_size());
+            assert_eq!(
+                serialize_to_buffer(&test_bt, None).unwrap().len(),
+                test_bt.serialized_size()
+            );
+            assert_eq!(
+                serialize_to_buffer(&test_bt, None).unwrap().len(),
+                test_bt.uncompressed_size()
+            );
 
             test_canonical_serialize_deserialize(true, &test_bt);
         }

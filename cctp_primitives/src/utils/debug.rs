@@ -26,7 +26,9 @@ macro_rules! printlndbg {
 #[cfg(not(debug_assertions))]
 #[macro_export]
 macro_rules! printdbg {
-    ($( $args:expr ),*) => {()}
+    ($( $args:expr ),*) => {
+        ()
+    };
 }
 
 /// Prints a line to standard output only if `debug_assertions` is set
@@ -34,5 +36,7 @@ macro_rules! printdbg {
 #[cfg(not(debug_assertions))]
 #[macro_export]
 macro_rules! printlndbg {
-    ($( $args:expr ),*) => {()}
+    ($( $args:expr ),*) => {
+        ()
+    };
 }

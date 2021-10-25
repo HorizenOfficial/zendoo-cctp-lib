@@ -1,12 +1,15 @@
 use algebra::{serialize::*, SemanticallyValid};
-use std::{path::Path, fs::File, io::{Read, BufReader, BufWriter, Cursor, Error as IoError, ErrorKind}};
+use std::{
+    fs::File,
+    io::{BufReader, BufWriter, Cursor, Error as IoError, ErrorKind, Read},
+    path::Path,
+};
 
 fn _deserialize_inner<R: Read, T: CanonicalDeserialize + SemanticallyValid>(
-    reader:                 R,
-    semantic_checks:        Option<bool>,
-    compressed:             Option<bool>,
-) ->  Result<T, SerializationError>
-{
+    reader: R,
+    semantic_checks: Option<bool>,
+    compressed: Option<bool>,
+) -> Result<T, SerializationError> {
     let semantic_checks = semantic_checks.unwrap_or(false);
     let compressed = compressed.unwrap_or(false);
 
@@ -17,7 +20,7 @@ fn _deserialize_inner<R: Read, T: CanonicalDeserialize + SemanticallyValid>(
     }?;
 
     if semantic_checks && !t.is_valid() {
-        return Err(SerializationError::InvalidData)
+        return Err(SerializationError::InvalidData);
     }
 
     Ok(t)
@@ -29,11 +32,10 @@ fn _deserialize_inner<R: Read, T: CanonicalDeserialize + SemanticallyValid>(
 /// `semantic_checks` can be optional, due to some types having no checks to be performed,
 /// or trivial checks already performed a priori during serialization.
 pub fn deserialize_from_buffer<T: CanonicalDeserialize + SemanticallyValid>(
-    buffer:                 &[u8],
-    semantic_checks:        Option<bool>,
-    compressed:             Option<bool>,
-) ->  Result<T, SerializationError>
-{
+    buffer: &[u8],
+    semantic_checks: Option<bool>,
+    compressed: Option<bool>,
+) -> Result<T, SerializationError> {
     _deserialize_inner(buffer, semantic_checks, compressed)
 }
 
@@ -44,11 +46,10 @@ pub fn deserialize_from_buffer<T: CanonicalDeserialize + SemanticallyValid>(
 /// or trivial checks already performed a priori during serialization.
 /// If there are still bytes to read in `buffer` after deserializing T, this function returns an error.
 pub fn deserialize_from_buffer_strict<T: CanonicalDeserialize + SemanticallyValid>(
-    buffer:                 &[u8],
-    semantic_checks:        Option<bool>,
-    compressed:             Option<bool>,
-) ->  Result<T, SerializationError>
-{
+    buffer: &[u8],
+    semantic_checks: Option<bool>,
+    compressed: Option<bool>,
+) -> Result<T, SerializationError> {
     // Wrap buffer in a cursor
     let buff_len = buffer.len() as u64;
     let mut buffer = Cursor::new(buffer);
@@ -60,7 +61,10 @@ pub fn deserialize_from_buffer_strict<T: CanonicalDeserialize + SemanticallyVali
     if position != buff_len {
         return Err(SerializationError::IoError(IoError::new(
             ErrorKind::InvalidInput,
-            format!("Oversized data. Read {} but buff len is {}", position, buff_len)
+            format!(
+                "Oversized data. Read {} but buff len is {}",
+                position, buff_len
+            ),
         )));
     }
 
@@ -71,10 +75,9 @@ pub fn deserialize_from_buffer_strict<T: CanonicalDeserialize + SemanticallyVali
 /// depending on the value of `compressed` flag.
 /// `compressed` can be optional, due to some types being uncompressable.
 pub fn serialize_to_buffer<T: CanonicalSerialize>(
-    to_write:               &T,
-    compressed:             Option<bool>,
-) ->  Result<Vec<u8>, SerializationError>
-{
+    to_write: &T,
+    compressed: Option<bool>,
+) -> Result<Vec<u8>, SerializationError> {
     let compressed = compressed.unwrap_or(false);
 
     let mut buffer;
@@ -97,13 +100,11 @@ pub const DEFAULT_BUF_SIZE: usize = 1 << 20;
 /// `semantic_checks` can be optional, due to some types having no checks to be performed,
 /// or trivial checks already performed a priori during serialization.
 pub fn read_from_file<T: CanonicalDeserialize + SemanticallyValid>(
-    file_path:              &Path,
-    semantic_checks:        Option<bool>,
-    compressed:             Option<bool>,
-) ->  Result<T, SerializationError>
-{
-    let fs = File::open(file_path)
-        .map_err(|e| SerializationError::IoError(e))?;
+    file_path: &Path,
+    semantic_checks: Option<bool>,
+    compressed: Option<bool>,
+) -> Result<T, SerializationError> {
+    let fs = File::open(file_path).map_err(|e| SerializationError::IoError(e))?;
     let reader = BufReader::with_capacity(DEFAULT_BUF_SIZE, fs);
 
     _deserialize_inner(reader, semantic_checks, compressed)
@@ -113,15 +114,13 @@ pub fn read_from_file<T: CanonicalDeserialize + SemanticallyValid>(
 /// depending on the value of `compressed` flag.
 /// `compressed` can be optional, due to some types being uncompressable.
 pub fn write_to_file<T: CanonicalSerialize>(
-    to_write:               &T,
-    file_path:              &Path,
-    compressed:             Option<bool>,
-) ->  Result<(), SerializationError>
-{
+    to_write: &T,
+    file_path: &Path,
+    compressed: Option<bool>,
+) -> Result<(), SerializationError> {
     let compressed = compressed.unwrap_or(false);
 
-    let fs = File::create(file_path)
-        .map_err(|e| SerializationError::IoError(e))?;
+    let fs = File::create(file_path).map_err(|e| SerializationError::IoError(e))?;
     let mut writer = BufWriter::with_capacity(DEFAULT_BUF_SIZE, fs);
 
     if compressed {
@@ -138,13 +137,13 @@ pub fn is_valid<T: SemanticallyValid>(to_check: &T) -> bool {
     T::is_valid(to_check)
 }
 
-
 #[cfg(test)]
 mod test {
     use super::*;
     use crate::type_mapping::{DarlinProof, DarlinVerifierKey};
     use std::{
-        io::{Error as IoError, ErrorKind}, path::Path
+        io::{Error as IoError, ErrorKind},
+        path::Path,
     };
 
     #[test]
@@ -163,12 +162,32 @@ mod test {
         let vk_len = vk_bytes.len();
 
         // Test strict deserialization (proof) from buffer is fine with data of correct size
-        assert!(deserialize_from_buffer::<DarlinProof>(proof_bytes.as_slice(), Some(true), Some(true)).is_ok());
-        assert!(deserialize_from_buffer_strict::<DarlinProof>(proof_bytes.as_slice(), Some(true), Some(true)).is_ok());
+        assert!(deserialize_from_buffer::<DarlinProof>(
+            proof_bytes.as_slice(),
+            Some(true),
+            Some(true)
+        )
+        .is_ok());
+        assert!(deserialize_from_buffer_strict::<DarlinProof>(
+            proof_bytes.as_slice(),
+            Some(true),
+            Some(true)
+        )
+        .is_ok());
 
         // Test strict deserialization (vk) from buffer is fine with data of correct size
-        assert!(deserialize_from_buffer::<DarlinVerifierKey>(vk_bytes.as_slice(), Some(true), Some(true)).is_ok());
-        assert!(deserialize_from_buffer_strict::<DarlinVerifierKey>(vk_bytes.as_slice(), Some(true), Some(true)).is_ok());
+        assert!(deserialize_from_buffer::<DarlinVerifierKey>(
+            vk_bytes.as_slice(),
+            Some(true),
+            Some(true)
+        )
+        .is_ok());
+        assert!(deserialize_from_buffer_strict::<DarlinVerifierKey>(
+            vk_bytes.as_slice(),
+            Some(true),
+            Some(true)
+        )
+        .is_ok());
 
         // Let's append a new byte to proof_bytes and vk_bytes and check that deserialization strict fails
         proof_bytes.push(5u8);
@@ -176,25 +195,57 @@ mod test {
 
         let expected_proof_bytes_error = SerializationError::IoError(IoError::new(
             ErrorKind::InvalidInput,
-            format!("Oversized data. Read {} but buff len is {}", proof_len, proof_len + 1)
-        )).to_string();
+            format!(
+                "Oversized data. Read {} but buff len is {}",
+                proof_len,
+                proof_len + 1
+            ),
+        ))
+        .to_string();
 
         let expected_vk_bytes_error = SerializationError::IoError(IoError::new(
             ErrorKind::InvalidInput,
-            format!("Oversized data. Read {} but buff len is {}", vk_len, vk_len + 1)
-        )).to_string();
+            format!(
+                "Oversized data. Read {} but buff len is {}",
+                vk_len,
+                vk_len + 1
+            ),
+        ))
+        .to_string();
 
         assert_eq!(
-            deserialize_from_buffer_strict::<DarlinProof>(proof_bytes.as_slice(), Some(true), Some(true)).unwrap_err().to_string(),
+            deserialize_from_buffer_strict::<DarlinProof>(
+                proof_bytes.as_slice(),
+                Some(true),
+                Some(true)
+            )
+            .unwrap_err()
+            .to_string(),
             expected_proof_bytes_error
         );
         assert_eq!(
-            deserialize_from_buffer_strict::<DarlinVerifierKey>(vk_bytes.as_slice(), Some(true), Some(true)).unwrap_err().to_string(),
+            deserialize_from_buffer_strict::<DarlinVerifierKey>(
+                vk_bytes.as_slice(),
+                Some(true),
+                Some(true)
+            )
+            .unwrap_err()
+            .to_string(),
             expected_vk_bytes_error
         );
 
         // Non-strict deserialization should still pass instead
-        assert!(deserialize_from_buffer::<DarlinProof>(proof_bytes.as_slice(), Some(true), Some(true)).is_ok());
-        assert!(deserialize_from_buffer::<DarlinVerifierKey>(vk_bytes.as_slice(), Some(true), Some(true)).is_ok());
+        assert!(deserialize_from_buffer::<DarlinProof>(
+            proof_bytes.as_slice(),
+            Some(true),
+            Some(true)
+        )
+        .is_ok());
+        assert!(deserialize_from_buffer::<DarlinVerifierKey>(
+            vk_bytes.as_slice(),
+            Some(true),
+            Some(true)
+        )
+        .is_ok());
     }
 }

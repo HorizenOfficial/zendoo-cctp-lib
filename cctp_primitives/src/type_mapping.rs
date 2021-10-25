@@ -1,16 +1,11 @@
-use algebra::{fields::tweedle::*, curves::tweedle::*, PrimeField, FpParameters};
 pub use algebra::biginteger::BigInteger256;
-use primitives::{
-    crh::*,
-    merkle_tree::*,
-};
-pub use primitives::merkle_tree::tweedle_dee::TWEEDLE_DEE_MHT_POSEIDON_PARAMETERS as GINGER_MHT_POSEIDON_PARAMETERS;
-use proof_systems::darlin::{
-    *, data_structures::*
-};
-pub use proof_systems::darlin::pcd::simple_marlin::MarlinProof;
-use poly_commit::ipa_pc::*;
+use algebra::{curves::tweedle::*, fields::tweedle::*, FpParameters, PrimeField};
 use blake2::Blake2s;
+use poly_commit::ipa_pc::*;
+pub use primitives::merkle_tree::tweedle_dee::TWEEDLE_DEE_MHT_POSEIDON_PARAMETERS as GINGER_MHT_POSEIDON_PARAMETERS;
+use primitives::{crh::*, merkle_tree::*};
+pub use proof_systems::darlin::pcd::simple_marlin::MarlinProof;
+use proof_systems::darlin::{data_structures::*, *};
 
 // Basic algebraic types
 
@@ -24,14 +19,12 @@ pub type ScalarFieldElement = Fq;
 
 //Field size in bytes
 pub const FIELD_CAPACITY: usize = <Fr as PrimeField>::Params::CAPACITY as usize;
-pub const FIELD_SIZE: usize = ((
-    <Fr as PrimeField>::Params::MODULUS_BITS +
-        <Fr as PrimeField>::Params::REPR_SHAVE_BITS
-)/8) as usize;
-pub const SCALAR_FIELD_SIZE: usize = ((
-    <Fq as PrimeField>::Params::MODULUS_BITS +
-        <Fq as PrimeField>::Params::REPR_SHAVE_BITS
-)/8) as usize;
+pub const FIELD_SIZE: usize = ((<Fr as PrimeField>::Params::MODULUS_BITS
+    + <Fr as PrimeField>::Params::REPR_SHAVE_BITS)
+    / 8) as usize;
+pub const SCALAR_FIELD_SIZE: usize = ((<Fq as PrimeField>::Params::MODULUS_BITS
+    + <Fq as PrimeField>::Params::REPR_SHAVE_BITS)
+    / 8) as usize;
 pub const GROUP_SIZE: usize = 2 * FIELD_SIZE + 1;
 pub const GROUP_COMPRESSED_SIZE: usize = FIELD_SIZE + 1;
 

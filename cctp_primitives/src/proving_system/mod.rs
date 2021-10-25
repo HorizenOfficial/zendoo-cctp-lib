@@ -1,18 +1,18 @@
-use algebra::{serialize::*, SemanticallyValid};
 use crate::{
-    type_mapping::{
-        Error, CoboundaryMarlinProof, DarlinProof, CoboundaryMarlinVerifierKey,
-        DarlinVerifierKey, CoboundaryMarlinProverKey, DarlinProverKey, FieldElement,
-    },
     proving_system::{
+        error::ProvingSystemError,
         init::{load_g1_committer_key, load_g2_committer_key},
-        error::ProvingSystemError
-    }
+    },
+    type_mapping::{
+        CoboundaryMarlinProof, CoboundaryMarlinProverKey, CoboundaryMarlinVerifierKey, DarlinProof,
+        DarlinProverKey, DarlinVerifierKey, Error, FieldElement,
+    },
 };
+use algebra::{serialize::*, SemanticallyValid};
 
+pub mod error;
 pub mod init;
 pub mod verifier;
-pub mod error;
 
 pub const UNDEFINED_PS_BYTE: u8 = 0u8;
 pub const DARLIN_PS_BYTE: u8 = 1u8;
@@ -37,7 +37,9 @@ impl CanonicalSerialize for ProvingSystem {
         match self {
             ProvingSystem::Undefined => CanonicalSerialize::serialize(&UNDEFINED_PS_BYTE, writer),
             ProvingSystem::Darlin => CanonicalSerialize::serialize(&DARLIN_PS_BYTE, writer),
-            ProvingSystem::CoboundaryMarlin => CanonicalSerialize::serialize(&COBOUNDARY_MARLIN_PS_BYTE, writer)
+            ProvingSystem::CoboundaryMarlin => {
+                CanonicalSerialize::serialize(&COBOUNDARY_MARLIN_PS_BYTE, writer)
+            }
         }
     }
 
@@ -60,7 +62,9 @@ impl CanonicalDeserialize for ProvingSystem {
 
 // Dummy implementation
 impl SemanticallyValid for ProvingSystem {
-    fn is_valid(&self) -> bool { true }
+    fn is_valid(&self) -> bool {
+        true
+    }
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -84,18 +88,18 @@ impl CanonicalSerialize for ZendooProof {
             ZendooProof::Darlin(proof) => {
                 CanonicalSerialize::serialize(&DARLIN_PS_BYTE, &mut writer)?;
                 CanonicalSerialize::serialize(&proof, writer)
-            },
+            }
             ZendooProof::CoboundaryMarlin(proof) => {
                 CanonicalSerialize::serialize(&COBOUNDARY_MARLIN_PS_BYTE, &mut writer)?;
                 CanonicalSerialize::serialize(&proof, writer)
-            },
+            }
         }
     }
 
     fn serialized_size(&self) -> usize {
         1 + match self {
             ZendooProof::Darlin(proof) => proof.serialized_size(),
-            ZendooProof::CoboundaryMarlin(proof) => proof.serialized_size()
+            ZendooProof::CoboundaryMarlin(proof) => proof.serialized_size(),
         }
     }
 
@@ -103,10 +107,10 @@ impl CanonicalSerialize for ZendooProof {
         match self {
             ZendooProof::Darlin(proof) => {
                 CanonicalSerialize::serialize_without_metadata(&proof, writer)
-            },
+            }
             ZendooProof::CoboundaryMarlin(proof) => {
                 CanonicalSerialize::serialize_without_metadata(&proof, writer)
-            },
+            }
         }
     }
 
@@ -116,11 +120,14 @@ impl CanonicalSerialize for ZendooProof {
             ZendooProof::Darlin(proof) => {
                 CanonicalSerialize::serialize_uncompressed(&DARLIN_PS_BYTE, &mut writer)?;
                 CanonicalSerialize::serialize_uncompressed(&proof, writer)
-            },
+            }
             ZendooProof::CoboundaryMarlin(proof) => {
-                CanonicalSerialize::serialize_uncompressed(&COBOUNDARY_MARLIN_PS_BYTE, &mut writer)?;
+                CanonicalSerialize::serialize_uncompressed(
+                    &COBOUNDARY_MARLIN_PS_BYTE,
+                    &mut writer,
+                )?;
                 CanonicalSerialize::serialize_uncompressed(&proof, writer)
-            },
+            }
         }
     }
 
@@ -128,7 +135,7 @@ impl CanonicalSerialize for ZendooProof {
     fn uncompressed_size(&self) -> usize {
         1 + match self {
             ZendooProof::Darlin(proof) => proof.uncompressed_size(),
-            ZendooProof::CoboundaryMarlin(proof) => proof.uncompressed_size()
+            ZendooProof::CoboundaryMarlin(proof) => proof.uncompressed_size(),
         }
     }
 }
@@ -137,8 +144,12 @@ impl CanonicalDeserialize for ZendooProof {
     fn deserialize<R: Read>(mut reader: R) -> Result<Self, SerializationError> {
         let ps_type_byte: u8 = CanonicalDeserialize::deserialize(&mut reader)?;
         match ps_type_byte {
-            DARLIN_PS_BYTE => Ok(ZendooProof::Darlin(<DarlinProof as CanonicalDeserialize>::deserialize(reader)?)),
-            COBOUNDARY_MARLIN_PS_BYTE => Ok(ZendooProof::CoboundaryMarlin(<CoboundaryMarlinProof as CanonicalDeserialize>::deserialize(reader)?)),
+            DARLIN_PS_BYTE => Ok(ZendooProof::Darlin(
+                <DarlinProof as CanonicalDeserialize>::deserialize(reader)?,
+            )),
+            COBOUNDARY_MARLIN_PS_BYTE => Ok(ZendooProof::CoboundaryMarlin(
+                <CoboundaryMarlinProof as CanonicalDeserialize>::deserialize(reader)?,
+            )),
             _ => Err(SerializationError::InvalidData),
         }
     }
@@ -146,8 +157,12 @@ impl CanonicalDeserialize for ZendooProof {
     fn deserialize_unchecked<R: Read>(mut reader: R) -> Result<Self, SerializationError> {
         let ps_type_byte: u8 = CanonicalDeserialize::deserialize_unchecked(&mut reader)?;
         match ps_type_byte {
-            DARLIN_PS_BYTE => Ok(ZendooProof::Darlin(<DarlinProof as CanonicalDeserialize>::deserialize_unchecked(reader)?)),
-            COBOUNDARY_MARLIN_PS_BYTE => Ok(ZendooProof::CoboundaryMarlin(<CoboundaryMarlinProof as CanonicalDeserialize>::deserialize_unchecked(reader)?)),
+            DARLIN_PS_BYTE => Ok(ZendooProof::Darlin(
+                <DarlinProof as CanonicalDeserialize>::deserialize_unchecked(reader)?,
+            )),
+            COBOUNDARY_MARLIN_PS_BYTE => Ok(ZendooProof::CoboundaryMarlin(
+                <CoboundaryMarlinProof as CanonicalDeserialize>::deserialize_unchecked(reader)?,
+            )),
             _ => Err(SerializationError::InvalidData),
         }
     }
@@ -156,15 +171,22 @@ impl CanonicalDeserialize for ZendooProof {
     fn deserialize_uncompressed<R: Read>(mut reader: R) -> Result<Self, SerializationError> {
         let ps_type_byte: u8 = CanonicalDeserialize::deserialize_uncompressed(&mut reader)?;
         match ps_type_byte {
-            DARLIN_PS_BYTE => Ok(ZendooProof::Darlin(<DarlinProof as CanonicalDeserialize>::deserialize_uncompressed(reader)?)),
-            COBOUNDARY_MARLIN_PS_BYTE => Ok(ZendooProof::CoboundaryMarlin(<CoboundaryMarlinProof as CanonicalDeserialize>::deserialize_uncompressed(reader)?)),
+            DARLIN_PS_BYTE => Ok(ZendooProof::Darlin(
+                <DarlinProof as CanonicalDeserialize>::deserialize_uncompressed(reader)?,
+            )),
+            COBOUNDARY_MARLIN_PS_BYTE => Ok(ZendooProof::CoboundaryMarlin(
+                <CoboundaryMarlinProof as CanonicalDeserialize>::deserialize_uncompressed(reader)?,
+            )),
             _ => Err(SerializationError::InvalidData),
         }
     }
 
     #[inline]
-    fn deserialize_uncompressed_unchecked<R: Read>(mut reader: R) -> Result<Self, SerializationError> {
-        let ps_type_byte: u8 = CanonicalDeserialize::deserialize_uncompressed_unchecked(&mut reader)?;
+    fn deserialize_uncompressed_unchecked<R: Read>(
+        mut reader: R,
+    ) -> Result<Self, SerializationError> {
+        let ps_type_byte: u8 =
+            CanonicalDeserialize::deserialize_uncompressed_unchecked(&mut reader)?;
         match ps_type_byte {
             DARLIN_PS_BYTE => Ok(ZendooProof::Darlin(<DarlinProof as CanonicalDeserialize>::deserialize_uncompressed_unchecked(reader)?)),
             COBOUNDARY_MARLIN_PS_BYTE => Ok(ZendooProof::CoboundaryMarlin(<CoboundaryMarlinProof as CanonicalDeserialize>::deserialize_uncompressed_unchecked(reader)?)),
@@ -177,7 +199,7 @@ impl SemanticallyValid for ZendooProof {
     fn is_valid(&self) -> bool {
         match self {
             ZendooProof::Darlin(proof) => proof.is_valid(),
-            ZendooProof::CoboundaryMarlin(proof) => proof.is_valid()
+            ZendooProof::CoboundaryMarlin(proof) => proof.is_valid(),
         }
     }
 }
@@ -203,18 +225,18 @@ impl CanonicalSerialize for ZendooVerifierKey {
             ZendooVerifierKey::Darlin(vk) => {
                 CanonicalSerialize::serialize(&DARLIN_PS_BYTE, &mut writer)?;
                 CanonicalSerialize::serialize(&vk, writer)
-            },
+            }
             ZendooVerifierKey::CoboundaryMarlin(vk) => {
                 CanonicalSerialize::serialize(&COBOUNDARY_MARLIN_PS_BYTE, &mut writer)?;
                 CanonicalSerialize::serialize(&vk, writer)
-            },
+            }
         }
     }
 
     fn serialized_size(&self) -> usize {
         1 + match self {
             ZendooVerifierKey::Darlin(vk) => vk.serialized_size(),
-            ZendooVerifierKey::CoboundaryMarlin(vk) => vk.serialized_size()
+            ZendooVerifierKey::CoboundaryMarlin(vk) => vk.serialized_size(),
         }
     }
 
@@ -222,10 +244,10 @@ impl CanonicalSerialize for ZendooVerifierKey {
         match self {
             ZendooVerifierKey::Darlin(vk) => {
                 CanonicalSerialize::serialize_without_metadata(&vk, writer)
-            },
+            }
             ZendooVerifierKey::CoboundaryMarlin(vk) => {
                 CanonicalSerialize::serialize_without_metadata(&vk, writer)
-            },
+            }
         }
     }
 
@@ -235,11 +257,14 @@ impl CanonicalSerialize for ZendooVerifierKey {
             ZendooVerifierKey::Darlin(vk) => {
                 CanonicalSerialize::serialize_uncompressed(&DARLIN_PS_BYTE, &mut writer)?;
                 CanonicalSerialize::serialize_uncompressed(&vk, writer)
-            },
+            }
             ZendooVerifierKey::CoboundaryMarlin(vk) => {
-                CanonicalSerialize::serialize_uncompressed(&COBOUNDARY_MARLIN_PS_BYTE, &mut writer)?;
+                CanonicalSerialize::serialize_uncompressed(
+                    &COBOUNDARY_MARLIN_PS_BYTE,
+                    &mut writer,
+                )?;
                 CanonicalSerialize::serialize_uncompressed(&vk, writer)
-            },
+            }
         }
     }
 
@@ -247,7 +272,7 @@ impl CanonicalSerialize for ZendooVerifierKey {
     fn uncompressed_size(&self) -> usize {
         1 + match self {
             ZendooVerifierKey::Darlin(vk) => vk.uncompressed_size(),
-            ZendooVerifierKey::CoboundaryMarlin(vk) => vk.uncompressed_size()
+            ZendooVerifierKey::CoboundaryMarlin(vk) => vk.uncompressed_size(),
         }
     }
 }
@@ -256,8 +281,12 @@ impl CanonicalDeserialize for ZendooVerifierKey {
     fn deserialize<R: Read>(mut reader: R) -> Result<Self, SerializationError> {
         let ps_type_byte: u8 = CanonicalDeserialize::deserialize(&mut reader)?;
         match ps_type_byte {
-            DARLIN_PS_BYTE => Ok(ZendooVerifierKey::Darlin(<DarlinVerifierKey as CanonicalDeserialize>::deserialize(reader)?)),
-            COBOUNDARY_MARLIN_PS_BYTE => Ok(ZendooVerifierKey::CoboundaryMarlin(<CoboundaryMarlinVerifierKey as CanonicalDeserialize>::deserialize(reader)?)),
+            DARLIN_PS_BYTE => Ok(ZendooVerifierKey::Darlin(
+                <DarlinVerifierKey as CanonicalDeserialize>::deserialize(reader)?,
+            )),
+            COBOUNDARY_MARLIN_PS_BYTE => Ok(ZendooVerifierKey::CoboundaryMarlin(
+                <CoboundaryMarlinVerifierKey as CanonicalDeserialize>::deserialize(reader)?,
+            )),
             _ => Err(SerializationError::InvalidData),
         }
     }
@@ -265,8 +294,14 @@ impl CanonicalDeserialize for ZendooVerifierKey {
     fn deserialize_unchecked<R: Read>(mut reader: R) -> Result<Self, SerializationError> {
         let ps_type_byte: u8 = CanonicalDeserialize::deserialize_unchecked(&mut reader)?;
         match ps_type_byte {
-            DARLIN_PS_BYTE => Ok(ZendooVerifierKey::Darlin(<DarlinVerifierKey as CanonicalDeserialize>::deserialize_unchecked(reader)?)),
-            COBOUNDARY_MARLIN_PS_BYTE => Ok(ZendooVerifierKey::CoboundaryMarlin(<CoboundaryMarlinVerifierKey as CanonicalDeserialize>::deserialize_unchecked(reader)?)),
+            DARLIN_PS_BYTE => Ok(ZendooVerifierKey::Darlin(
+                <DarlinVerifierKey as CanonicalDeserialize>::deserialize_unchecked(reader)?,
+            )),
+            COBOUNDARY_MARLIN_PS_BYTE => Ok(ZendooVerifierKey::CoboundaryMarlin(
+                <CoboundaryMarlinVerifierKey as CanonicalDeserialize>::deserialize_unchecked(
+                    reader,
+                )?,
+            )),
             _ => Err(SerializationError::InvalidData),
         }
     }
@@ -275,15 +310,24 @@ impl CanonicalDeserialize for ZendooVerifierKey {
     fn deserialize_uncompressed<R: Read>(mut reader: R) -> Result<Self, SerializationError> {
         let ps_type_byte: u8 = CanonicalDeserialize::deserialize_uncompressed(&mut reader)?;
         match ps_type_byte {
-            DARLIN_PS_BYTE => Ok(ZendooVerifierKey::Darlin(<DarlinVerifierKey as CanonicalDeserialize>::deserialize_uncompressed(reader)?)),
-            COBOUNDARY_MARLIN_PS_BYTE => Ok(ZendooVerifierKey::CoboundaryMarlin(<CoboundaryMarlinVerifierKey as CanonicalDeserialize>::deserialize_uncompressed(reader)?)),
+            DARLIN_PS_BYTE => Ok(ZendooVerifierKey::Darlin(
+                <DarlinVerifierKey as CanonicalDeserialize>::deserialize_uncompressed(reader)?,
+            )),
+            COBOUNDARY_MARLIN_PS_BYTE => Ok(ZendooVerifierKey::CoboundaryMarlin(
+                <CoboundaryMarlinVerifierKey as CanonicalDeserialize>::deserialize_uncompressed(
+                    reader,
+                )?,
+            )),
             _ => Err(SerializationError::InvalidData),
         }
     }
 
     #[inline]
-    fn deserialize_uncompressed_unchecked<R: Read>(mut reader: R) -> Result<Self, SerializationError> {
-        let ps_type_byte: u8 = CanonicalDeserialize::deserialize_uncompressed_unchecked(&mut reader)?;
+    fn deserialize_uncompressed_unchecked<R: Read>(
+        mut reader: R,
+    ) -> Result<Self, SerializationError> {
+        let ps_type_byte: u8 =
+            CanonicalDeserialize::deserialize_uncompressed_unchecked(&mut reader)?;
         match ps_type_byte {
             DARLIN_PS_BYTE => Ok(ZendooVerifierKey::Darlin(<DarlinVerifierKey as CanonicalDeserialize>::deserialize_uncompressed_unchecked(reader)?)),
             COBOUNDARY_MARLIN_PS_BYTE => Ok(ZendooVerifierKey::CoboundaryMarlin(<CoboundaryMarlinVerifierKey as CanonicalDeserialize>::deserialize_uncompressed_unchecked(reader)?)),
@@ -296,7 +340,7 @@ impl SemanticallyValid for ZendooVerifierKey {
     fn is_valid(&self) -> bool {
         match self {
             ZendooVerifierKey::Darlin(vk) => vk.is_valid(),
-            ZendooVerifierKey::CoboundaryMarlin(vk) => vk.is_valid()
+            ZendooVerifierKey::CoboundaryMarlin(vk) => vk.is_valid(),
         }
     }
 }
@@ -304,7 +348,7 @@ impl SemanticallyValid for ZendooVerifierKey {
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum ZendooProverKey {
     CoboundaryMarlin(CoboundaryMarlinProverKey),
-    Darlin(DarlinProverKey)
+    Darlin(DarlinProverKey),
 }
 
 impl ZendooProverKey {
@@ -322,18 +366,18 @@ impl CanonicalSerialize for ZendooProverKey {
             ZendooProverKey::Darlin(pk) => {
                 CanonicalSerialize::serialize(&DARLIN_PS_BYTE, &mut writer)?;
                 CanonicalSerialize::serialize(&pk, writer)
-            },
+            }
             ZendooProverKey::CoboundaryMarlin(pk) => {
                 CanonicalSerialize::serialize(&COBOUNDARY_MARLIN_PS_BYTE, &mut writer)?;
                 CanonicalSerialize::serialize(&pk, writer)
-            },
+            }
         }
     }
 
     fn serialized_size(&self) -> usize {
         1 + match self {
             ZendooProverKey::Darlin(pk) => pk.serialized_size(),
-            ZendooProverKey::CoboundaryMarlin(pk) => pk.serialized_size()
+            ZendooProverKey::CoboundaryMarlin(pk) => pk.serialized_size(),
         }
     }
 
@@ -341,10 +385,10 @@ impl CanonicalSerialize for ZendooProverKey {
         match self {
             ZendooProverKey::Darlin(pk) => {
                 CanonicalSerialize::serialize_without_metadata(&pk, writer)
-            },
+            }
             ZendooProverKey::CoboundaryMarlin(pk) => {
                 CanonicalSerialize::serialize_without_metadata(&pk, writer)
-            },
+            }
         }
     }
 
@@ -354,11 +398,14 @@ impl CanonicalSerialize for ZendooProverKey {
             ZendooProverKey::Darlin(pk) => {
                 CanonicalSerialize::serialize_uncompressed(&DARLIN_PS_BYTE, &mut writer)?;
                 CanonicalSerialize::serialize_uncompressed(&pk, writer)
-            },
+            }
             ZendooProverKey::CoboundaryMarlin(pk) => {
-                CanonicalSerialize::serialize_uncompressed(&COBOUNDARY_MARLIN_PS_BYTE, &mut writer)?;
+                CanonicalSerialize::serialize_uncompressed(
+                    &COBOUNDARY_MARLIN_PS_BYTE,
+                    &mut writer,
+                )?;
                 CanonicalSerialize::serialize_uncompressed(&pk, writer)
-            },
+            }
         }
     }
 
@@ -366,7 +413,7 @@ impl CanonicalSerialize for ZendooProverKey {
     fn uncompressed_size(&self) -> usize {
         1 + match self {
             ZendooProverKey::Darlin(pk) => pk.uncompressed_size(),
-            ZendooProverKey::CoboundaryMarlin(pk) => pk.uncompressed_size()
+            ZendooProverKey::CoboundaryMarlin(pk) => pk.uncompressed_size(),
         }
     }
 }
@@ -375,8 +422,12 @@ impl CanonicalDeserialize for ZendooProverKey {
     fn deserialize<R: Read>(mut reader: R) -> Result<Self, SerializationError> {
         let ps_type_byte: u8 = CanonicalDeserialize::deserialize(&mut reader)?;
         match ps_type_byte {
-            DARLIN_PS_BYTE => Ok(ZendooProverKey::Darlin(<DarlinProverKey as CanonicalDeserialize>::deserialize(reader)?)),
-            COBOUNDARY_MARLIN_PS_BYTE => Ok(ZendooProverKey::CoboundaryMarlin(<CoboundaryMarlinProverKey as CanonicalDeserialize>::deserialize(reader)?)),
+            DARLIN_PS_BYTE => Ok(ZendooProverKey::Darlin(
+                <DarlinProverKey as CanonicalDeserialize>::deserialize(reader)?,
+            )),
+            COBOUNDARY_MARLIN_PS_BYTE => Ok(ZendooProverKey::CoboundaryMarlin(
+                <CoboundaryMarlinProverKey as CanonicalDeserialize>::deserialize(reader)?,
+            )),
             _ => Err(SerializationError::InvalidData),
         }
     }
@@ -384,8 +435,12 @@ impl CanonicalDeserialize for ZendooProverKey {
     fn deserialize_unchecked<R: Read>(mut reader: R) -> Result<Self, SerializationError> {
         let ps_type_byte: u8 = CanonicalDeserialize::deserialize_unchecked(&mut reader)?;
         match ps_type_byte {
-            DARLIN_PS_BYTE => Ok(ZendooProverKey::Darlin(<DarlinProverKey as CanonicalDeserialize>::deserialize_unchecked(reader)?)),
-            COBOUNDARY_MARLIN_PS_BYTE => Ok(ZendooProverKey::CoboundaryMarlin(<CoboundaryMarlinProverKey as CanonicalDeserialize>::deserialize_unchecked(reader)?)),
+            DARLIN_PS_BYTE => Ok(ZendooProverKey::Darlin(
+                <DarlinProverKey as CanonicalDeserialize>::deserialize_unchecked(reader)?,
+            )),
+            COBOUNDARY_MARLIN_PS_BYTE => Ok(ZendooProverKey::CoboundaryMarlin(
+                <CoboundaryMarlinProverKey as CanonicalDeserialize>::deserialize_unchecked(reader)?,
+            )),
             _ => Err(SerializationError::InvalidData),
         }
     }
@@ -394,14 +449,22 @@ impl CanonicalDeserialize for ZendooProverKey {
     fn deserialize_uncompressed<R: Read>(mut reader: R) -> Result<Self, SerializationError> {
         let ps_type_byte: u8 = CanonicalDeserialize::deserialize_uncompressed(&mut reader)?;
         match ps_type_byte {
-            DARLIN_PS_BYTE => Ok(ZendooProverKey::Darlin(<DarlinProverKey as CanonicalDeserialize>::deserialize_uncompressed(reader)?)),
-            COBOUNDARY_MARLIN_PS_BYTE => Ok(ZendooProverKey::CoboundaryMarlin(<CoboundaryMarlinProverKey as CanonicalDeserialize>::deserialize_uncompressed(reader)?)),
+            DARLIN_PS_BYTE => Ok(ZendooProverKey::Darlin(
+                <DarlinProverKey as CanonicalDeserialize>::deserialize_uncompressed(reader)?,
+            )),
+            COBOUNDARY_MARLIN_PS_BYTE => Ok(ZendooProverKey::CoboundaryMarlin(
+                <CoboundaryMarlinProverKey as CanonicalDeserialize>::deserialize_uncompressed(
+                    reader,
+                )?,
+            )),
             _ => Err(SerializationError::InvalidData),
         }
     }
 
     #[inline]
-    fn deserialize_uncompressed_unchecked<R: Read>(mut reader: R) -> Result<Self, SerializationError> {
+    fn deserialize_uncompressed_unchecked<R: Read>(
+        mut reader: R,
+    ) -> Result<Self, SerializationError> {
         let ps_type_byte: u8 = CanonicalDeserialize::deserialize(&mut reader)?;
         match ps_type_byte {
             DARLIN_PS_BYTE => Ok(ZendooProverKey::Darlin(<DarlinProverKey as CanonicalDeserialize>::deserialize_uncompressed_unchecked(reader)?)),
@@ -415,7 +478,7 @@ impl SemanticallyValid for ZendooProverKey {
     fn is_valid(&self) -> bool {
         match self {
             ZendooProverKey::Darlin(pk) => pk.is_valid(),
-            ZendooProverKey::CoboundaryMarlin(pk) => pk.is_valid()
+            ZendooProverKey::CoboundaryMarlin(pk) => pk.is_valid(),
         }
     }
 }
@@ -427,9 +490,8 @@ pub fn init_dlog_keys(
     max_segment_size: usize,
     supported_segment_size: usize,
 ) -> Result<(), Error> {
-
     if matches!(proving_system, ProvingSystem::Undefined) {
-        return Err(ProvingSystemError::UndefinedProvingSystem)?
+        return Err(ProvingSystemError::UndefinedProvingSystem)?;
     }
 
     load_g1_committer_key(max_segment_size - 1, supported_segment_size - 1)?;
@@ -442,11 +504,7 @@ pub fn init_dlog_keys(
 }
 
 /// Utility function: check that proof and vk belong to the same proving system.
-pub fn check_matching_proving_system_type(
-    proof: &ZendooProof,
-    vk:    &ZendooVerifierKey,
-) -> bool
-{
+pub fn check_matching_proving_system_type(proof: &ZendooProof, vk: &ZendooVerifierKey) -> bool {
     let proof_ps_type = proof.get_proving_system_type();
     let vk_ps_type = vk.get_proving_system_type();
 
@@ -464,8 +522,7 @@ pub fn check_proof_vk_size(
     proof_type: ProvingSystem,
     max_proof_size: usize,
     max_vk_size: usize,
-) -> bool 
-{
+) -> bool {
     let (proof_size, vk_size) = compute_proof_vk_size(segment_size, info, zk, proof_type);
     proof_size <= max_proof_size && vk_size <= max_vk_size
 }
@@ -476,28 +533,30 @@ pub fn compute_proof_vk_size(
     info: IndexInfo<FieldElement>,
     zk: bool,
     proof_type: ProvingSystem,
-) -> (usize, usize) 
-{
+) -> (usize, usize) {
     // Compute config data
     let zk_bound: usize = if zk { 1 } else { 0 };
     let segment_size = segment_size.next_power_of_two();
     let num_inputs = info.num_inputs.next_power_of_two();
-    let h = std::cmp::max(info.num_constraints.next_power_of_two(), (info.num_witness + info.num_inputs).next_power_of_two());
+    let h = std::cmp::max(
+        info.num_constraints.next_power_of_two(),
+        (info.num_witness + info.num_inputs).next_power_of_two(),
+    );
     let k = info.num_non_zero.next_power_of_two();
 
     // Compute num segments
-    let w_segs = ((h + 2 * zk_bound - num_inputs) as f64/segment_size as f64).ceil() as usize;
-    let z_a_b_segs = ((h + 2 * zk_bound) as f64/segment_size as f64).ceil() as usize;
-    let t_segs = ((h as f64/segment_size as f64)).ceil() as usize;
-    let z_1_segs = ((h + 3 * zk_bound) as f64/segment_size as f64).ceil() as usize;
-    let h_1_segs = ((2 * h + 4 * zk_bound - 2) as f64/segment_size as f64).ceil() as usize;
-    let z_2_segs = (k as f64/segment_size as f64).ceil() as usize;
-    let h_2_segs =  ((3 * k - 3) as f64/segment_size as f64).ceil() as usize;
+    let w_segs = ((h + 2 * zk_bound - num_inputs) as f64 / segment_size as f64).ceil() as usize;
+    let z_a_b_segs = ((h + 2 * zk_bound) as f64 / segment_size as f64).ceil() as usize;
+    let t_segs = (h as f64 / segment_size as f64).ceil() as usize;
+    let z_1_segs = ((h + 3 * zk_bound) as f64 / segment_size as f64).ceil() as usize;
+    let h_1_segs = ((2 * h + 4 * zk_bound - 2) as f64 / segment_size as f64).ceil() as usize;
+    let z_2_segs = (k as f64 / segment_size as f64).ceil() as usize;
+    let h_2_segs = ((3 * k - 3) as f64 / segment_size as f64).ceil() as usize;
 
     let num_segments = w_segs + 2 * z_a_b_segs + t_segs + z_1_segs + h_1_segs + h_2_segs + z_2_segs;
 
     // Compute sizes
-    let num_evaluations = 22; // indexer polys (12) + prover polys (8) + 2 (z_1 and z_2 are queried at 2 different points) 
+    let num_evaluations = 22; // indexer polys (12) + prover polys (8) + 2 (z_1 and z_2 are queried at 2 different points)
 
     let pc_proof_size = 1 // l_vec_len
         + 2 * algebra::log2_floor(segment_size) * 33 // l_vec and r_vec elems
@@ -508,7 +567,7 @@ pub fn compute_proof_vk_size(
         + 1 // Rand is Some or None
         + if zk { 32 } else { 0 }; // If zk we will have the rand
 
-    let h_poly_segs = ((3 * k - 4) as f64/segment_size as f64).ceil() as usize;
+    let h_poly_segs = ((3 * k - 4) as f64 / segment_size as f64).ceil() as usize;
     let pc_batch_proof_size = 33 * h_poly_segs // num segs of the highest degree polynomial as the h poly will have this degree too
         + 1 // 1 byte to encode length of segments vec
         + pc_proof_size as usize;
@@ -519,7 +578,7 @@ pub fn compute_proof_vk_size(
         + num_evaluations * 32
         + pc_batch_proof_size
         + match proof_type {
-            ProvingSystem::Darlin => 
+            ProvingSystem::Darlin =>
                 2 * // 2 deferred accumulators
                 (
                     33 // G_final
@@ -530,14 +589,14 @@ pub fn compute_proof_vk_size(
             _ => unreachable!()
         } as usize;
 
-    let indexer_polys_num_segs = (k as f64/segment_size as f64).ceil() as usize;
+    let indexer_polys_num_segs = (k as f64 / segment_size as f64).ceil() as usize;
     let vk_size = 32 // index_info
         + 1 // indexer comms vec len
         + indexer_polys_num_segs * 33 * 12 // segment commitments for each indexer poly
         + 12 // comms vec len for each indexer poly
         + 12 // shifted comm some or none for each indexer poly
     ;
-    
+
     (proof_size, vk_size)
 }
 
@@ -553,9 +612,8 @@ pub(crate) fn compute_max_constraints_and_variables(
     num_inputs: usize,
     max_proof_size: usize,
     max_vk_size: usize,
-    proof_type: ProvingSystem
-) -> (usize, usize, usize, usize)
-{
+    proof_type: ProvingSystem,
+) -> (usize, usize, usize, usize) {
     let segment_size = segment_size.next_power_of_two();
     let num_inputs = num_inputs.next_power_of_two();
     let mut max_supported_proof_size = 0;
@@ -563,15 +621,14 @@ pub(crate) fn compute_max_constraints_and_variables(
     let mut k_ctr = algebra::log2(num_inputs * density);
 
     loop {
-
         let k = 1 << k_ctr;
-        let num_constraints = k/density;
+        let num_constraints = k / density;
         // the smallest domain h possible
         let h = num_constraints.next_power_of_two();
 
         let mut info = IndexInfo::<FieldElement>::default();
         info.num_constraints = num_constraints;
-        // we choose the most greedy setting, 
+        // we choose the most greedy setting,
         info.num_witness = h - num_inputs;
         info.num_inputs = num_inputs;
         info.num_non_zero = k;
@@ -586,24 +643,29 @@ pub(crate) fn compute_max_constraints_and_variables(
             // starting from min_domain_h_size = max_supported_num_constraints.next_power_of_two() and increase by factor 2 until
             // we exceed the max_proof_size (then we break)
             let k = 1 << (k_ctr - 1);
-            let num_constraints = k/density;
+            let num_constraints = k / density;
             let mut info = IndexInfo::<FieldElement>::default();
             info.num_constraints = num_constraints;
             info.num_inputs = num_inputs;
             info.num_non_zero = k;
 
-            // even though we know that the conservative num_variables (vk_size,proof_size) is below the thresholds 
-            // for the previous domain_k_size, we start again from it. 
+            // even though we know that the conservative num_variables (vk_size,proof_size) is below the thresholds
+            // for the previous domain_k_size, we start again from it.
             let mut h = num_constraints.next_power_of_two();
             loop {
                 info.num_witness = h - num_inputs;
                 let (proof_size, _) = compute_proof_vk_size(segment_size, info, zk, proof_type);
                 if proof_size > max_proof_size {
-                    return (info.num_constraints, h/2, max_supported_proof_size, max_supported_vk_size);
+                    return (
+                        info.num_constraints,
+                        h / 2,
+                        max_supported_proof_size,
+                        max_supported_vk_size,
+                    );
                 }
                 max_supported_proof_size = proof_size;
                 h *= 2;
-            };
+            }
         }
 
         max_supported_proof_size = proof_size;
@@ -618,14 +680,23 @@ fn test_check_proof_vk_size() {
     let max_proof_size = 7000;
     let max_vk_size = 4000;
     let num_inputs = 32;
-    
+
     for density in 2..=5 {
         for proof_type in vec![ProvingSystem::CoboundaryMarlin, ProvingSystem::Darlin].into_iter() {
             for zk in vec![true, false].into_iter() {
                 for size in 15..19 {
                     let segment_size = 1 << size;
 
-                    let (max_num_constraints, max_num_variables, proof_size, vk_size) = compute_max_constraints_and_variables(segment_size, density, zk, num_inputs, max_proof_size, max_vk_size, proof_type);
+                    let (max_num_constraints, max_num_variables, proof_size, vk_size) =
+                        compute_max_constraints_and_variables(
+                            segment_size,
+                            density,
+                            zk,
+                            num_inputs,
+                            max_proof_size,
+                            max_vk_size,
+                            proof_type,
+                        );
                     println!(
                         "For Density: {}, MaxProofSize: {}, MaxVkSize: {}, ProofType: {:?}, Zk: {}, SegmentSize: 1 << {}, Num inputs: {}, Max supported constraints are: {}, Max supported variables are: {}, Proof size: {} bytes, Vk size: {} bytes",
                         density, max_proof_size, max_vk_size, proof_type, zk, size, num_inputs, max_num_constraints, max_num_variables, proof_size, vk_size
@@ -637,25 +708,53 @@ fn test_check_proof_vk_size() {
                     info.num_witness = h - num_inputs;
                     info.num_inputs = num_inputs;
                     info.num_non_zero = (max_num_constraints * density).next_power_of_two();
-                    assert!(check_proof_vk_size(segment_size, info, zk, proof_type, max_proof_size, max_vk_size));
+                    assert!(check_proof_vk_size(
+                        segment_size,
+                        info,
+                        zk,
+                        proof_type,
+                        max_proof_size,
+                        max_vk_size
+                    ));
 
                     info.num_constraints = max_num_constraints + 1;
                     info.num_witness = h - num_inputs;
                     info.num_inputs = num_inputs;
                     info.num_non_zero = ((max_num_constraints + 1) * density).next_power_of_two();
-                    assert!(!check_proof_vk_size(segment_size, info, zk, proof_type, max_proof_size, max_vk_size));
+                    assert!(!check_proof_vk_size(
+                        segment_size,
+                        info,
+                        zk,
+                        proof_type,
+                        max_proof_size,
+                        max_vk_size
+                    ));
 
                     info.num_constraints = max_num_constraints;
                     info.num_witness = h - num_inputs + 1;
                     info.num_inputs = num_inputs;
                     info.num_non_zero = (max_num_constraints * density).next_power_of_two();
-                    assert!(!check_proof_vk_size(segment_size, info, zk, proof_type, max_proof_size, max_vk_size));
+                    assert!(!check_proof_vk_size(
+                        segment_size,
+                        info,
+                        zk,
+                        proof_type,
+                        max_proof_size,
+                        max_vk_size
+                    ));
 
                     info.num_constraints = max_num_constraints;
                     info.num_witness = h - num_inputs;
                     info.num_inputs = num_inputs + 1;
                     info.num_non_zero = (max_num_constraints * density).next_power_of_two();
-                    assert!(!check_proof_vk_size(segment_size, info, zk, proof_type, max_proof_size, max_vk_size));
+                    assert!(!check_proof_vk_size(
+                        segment_size,
+                        info,
+                        zk,
+                        proof_type,
+                        max_proof_size,
+                        max_vk_size
+                    ));
                 }
             }
         }
