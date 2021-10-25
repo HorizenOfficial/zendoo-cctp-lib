@@ -32,6 +32,17 @@ private_in_public,
 unsafe_code
 )]
 #![forbid(unsafe_code)]
+#![allow(
+    clippy::upper_case_acronyms,
+    clippy::too_many_arguments,
+    clippy::type_complexity,
+    clippy::try_err,
+    clippy::map_collect_result_unit,
+    clippy::not_unsafe_ptr_arg_deref,
+    clippy::suspicious_op_assign_impl,
+    clippy::assertions_on_constants
+)]
+
 
 pub mod type_mapping;
 pub mod commitment_tree;
