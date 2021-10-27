@@ -16,10 +16,8 @@ edition = "2018"
 
 [dependencies]
 algebra = { git = "https://github.com/HorizenOfficial/ginger-lib", branch = "development", features = ["parallel", "tweedle", "derive"] }
-bench-utils = { git = "https://github.com/HorizenOfficial/ginger-lib.git", branch = "development" }
 primitives = { git = "https://github.com/HorizenOfficial/ginger-lib.git", branch = "development", features = ["merkle_tree", "tweedle"]}
 proof-systems = { git = "https://github.com/HorizenOfficial/ginger-lib.git", branch = "development", features = ["darlin"]}
-r1cs-core = { git = "https://github.com/HorizenOfficial/ginger-lib.git", branch = "development" }
 
 marlin = { git = "https://github.com/HorizenLabs/marlin", branch = "dev" }
 poly-commit = { git = "https://github.com/HorizenLabs/poly-commit", branch = "dev" }
