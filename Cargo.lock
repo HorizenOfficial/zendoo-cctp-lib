@@ -315,7 +315,7 @@ dependencies = [
 [[package]]
 name = "marlin"
 version = "0.2.0"
-source = "git+https://github.com/HorizenLabs/marlin?branch=dev#9ca1ec4032bd690654709d633ec6ac73a4f48d13"
+source = "git+https://github.com/HorizenLabs/marlin?branch=dev#61daa91696b05f218d9dd5a2c71531dbbd843ceb"
 dependencies = [
  "algebra",
  "bench-utils",
@@ -417,7 +417,7 @@ checksum = "12295df4f294471248581bc09bef3c38a5e46f1e36d6a37353621a0c6c357e1f"
 [[package]]
 name = "poly-commit"
 version = "0.2.0"
-source = "git+https://github.com/HorizenLabs/poly-commit?branch=dev#ab8296eee15d6c37e9d507dad009b77080b49be8"
+source = "git+https://github.com/HorizenLabs/poly-commit?branch=dev#5fde2bdd05cb03cc9340f1621022c4ffd643d441"
 dependencies = [
  "algebra",
  "bench-utils",
