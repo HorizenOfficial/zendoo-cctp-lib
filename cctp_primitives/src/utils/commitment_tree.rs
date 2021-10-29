@@ -1,5 +1,5 @@
 use crate::type_mapping::{Error, FieldElement, FieldHash, GingerMHT, FIELD_SIZE};
-use crate::utils::mht::{append_leaf_to_ginger_mht, new_ginger_mht};
+use super::super::{append_leaf_to_ginger_mht, new_ginger_mht};
 use algebra::{CanonicalSerialize, ToConstraintField, UniformRand};
 use primitives::FieldBasedHash;
 use rand::Rng;

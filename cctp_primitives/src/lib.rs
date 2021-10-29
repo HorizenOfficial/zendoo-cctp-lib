@@ -44,7 +44,12 @@
 )]
 
 pub mod bit_vector;
+
 pub mod commitment_tree;
+
 pub mod proving_system;
+
 pub mod type_mapping;
+use type_mapping::*;
+
 pub mod utils;

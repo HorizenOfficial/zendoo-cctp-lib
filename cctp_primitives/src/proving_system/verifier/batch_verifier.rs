@@ -53,8 +53,8 @@ impl ZendooBatchVerifier {
     /// to None.
     fn batch_verify_proofs<R: RngCore>(
         proofs_vks_ins: Vec<(ZendooProof, ZendooVerifierKey, Vec<FieldElement>)>,
-        g1_ck: &CommitterKeyG1,
-        g2_ck: &CommitterKeyG2,
+        g1_ck: &CommitterKeyDualGroup,
+        g2_ck: &CommitterKeyGroup,
         rng: &mut R,
     ) -> Result<bool, Option<Vec<usize>>> {
         let batch_len = proofs_vks_ins.len();
@@ -65,12 +65,12 @@ impl ZendooBatchVerifier {
             .map(|(proof, vk, ins)| match (proof, vk) {
                 (ZendooProof::CoboundaryMarlin(proof), ZendooVerifierKey::CoboundaryMarlin(vk)) => {
                     (
-                        GeneralPCD::SimpleMarlin(SimpleMarlinPCD::<G1, Digest>::new(proof, ins)),
+                        GeneralPCD::SimpleMarlin(SimpleMarlinPCD::<DualGroup, Digest>::new(proof, ins)),
                         vk,
                     )
                 }
                 (ZendooProof::Darlin(proof), ZendooVerifierKey::Darlin(vk)) => (
-                    GeneralPCD::FinalDarlin(FinalDarlinPCD::<G1, G2, Digest>::new(proof, ins)),
+                    GeneralPCD::FinalDarlin(FinalDarlinPCD::<DualGroup, Group, Digest>::new(proof, ins)),
                     vk,
                 ),
                 _ => unreachable!(),
@@ -176,7 +176,7 @@ mod test {
                 certificate::CertificateProofUserInputs, UserInputs,
             },
         },
-        type_mapping::{FieldElement, G1, G2},
+        type_mapping::{FieldElement, DualGroup, Group},
         utils::{
             commitment_tree::{rand_fe, rand_vec},
             data_structures::BackwardTransfer,
@@ -203,7 +203,7 @@ mod test {
         }
     }
 
-    fn get_params() -> (UniversalParams<G1>, UniversalParams<G2>, usize, usize) {
+    fn get_params() -> (UniversalParams<DualGroup>, UniversalParams<Group>, usize, usize) {
         let max_pow = 7usize;
         let segment_size = 1 << max_pow;
 
@@ -216,7 +216,7 @@ mod test {
         .unwrap()
         .clone();
 
-        let params_g1 = UniversalParams::<G1> {
+        let params_g1 = UniversalParams::<DualGroup> {
             hash: committer_key_g1.hash.clone(),
             comm_key: committer_key_g1.comm_key.clone(),
             h: committer_key_g1.h.clone(),
@@ -231,7 +231,7 @@ mod test {
         .unwrap()
         .clone();
 
-        let params_g2 = UniversalParams::<G2> {
+        let params_g2 = UniversalParams::<Group> {
             hash: committer_key_g2.hash.clone(),
             comm_key: committer_key_g2.comm_key.clone(),
             h: committer_key_g2.h.clone(),
@@ -471,8 +471,8 @@ mod test {
 
         fn batch_verify_proofs<R: RngCore>(
             proofs_vks_ins: Vec<(ZendooProof, ZendooVerifierKey, Vec<FieldElement>, bool)>,
-            _g1_ck: &CommitterKeyG1,
-            _g2_ck: &CommitterKeyG2,
+            _g1_ck: &CommitterKeyDualGroup,
+            _g2_ck: &CommitterKeyGroup,
             _rng: &mut R,
         ) -> Result<bool, Option<Vec<usize>>> {
             let mut failing_indices = Vec::new();

@@ -173,6 +173,8 @@ mod test {
 
     #[test]
     fn test_sc_neighbour() {
+        use std::convert::TryInto;
+        
         let mut rng = rand::thread_rng();
 
         let id = FieldElement::rand(&mut rng);
@@ -189,7 +191,7 @@ mod test {
             FieldElement::rand(&mut rng),
         );
 
-        let scn_initial = ScNeighbour::create(id, mpath, sc_data);
+        let scn_initial = ScNeighbour::create(id, mpath.try_into().unwrap(), sc_data);
         test_canonical_serialize_deserialize(true, &scn_initial);
     }
 }

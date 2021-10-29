@@ -1,15 +1,11 @@
 use crate::utils::data_structures::BackwardTransfer;
-use crate::{
-    type_mapping::{Error, FieldElement, GingerMHT, GINGER_MHT_POSEIDON_PARAMETERS},
-    utils::commitment_tree::{hash_vec, ByteAccumulator},
-};
+use super::{FieldElement, Error, GingerMHT, GINGER_MHT_POSEIDON_PARAMETERS};
+use crate::utils::commitment_tree::{hash_vec, ByteAccumulator};
 use primitives::FieldBasedMerkleTree;
 
 pub mod commitment_tree;
 pub mod data_structures;
 pub mod debug;
-pub mod mht;
-pub mod poseidon_hash;
 pub mod serialization;
 
 fn _get_root_from_field_vec(

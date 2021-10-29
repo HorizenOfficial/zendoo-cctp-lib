@@ -1,7 +1,7 @@
 use crate::proving_system::{error::ProvingSystemError, verifier::UserInputs};
-use crate::type_mapping::{BigInteger256, FieldElement, MC_PK_SIZE};
+use crate::{FieldElement, MC_PK_SIZE};
 use crate::utils::commitment_tree::{hash_vec, ByteAccumulator};
-use algebra::field_new;
+use algebra::{field_new, biginteger::BigInteger256};
 
 pub const PHANTOM_CERT_DATA_HASH: FieldElement = field_new!(
     FieldElement,

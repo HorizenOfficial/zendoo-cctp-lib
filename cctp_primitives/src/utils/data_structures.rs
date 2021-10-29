@@ -59,7 +59,7 @@ impl CanonicalDeserialize for BackwardTransfer {
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::utils::serialization::serialize_to_buffer;
+    use crate::serialize_to_buffer;
 
     #[test]
     fn test_serialized_size() {

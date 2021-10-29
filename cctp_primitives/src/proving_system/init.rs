@@ -18,20 +18,20 @@ use std::sync::{RwLock, RwLockReadGuard};
 // additionally wrapped the committer key in a RwLock.
 
 lazy_static! {
-    pub static ref G1_COMMITTER_KEY: RwLock<Option<CommitterKeyG1>> = RwLock::new(None);
+    pub static ref G1_COMMITTER_KEY: RwLock<Option<CommitterKeyDualGroup>> = RwLock::new(None);
 }
 
 lazy_static! {
-    pub static ref G2_COMMITTER_KEY: RwLock<Option<CommitterKeyG2>> = RwLock::new(None);
+    pub static ref G2_COMMITTER_KEY: RwLock<Option<CommitterKeyGroup>> = RwLock::new(None);
 }
 
-/// Generate G1CommitterKey and store it in memory.
+/// Generate DualGroupCommitterKey and store it in memory.
 /// The parameter `max_degree` is required in order to derive a unique hash for the key itself.
 pub fn load_g1_committer_key(
     max_degree: usize,
     supported_degree: usize,
 ) -> Result<(), SerializationError> {
-    match load_generators::<G1>(max_degree, supported_degree) {
+    match load_generators::<DualGroup>(max_degree, supported_degree) {
         // Generation/Loading successfull, assign the key to the lazy_static
         Ok(loaded_key) => {
             G1_COMMITTER_KEY
@@ -51,13 +51,13 @@ pub fn load_g1_committer_key(
     }
 }
 
-/// Generate G2CommitterKey and store it in memory.
+/// Generate GroupCommitterKey and store it in memory.
 /// The parameter `max_degree` is required in order to derive a unique hash for the key itself.
 pub fn load_g2_committer_key(
     max_degree: usize,
     supported_degree: usize,
 ) -> Result<(), SerializationError> {
-    match load_generators::<G2>(max_degree, supported_degree) {
+    match load_generators::<Group>(max_degree, supported_degree) {
         // Generation/Loading successful, assign the key to the lazy_static
         Ok(loaded_key) => {
             G2_COMMITTER_KEY
@@ -77,12 +77,12 @@ pub fn load_g2_committer_key(
     }
 }
 
-/// Return a RwLockGuard containing the G1CommitterKey, if G1CommitterKey has been initialized,
+/// Return a RwLockGuard containing the DualGroupCommitterKey, if DualGroupCommitterKey has been initialized,
 /// otherwise return Error.
 pub fn get_g1_committer_key<'a>(
-) -> Result<RwLockReadGuard<'a, Option<CommitterKeyG1>>, ProvingSystemError> {
+) -> Result<RwLockReadGuard<'a, Option<CommitterKeyDualGroup>>, ProvingSystemError> {
     let ck_g1_guard = G1_COMMITTER_KEY.read().map_err(|_| {
-        ProvingSystemError::Other("Failed to acquire lock for G1 Committer Key".to_owned())
+        ProvingSystemError::Other("Failed to acquire lock for DualGroup Committer Key".to_owned())
     })?;
     if ck_g1_guard.is_some() {
         Ok(ck_g1_guard)
@@ -91,12 +91,12 @@ pub fn get_g1_committer_key<'a>(
     }
 }
 
-/// Return a RwLockGuard containing the G2CommitterKey, if G2CommitterKey has been initialized,
+/// Return a RwLockGuard containing the GroupCommitterKey, if GroupCommitterKey has been initialized,
 /// otherwise return Error.
 pub fn get_g2_committer_key<'a>(
-) -> Result<RwLockReadGuard<'a, Option<CommitterKeyG2>>, ProvingSystemError> {
+) -> Result<RwLockReadGuard<'a, Option<CommitterKeyGroup>>, ProvingSystemError> {
     let ck_g2_guard = G2_COMMITTER_KEY.read().map_err(|_| {
-        ProvingSystemError::Other("Failed to acquire lock for G2 Committer Key".to_owned())
+        ProvingSystemError::Other("Failed to acquire lock for Group Committer Key".to_owned())
     })?;
     if ck_g2_guard.is_some() {
         Ok(ck_g2_guard)
@@ -132,8 +132,8 @@ mod test {
         let max_degree = 1 << 10;
         let supported_degree = 1 << 9;
 
-        let pp = InnerProductArgPC::<G1, Digest>::setup(max_degree).unwrap();
-        let (pk, _) = InnerProductArgPC::<G1, Digest>::trim(&pp, supported_degree).unwrap();
+        let pp = InnerProductArgPC::<DualGroup, Digest>::setup(max_degree).unwrap();
+        let (pk, _) = InnerProductArgPC::<DualGroup, Digest>::trim(&pp, supported_degree).unwrap();
 
         load_g1_committer_key(max_degree, supported_degree).unwrap();
 
@@ -157,8 +157,8 @@ mod test {
         let max_degree = 1 << 10;
         let supported_degree = 1 << 9;
 
-        let pp = InnerProductArgPC::<G2, Digest>::setup(max_degree).unwrap();
-        let (pk, _) = InnerProductArgPC::<G2, Digest>::trim(&pp, supported_degree).unwrap();
+        let pp = InnerProductArgPC::<Group, Digest>::setup(max_degree).unwrap();
+        let (pk, _) = InnerProductArgPC::<Group, Digest>::trim(&pp, supported_degree).unwrap();
 
         load_g2_committer_key(max_degree, supported_degree).unwrap();
 

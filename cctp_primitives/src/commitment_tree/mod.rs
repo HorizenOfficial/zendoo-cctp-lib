@@ -12,6 +12,7 @@ use crate::{
     },
 };
 use primitives::{FieldBasedMerkleTree, FieldBasedMerkleTreePath};
+use std::convert::TryInto;
 
 pub mod hashers;
 pub mod proofs;
@@ -282,7 +283,7 @@ impl CommitmentTree {
             if let Some(tree) = self.get_commitments_tree() {
                 match tree.finalize() {
                     Ok(finalized_tree) => Some(ScExistenceProof::create(
-                        finalized_tree.get_merkle_path(index)?,
+                        finalized_tree.get_merkle_path(index)?.try_into().unwrap(),
                     )),
                     Err(_) => None,
                 }
@@ -309,7 +310,7 @@ impl CommitmentTree {
             if let Some((index, id)) = index_id {
                 Some(ScNeighbour::create(
                     id,
-                    tree.get_merkle_path(index)?,
+                    tree.get_merkle_path(index)?.try_into().unwrap(),
                     self.get_sc_data(&id)?,
                 ))
             } else {
