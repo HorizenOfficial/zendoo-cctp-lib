@@ -3,10 +3,8 @@ use crate::{
         error::ProvingSystemError,
         init::{load_g1_committer_key, load_g2_committer_key},
     },
-    type_mapping::{
-        CoboundaryMarlinProof, CoboundaryMarlinProverKey, CoboundaryMarlinVerifierKey, DarlinProof,
-        DarlinProverKey, DarlinVerifierKey, Error, FieldElement,
-    },
+    CoboundaryMarlinProof, CoboundaryMarlinProverKey, CoboundaryMarlinVerifierKey, DarlinProof,
+    DarlinProverKey, DarlinVerifierKey, Error, FieldElement,
 };
 use algebra::{serialize::*, SemanticallyValid};
 

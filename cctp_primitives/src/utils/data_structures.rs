@@ -1,4 +1,4 @@
-use crate::type_mapping::MC_PK_SIZE;
+use crate::MC_PK_SIZE;
 use algebra::serialize::*;
 
 #[derive(Clone, Debug, Eq, PartialEq, CanonicalSerialize, CanonicalDeserialize)]

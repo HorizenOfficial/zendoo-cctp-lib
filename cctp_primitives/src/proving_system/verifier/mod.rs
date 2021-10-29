@@ -2,7 +2,7 @@ use crate::proving_system::init::{get_g1_committer_key, get_g2_committer_key};
 use crate::{
     proving_system::error::ProvingSystemError,
     proving_system::{check_matching_proving_system_type, ZendooProof, ZendooVerifierKey},
-    type_mapping::*,
+    FieldElement, CoboundaryMarlin, Darlin
 };
 use rand::RngCore;
 

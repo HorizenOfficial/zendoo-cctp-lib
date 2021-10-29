@@ -1,6 +1,6 @@
 use crate::commitment_tree::sidechain_tree_alive::SidechainTreeAlive;
 use crate::commitment_tree::sidechain_tree_ceased::SidechainTreeCeased;
-use crate::type_mapping::{FieldElement, GingerMHTPath};
+use crate::{FieldElement, GingerMHTPath};
 use algebra::serialize::*;
 
 //--------------------------------------------------------------------------------------------------
@@ -125,7 +125,7 @@ mod test {
         ScAliveCommitmentData, ScCeasedCommitmentData, ScCommitmentData, ScNeighbour,
     };
     use crate::commitment_tree::CMT_MT_HEIGHT;
-    use crate::type_mapping::FieldElement;
+    use crate::FieldElement;
     use crate::utils::commitment_tree::new_mt;
     use algebra::{test_canonical_serialize_deserialize, UniformRand};
     use primitives::FieldBasedMerkleTree;

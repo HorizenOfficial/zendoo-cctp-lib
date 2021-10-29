@@ -18,7 +18,7 @@ edition = "2018"
 algebra = { git = "https://github.com/HorizenOfficial/ginger-lib", branch = "development", features = ["parallel", "tweedle", "derive"] }
 primitives = { git = "https://github.com/HorizenOfficial/ginger-lib.git", branch = "development", features = ["merkle_tree", "tweedle"]}
 proof-systems = { git = "https://github.com/HorizenOfficial/ginger-lib.git", branch = "development", features = ["darlin"]}
-type-mappings = { git = "https://github.com/HorizenOfficial/ginger-lib.git", branch = "feat/concrete_instantiations"}
+type-mappings = { git = "https://github.com/HorizenOfficial/ginger-lib.git", features = ["tweedle", "darlin"], branch = "feat/concrete_instantiations"}
 
 marlin = { git = "https://github.com/HorizenLabs/marlin", branch = "dev" }
 poly-commit = { git = "https://github.com/HorizenLabs/poly-commit", branch = "dev" }

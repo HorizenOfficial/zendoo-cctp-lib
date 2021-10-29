@@ -5,7 +5,7 @@ use crate::{
         sidechain_tree_alive::{SidechainAliveSubtreeType, SidechainTreeAlive},
         sidechain_tree_ceased::SidechainTreeCeased,
     },
-    type_mapping::*,
+    *,
     utils::{
         commitment_tree::{new_mt, pow2},
         data_structures::{BackwardTransfer, BitVectorElementsConfig},
@@ -784,7 +784,7 @@ impl CommitmentTree {
 #[cfg(test)]
 mod test {
     use crate::commitment_tree::CommitmentTree;
-    use crate::type_mapping::*;
+    use crate::{FieldElement, MC_PK_SIZE};
     use crate::utils::{
         commitment_tree::{rand_fe, rand_fe_vec, rand_vec},
         data_structures::{BackwardTransfer, BitVectorElementsConfig},

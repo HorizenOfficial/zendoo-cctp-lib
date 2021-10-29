@@ -8,6 +8,7 @@ use proof_systems::darlin::pcd::{
     final_darlin::FinalDarlinPCD, simple_marlin::SimpleMarlinPCD, GeneralPCD,
 };
 use rand::RngCore;
+use crate::{CommitterKeyDualGroup, CommitterKeyGroup, Digest, DualGroup, Group};
 use std::collections::HashMap;
 
 /// Updatable struct storing all the data required to verify a batch of proof.
@@ -176,11 +177,11 @@ mod test {
                 certificate::CertificateProofUserInputs, UserInputs,
             },
         },
-        type_mapping::{FieldElement, DualGroup, Group},
         utils::{
             commitment_tree::{rand_fe, rand_vec},
             data_structures::BackwardTransfer,
         },
+        MC_PK_SIZE
     };
     use algebra::{test_canonical_serialize_deserialize, UniformRand};
     use poly_commit::ipa_pc::UniversalParams;

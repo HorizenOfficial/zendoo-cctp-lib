@@ -2,7 +2,7 @@ use crate::utils::data_structures::BackwardTransfer;
 use crate::utils::get_cert_data_hash;
 use crate::{
     proving_system::{error::ProvingSystemError, verifier::UserInputs},
-    type_mapping::FieldElement,
+    FieldElement,
 };
 
 /// All the data needed to reconstruct the aggregated input for the NaiveThresholdSignatureCircuit

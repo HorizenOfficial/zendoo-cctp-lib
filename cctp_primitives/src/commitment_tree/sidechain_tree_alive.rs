@@ -1,4 +1,4 @@
-use crate::type_mapping::{Error, FieldElement, GingerMHT};
+use crate::{Error, FieldElement, GingerMHT};
 use crate::utils::commitment_tree::{add_leaf, hash_vec, new_mt};
 use algebra::Field;
 use primitives::FieldBasedMerkleTree;
@@ -150,7 +150,7 @@ impl SidechainTreeAlive {
 #[cfg(test)]
 mod test {
     use crate::commitment_tree::sidechain_tree_alive::SidechainTreeAlive;
-    use crate::type_mapping::FieldElement;
+    use crate::FieldElement;
     use algebra::Field;
 
     #[test]

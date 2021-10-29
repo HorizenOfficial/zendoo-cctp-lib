@@ -3,7 +3,7 @@
 //! `merkle_tree` exposes functions to compute a bit vector Merkle tree.
 
 use super::compression;
-use crate::type_mapping::*;
+use crate::{FIELD_CAPACITY, GingerMHT, Error};
 
 use algebra::{log2, ToConstraintField};
 use primitives::merkle_tree::field_based_mht::FieldBasedMerkleTree;
@@ -95,6 +95,7 @@ pub fn merkle_root_from_compressed_bytes_without_checks(
 mod test {
 
     use super::*;
+    use crate::FieldElement;
     use compression::{compress_bit_vector, CompressionAlgorithm};
 
     use std::fmt::Write;

@@ -1,4 +1,4 @@
-use crate::type_mapping::{Error, FieldElement, GingerMHT};
+use crate::{Error, FieldElement, GingerMHT};
 use crate::utils::commitment_tree::{add_leaf, hash_vec, new_mt};
 use primitives::FieldBasedMerkleTree;
 use std::borrow::BorrowMut;
@@ -64,7 +64,7 @@ impl SidechainTreeCeased {
 #[cfg(test)]
 mod test {
     use crate::commitment_tree::sidechain_tree_ceased::SidechainTreeCeased;
-    use crate::type_mapping::FieldElement;
+    use crate::FieldElement;
     use algebra::Field;
 
     #[test]

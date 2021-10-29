@@ -1,4 +1,4 @@
-use crate::type_mapping::*;
+use crate::*;
 
 use algebra::{serialize::*, AffineCurve};
 

@@ -9,7 +9,7 @@ use std::io::{Read, Write};
 use bzip2::read::{BzDecoder, BzEncoder};
 use flate2::{read::GzDecoder, write::GzEncoder, Compression as GzipCompression};
 
-use crate::{printlndbg, type_mapping::Error};
+use crate::{printlndbg, Error};
 
 /// The chunk size used in the decompression functions.
 const DECOMPRESSION_CHUNK_SIZE: usize = 1024;

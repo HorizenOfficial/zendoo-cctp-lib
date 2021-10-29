@@ -1,5 +1,5 @@
 use crate::utils::data_structures::BackwardTransfer;
-use super::{FieldElement, Error, GingerMHT, GINGER_MHT_POSEIDON_PARAMETERS};
+use crate::{FieldElement, Error, GingerMHT, GINGER_MHT_POSEIDON_PARAMETERS};
 use crate::utils::commitment_tree::{hash_vec, ByteAccumulator};
 use primitives::FieldBasedMerkleTree;
 

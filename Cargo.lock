@@ -728,13 +728,17 @@ dependencies = [
 [[package]]
 name = "type-mappings"
 version = "0.1.0"
-source = "git+https://github.com/HorizenOfficial/ginger-lib.git?branch=feat/concrete_instantiations#ea2aa40c807c72c6f8a29f36046dc49d12b55d54"
+source = "git+https://github.com/HorizenOfficial/ginger-lib.git?branch=feat/concrete_instantiations#4c3ec769fb64223186be8ec5925b3f6bed75d051"
 dependencies = [
  "algebra",
  "bit-vec",
+ "blake2",
  "blake2s_simd",
  "lazy_static",
+ "marlin",
+ "poly-commit",
  "primitives",
+ "proof-systems",
  "rand",
  "rand_xorshift",
 ]

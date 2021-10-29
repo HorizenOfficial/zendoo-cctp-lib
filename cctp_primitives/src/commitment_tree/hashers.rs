@@ -1,4 +1,4 @@
-use crate::type_mapping::*;
+use crate::{FieldElement, Error, MC_PK_SIZE};
 use crate::utils::{
     commitment_tree::*,
     data_structures::{BackwardTransfer, BitVectorElementsConfig},
@@ -197,7 +197,7 @@ pub fn hash_csw(
 #[cfg(test)]
 mod test {
     use crate::commitment_tree::hashers::{hash_bwtr, hash_cert, hash_csw, hash_fwt, hash_scc};
-    use crate::type_mapping::MC_PK_SIZE;
+    use crate::MC_PK_SIZE;
     use crate::utils::{
         commitment_tree::{rand_fe, rand_fe_vec, rand_vec},
         data_structures::{BackwardTransfer, BitVectorElementsConfig},
