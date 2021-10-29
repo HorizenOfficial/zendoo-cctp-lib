@@ -728,7 +728,7 @@ dependencies = [
 [[package]]
 name = "type-mappings"
 version = "0.1.0"
-source = "git+https://github.com/HorizenOfficial/ginger-lib.git?branch=feat/concrete_instantiations#afd5fb50cde11761c46656766a492ededb73f1f3"
+source = "git+https://github.com/HorizenOfficial/ginger-lib.git?branch=feat/concrete_instantiations#ea2aa40c807c72c6f8a29f36046dc49d12b55d54"
 dependencies = [
  "algebra",
  "bit-vec",
