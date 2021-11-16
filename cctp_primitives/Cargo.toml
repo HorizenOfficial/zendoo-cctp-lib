@@ -1,6 +1,6 @@
 [package]
 name = "cctp_primitives"
-version = "0.1.0"
+version = "0.1.1"
 authors = [
     "Alberto Benegiamo",
     "Daniele Di Benedetto <daniele@horizenlabs.io>",
@@ -15,21 +15,21 @@ authors = [
 edition = "2018"
 
 [dependencies]
-algebra = { git = "https://github.com/HorizenOfficial/ginger-lib", tag = "0.3.0", features = ["parallel", "tweedle", "derive"] }
-primitives = { git = "https://github.com/HorizenOfficial/ginger-lib.git", tag = "0.3.0", features = ["merkle_tree", "tweedle"]}
-proof-systems = { git = "https://github.com/HorizenOfficial/ginger-lib.git", tag = "0.3.0", features = ["darlin"]}
+algebra = { git = "https://github.com/HorizenOfficial/ginger-lib", tag = "0.3.1", features = ["parallel", "tweedle", "derive"] }
+primitives = { git = "https://github.com/HorizenOfficial/ginger-lib.git", tag = "0.3.1", features = ["merkle_tree", "tweedle"]}
+proof-systems = { git = "https://github.com/HorizenOfficial/ginger-lib.git", tag = "0.3.1", features = ["darlin"]}
 
-marlin = { git = "https://github.com/HorizenLabs/marlin", tag = "0.2.0" }
-poly-commit = { git = "https://github.com/HorizenLabs/poly-commit", tag = "0.2.0" }
+marlin = { git = "https://github.com/HorizenLabs/marlin", tag = "0.2.1" }
+poly-commit = { git = "https://github.com/HorizenLabs/poly-commit", tag = "0.2.1" }
 
-rand = { version = "0.8.4" }
-byteorder = "1.4.2"
-lazy_static = "1.4.0"
-blake2 = { version = "0.8.1", default-features = false }
-sha1 = "0.6.0"
-bit-vec = "0.6"
-bzip2 = "0.4.2"
-flate2 = "1.0.20"
+rand = { version = "=0.8.4" }
+byteorder = "=1.4.3"
+lazy_static = "=1.4.0"
+blake2 = { version = "=0.8.1", default-features = false }
+sha1 = "=0.6.0"
+bit-vec = "=0.6.3"
+bzip2 = "=0.4.3"
+flate2 = "=1.0.21"
 
 [dev-dependencies]
 serial_test = "*"
