@@ -50,6 +50,7 @@ impl BatchFieldBasedMerkleTreeParameters for GingerMHTParams {
 }
 
 pub type GingerMHT = FieldBasedOptimizedMHT<GingerMHTParams>;
+pub type GingerSparseMHT = FieldBasedOptimizedSparseMHT<GingerMHTParams>;
 pub type GingerMHTPath = FieldBasedMHTPath<GingerMHTParams>;
 
 // Polynomial Commitment instantiations
