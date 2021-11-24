@@ -2,7 +2,6 @@ use crate::type_mapping::{Error, FieldElement, GingerMHT, GingerMHTPath};
 use crate::utils::commitment_tree::{add_leaf, hash_vec, new_mt};
 use algebra::Field;
 use primitives::FieldBasedMerkleTree;
-use std::borrow::BorrowMut;
 
 // Tunable parameters
 pub const FWT_MT_HEIGHT: usize = 12;
@@ -87,7 +86,7 @@ impl SidechainTreeAlive {
 
     // Gets merkle path to the Forward Transfer in the tree
     pub fn get_fwt_merkle_path(&mut self, leaf_index: usize) -> Option<GingerMHTPath> {
-        match self.fwt_mt.borrow_mut().finalize() {
+        match self.fwt_mt.finalize() {
             Ok(finalized_tree) => finalized_tree.get_merkle_path(leaf_index),
             Err(_) => None,
         }
@@ -95,7 +94,7 @@ impl SidechainTreeAlive {
 
     // Gets merkle path to the Forward Transfer in the tree
     pub fn get_bwtr_merkle_path(&mut self, leaf_index: usize) -> Option<GingerMHTPath> {
-        match self.bwtr_mt.borrow_mut().finalize() {
+        match self.bwtr_mt.finalize() {
             Ok(finalized_tree) => finalized_tree.get_merkle_path(leaf_index),
             Err(_) => None,
         }
@@ -103,7 +102,7 @@ impl SidechainTreeAlive {
 
     // Gets merkle path to the Forward Transfer in the tree
     pub fn get_cert_merkle_path(&mut self, leaf_index: usize) -> Option<GingerMHTPath> {
-        match self.cert_mt.borrow_mut().finalize() {
+        match self.cert_mt.finalize() {
             Ok(finalized_tree) => finalized_tree.get_merkle_path(leaf_index),
             Err(_) => None,
         }
@@ -111,7 +110,7 @@ impl SidechainTreeAlive {
 
     // Gets commitment (root) of the Forward Transfer Transactions tree
     pub fn get_fwt_commitment(&mut self) -> Option<FieldElement> {
-        match self.fwt_mt.borrow_mut().finalize() {
+        match self.fwt_mt.finalize() {
             Ok(finalized_tree) => finalized_tree.root(),
             Err(_) => None,
         }
@@ -119,7 +118,7 @@ impl SidechainTreeAlive {
 
     // Gets commitment (root) of the Backward Transfer Requests Transactions tree
     pub fn get_bwtr_commitment(&mut self) -> Option<FieldElement> {
-        match self.bwtr_mt.borrow_mut().finalize() {
+        match self.bwtr_mt.finalize() {
             Ok(finalized_tree) => finalized_tree.root(),
             Err(_) => None,
         }
@@ -127,7 +126,7 @@ impl SidechainTreeAlive {
 
     // Gets commitment (root) of the Certificates tree
     pub fn get_cert_commitment(&mut self) -> Option<FieldElement> {
-        match self.cert_mt.borrow_mut().finalize() {
+        match self.cert_mt.finalize() {
             Ok(finalized_tree) => finalized_tree.root(),
             Err(_) => None,
         }
