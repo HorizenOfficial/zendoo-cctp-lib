@@ -1,4 +1,4 @@
-use crate::type_mapping::{Error, FieldElement, GingerMHT};
+use crate::type_mapping::{Error, FieldElement, GingerMHT, GingerMHTPath};
 use crate::utils::commitment_tree::{add_leaf, hash_vec, new_mt};
 use algebra::Field;
 use primitives::FieldBasedMerkleTree;
@@ -85,6 +85,30 @@ impl SidechainTreeAlive {
         self.cert_mt.get_leaves().to_vec()
     }
 
+    // Gets merkle path to the Forward Transfer in the tree
+    pub fn get_fwt_merkle_path(&mut self, leaf_index: usize) -> Option<GingerMHTPath> {
+        match self.fwt_mt.borrow_mut().finalize() {
+            Ok(finalized_tree) => finalized_tree.get_merkle_path(leaf_index),
+            Err(_) => None,
+        }
+    }
+
+    // Gets merkle path to the Forward Transfer in the tree
+    pub fn get_bwtr_merkle_path(&mut self, leaf_index: usize) -> Option<GingerMHTPath> {
+        match self.bwtr_mt.borrow_mut().finalize() {
+            Ok(finalized_tree) => finalized_tree.get_merkle_path(leaf_index),
+            Err(_) => None,
+        }
+    }
+
+    // Gets merkle path to the Forward Transfer in the tree
+    pub fn get_cert_merkle_path(&mut self, leaf_index: usize) -> Option<GingerMHTPath> {
+        match self.cert_mt.borrow_mut().finalize() {
+            Ok(finalized_tree) => finalized_tree.get_merkle_path(leaf_index),
+            Err(_) => None,
+        }
+    }
+
     // Gets commitment (root) of the Forward Transfer Transactions tree
     pub fn get_fwt_commitment(&mut self) -> Option<FieldElement> {
         match self.fwt_mt.borrow_mut().finalize() {
@@ -152,6 +176,8 @@ mod test {
     use crate::commitment_tree::sidechain_tree_alive::SidechainTreeAlive;
     use crate::type_mapping::FieldElement;
     use algebra::Field;
+    use primitives::FieldBasedMerkleTree;
+    use crate::utils::mht;
 
     #[test]
     fn sidechain_tree_tests() {
@@ -201,5 +227,29 @@ mod test {
 
         // SCT commitment has non-empty value
         assert_ne!(empty_comm, sct.get_commitment());
+
+        // Merkle path to existing leaf should be present
+        let fwt_merkle_path_opt = sct.get_fwt_merkle_path(0);
+        assert!(fwt_merkle_path_opt.is_some());
+        let bwtr_merkle_path_opt = sct.get_bwtr_merkle_path(0);
+        assert!(bwtr_merkle_path_opt.is_some());
+        let cert_merkle_path_opt = sct.get_cert_merkle_path(0);
+        assert!(cert_merkle_path_opt.is_some());
+
+        // Verify merkle path
+        assert!(mht::verify_ginger_merkle_path_without_length_check(&fwt_merkle_path_opt.unwrap(), &fe, &updated_fwt.unwrap()));
+        assert!(mht::verify_ginger_merkle_path_without_length_check(&bwtr_merkle_path_opt.unwrap(), &fe, &updated_bwtr.unwrap()));
+        assert!(mht::verify_ginger_merkle_path_without_length_check(&cert_merkle_path_opt.unwrap(), &fe, &updated_cert.unwrap()));
+
+        // Path to empty leaf should exist
+        assert!(sct.get_fwt_merkle_path(1).is_some());
+
+        // No merkle path for out of range leaf
+        let fwt_num_leaves = 1 << sct.fwt_mt.height();
+        assert!(sct.get_fwt_merkle_path(fwt_num_leaves).is_none());
+        let bwtr_num_leaves = 1 << sct.bwtr_mt.height();
+        assert!(sct.get_bwtr_merkle_path(bwtr_num_leaves).is_none());
+        let cert_num_leaves = 1 << sct.cert_mt.height();
+        assert!(sct.get_cert_merkle_path(cert_num_leaves).is_none());
     }
 }
