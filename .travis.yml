@@ -27,8 +27,8 @@ env:
     - IMAGE_NAME=sc-ci-base
 
 script: 
-    -ci/script.sh
-    -ci/travis_keep_alive.sh
+  - ci/travis_keep_alive.sh
+  - ci/script.sh
 
 jobs:
   include:
