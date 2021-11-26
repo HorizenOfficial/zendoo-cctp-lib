@@ -1,6 +1,6 @@
 use crate::proving_system::{error::ProvingSystemError, verifier::UserInputs};
 use crate::type_mapping::{BigInteger256, FieldElement, MC_PK_SIZE};
-use crate::utils::commitment_tree::{hash_vec, ByteAccumulator};
+use crate::utils::commitment_tree::{hash_vec, DataAccumulator};
 use algebra::field_new;
 
 pub const PHANTOM_CERT_DATA_HASH: FieldElement = field_new!(
@@ -32,7 +32,7 @@ impl<'a> UserInputs for CSWProofUserInputs<'a> {
             inputs.push(*self.constant.unwrap());
         }
 
-        let mut fes = ByteAccumulator::init()
+        let mut fes = DataAccumulator::init()
             .update(self.amount)
             .map_err(|e| ProvingSystemError::Other(format!("{:?}", e)))?
             .update(&self.pub_key_hash[..])
@@ -59,7 +59,7 @@ impl<'a> UserInputs for CSWProofUserInputs<'a> {
 fn test_phantom_cert_data_hash() {
     assert_eq!(
         PHANTOM_CERT_DATA_HASH,
-        ByteAccumulator::init()
+        DataAccumulator::init()
             .update(&b"BASOOKA"[..])
             .unwrap()
             .get_field_elements()

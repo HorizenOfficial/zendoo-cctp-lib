@@ -1,7 +1,7 @@
 use crate::utils::data_structures::BackwardTransfer;
 use crate::{
     type_mapping::{Error, FieldElement, GingerMHT, GINGER_MHT_POSEIDON_PARAMETERS},
-    utils::commitment_tree::{hash_vec, ByteAccumulator},
+    utils::commitment_tree::{hash_vec, DataAccumulator},
 };
 use primitives::FieldBasedMerkleTree;
 
@@ -43,7 +43,7 @@ pub fn get_bt_merkle_root(bt_list: Option<&[BackwardTransfer]>) -> Result<FieldE
         let bt_list = bt_list.unwrap();
         let mut leaves = Vec::with_capacity(bt_list.len());
         for bt in bt_list.iter() {
-            let bt_fes = ByteAccumulator::init().update(bt)?.get_field_elements()?;
+            let bt_fes = DataAccumulator::init().update(bt)?.get_field_elements()?;
             assert_eq!(bt_fes.len(), 1);
             leaves.push(bt_fes[0]);
         }
@@ -66,7 +66,7 @@ pub fn get_cert_data_hash(
     ft_min_amount: u64,
 ) -> Result<FieldElement, Error> {
     // Pack btr_fee and ft_min_amount into a single field element
-    let fees_field_elements = ByteAccumulator::init()
+    let fees_field_elements = DataAccumulator::init()
         .update(btr_fee)?
         .update(ft_min_amount)?
         .get_field_elements()?;
@@ -112,7 +112,7 @@ pub fn get_cert_data_hash(
 }
 
 pub fn compute_sc_id(tx_hash: &[u8; 32], pos: u32) -> Result<FieldElement, Error> {
-    ByteAccumulator::init()
+    DataAccumulator::init()
         .update(&tx_hash[..])?
         .update(pos)?
         .compute_field_hash_constant_length()
