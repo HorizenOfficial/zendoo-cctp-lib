@@ -49,8 +49,8 @@ impl BatchFieldBasedMerkleTreeParameters for GingerMHTParams {
     type BH = BatchFieldHash;
 }
 
-pub type GingerMHT = FieldBasedOptimizedMHT<GingerMHTParams>;
-pub type GingerSparseMHT = FieldBasedOptimizedSparseMHT<GingerMHTParams>;
+pub type GingerMHT = FieldBasedAppendOnlyMHT<GingerMHTParams>;
+pub type GingerSparseMHT = FieldBasedSparseMHT<GingerMHTParams>;
 pub type GingerMHTPath = FieldBasedMHTPath<GingerMHTParams>;
 
 // Polynomial Commitment instantiations
