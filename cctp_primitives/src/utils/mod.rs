@@ -65,6 +65,43 @@ pub fn get_cert_data_hash(
     btr_fee: u64,
     ft_min_amount: u64,
 ) -> Result<FieldElement, Error> {
+    // Compute bt_list merkle root
+    let bt_root = get_bt_merkle_root(bt_list)?;
+
+    // Compute linear hash of custom fields (if present)
+    let mut custom_fields_hash = None;
+
+    if custom_fields.is_some() {
+        let custom_fes = custom_fields
+            .unwrap()
+            .into_iter()
+            .map(|custom_field| *custom_field)
+            .collect::<Vec<_>>();
+        custom_fields_hash = Some(hash_vec(custom_fes)?)
+    }
+
+    get_cert_data_hash_from_bt_root_and_custom_fields_hash(
+        sc_id,
+        epoch_number,
+        quality,
+        bt_root,
+        custom_fields_hash,
+        end_cumulative_sc_tx_commitment_tree_root,
+        btr_fee,
+        ft_min_amount,
+    )
+}
+
+pub fn get_cert_data_hash_from_bt_root_and_custom_fields_hash(
+    sc_id: &FieldElement,
+    epoch_number: u32,
+    quality: u64,
+    bt_root: FieldElement,
+    custom_fields_hash: Option<FieldElement>, //aka proof_data - includes custom_field_elements and bit_vectors merkle roots
+    end_cumulative_sc_tx_commitment_tree_root: &FieldElement,
+    btr_fee: u64,
+    ft_min_amount: u64,
+) -> Result<FieldElement, Error> {
     // Pack btr_fee and ft_min_amount into a single field element
     let fees_field_elements = DataAccumulator::init()
         .update(btr_fee)?
@@ -77,9 +114,6 @@ pub fn get_cert_data_hash(
     // the circuit)
     let epoch_number_fe = FieldElement::from(epoch_number);
     let quality_fe = FieldElement::from(quality);
-
-    // Compute bt_list merkle root
-    let bt_root = get_bt_merkle_root(bt_list)?;
 
     // Compute cert sysdata hash
     let cert_sysdata_hash = hash_vec(vec![
@@ -94,14 +128,9 @@ pub fn get_cert_data_hash(
     // Final field elements to hash
     let mut fes = Vec::new();
 
-    // Compute linear hash of custom fields (if present) and add the digest to fes
-    if custom_fields.is_some() {
-        let custom_fes = custom_fields
-            .unwrap()
-            .into_iter()
-            .map(|custom_field| *custom_field)
-            .collect::<Vec<_>>();
-        fes.push(hash_vec(custom_fes)?)
+    // Add custom fields hash if present
+    if custom_fields_hash.is_some() {
+        fes.push(custom_fields_hash.unwrap())
     }
 
     // Add cert_sysdata_hash
