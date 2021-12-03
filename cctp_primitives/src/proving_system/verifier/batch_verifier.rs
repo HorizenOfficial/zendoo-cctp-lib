@@ -183,7 +183,7 @@ mod test {
         },
     };
     use algebra::{test_canonical_serialize_deserialize, UniformRand};
-    use poly_commit::ipa_pc::UniversalParams;
+    use poly_commit::ipa_pc::Parameters;
     use proof_systems::darlin::tests::{
         final_darlin::generate_test_data as generate_final_darlin_test_data,
         simple_marlin::generate_test_data as generate_simple_marlin_test_data,
@@ -203,7 +203,7 @@ mod test {
         }
     }
 
-    fn get_params() -> (UniversalParams<G1>, UniversalParams<G2>, usize, usize) {
+    fn get_params() -> (Parameters<G1>, Parameters<G2>, usize, usize) {
         let max_pow = 7usize;
         let segment_size = 1 << max_pow;
 
@@ -216,7 +216,7 @@ mod test {
         .unwrap()
         .clone();
 
-        let params_g1 = UniversalParams::<G1> {
+        let params_g1 = Parameters::<G1> {
             hash: committer_key_g1.hash.clone(),
             comm_key: committer_key_g1.comm_key.clone(),
             h: committer_key_g1.h.clone(),
@@ -231,7 +231,7 @@ mod test {
         .unwrap()
         .clone();
 
-        let params_g2 = UniversalParams::<G2> {
+        let params_g2 = Parameters::<G2> {
             hash: committer_key_g2.hash.clone(),
             comm_key: committer_key_g2.comm_key.clone(),
             h: committer_key_g2.h.clone(),

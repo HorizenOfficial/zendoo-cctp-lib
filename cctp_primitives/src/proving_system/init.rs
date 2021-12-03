@@ -133,7 +133,7 @@ mod test {
         let supported_degree = 1 << 9;
 
         let pp = InnerProductArgPC::<G1, Digest>::setup(max_degree).unwrap();
-        let (pk, _) = InnerProductArgPC::<G1, Digest>::trim(&pp, supported_degree).unwrap();
+        let (pk, _) = pp.trim(supported_degree).unwrap();
 
         load_g1_committer_key(max_degree, supported_degree).unwrap();
 
@@ -158,7 +158,7 @@ mod test {
         let supported_degree = 1 << 9;
 
         let pp = InnerProductArgPC::<G2, Digest>::setup(max_degree).unwrap();
-        let (pk, _) = InnerProductArgPC::<G2, Digest>::trim(&pp, supported_degree).unwrap();
+        let (pk, _) = pp.trim(supported_degree).unwrap();
 
         load_g2_committer_key(max_degree, supported_degree).unwrap();
 

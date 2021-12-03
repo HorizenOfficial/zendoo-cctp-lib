@@ -788,7 +788,7 @@ mod test {
         commitment_tree::{rand_fe, rand_fe_vec, rand_vec},
         data_structures::{BackwardTransfer, BitVectorElementsConfig},
     };
-    use algebra::{test_canonical_serialize_deserialize, Field};
+    use algebra::{test_canonical_serialize_deserialize, Group, Field};
     use rand::Rng;
     use std::convert::TryInto;
 
