@@ -15,12 +15,12 @@ authors = [
 edition = "2018"
 
 [dependencies]
-algebra = { git = "https://github.com/HorizenOfficial/ginger-lib", branch = "development", features = ["parallel", "tweedle", "derive"] }
-primitives = { git = "https://github.com/HorizenOfficial/ginger-lib.git", branch = "development", features = ["merkle_tree", "tweedle"]}
-proof-systems = { git = "https://github.com/HorizenOfficial/ginger-lib.git", branch = "development", features = ["darlin"]}
+algebra = { git = "https://github.com/HorizenOfficial/ginger-lib", branch = "refactor_ginger_dev", features = ["parallel", "tweedle", "derive"] }
+primitives = { git = "https://github.com/HorizenOfficial/ginger-lib.git", branch = "refactor_ginger_dev", features = ["merkle_tree", "tweedle"]}
+proof-systems = { git = "https://github.com/HorizenOfficial/ginger-lib.git", branch = "refactor_ginger_dev", features = ["darlin"]}
 
-marlin = { git = "https://github.com/HorizenLabs/marlin", branch = "dev" }
-poly-commit = { git = "https://github.com/HorizenLabs/poly-commit", branch = "dev" }
+marlin = { git = "https://github.com/HorizenLabs/marlin", branch = "refactor_ginger_dev" }
+poly-commit = { git = "https://github.com/HorizenLabs/poly-commit", branch = "refactor_ginger_dev" }
 
 rand = { version = "=0.8.4" }
 byteorder = "=1.4.3"

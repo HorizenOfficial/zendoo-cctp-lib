@@ -1,9 +1,9 @@
 use crate::type_mapping::*;
 
-use algebra::{serialize::*, AffineCurve};
+use algebra::{serialize::*, Curve};
 
 use poly_commit::ipa_pc::{CommitterKey, InnerProductArgPC};
-use poly_commit::PolynomialCommitment;
+use poly_commit::{PolynomialCommitment, PCParameters};
 
 use crate::proving_system::error::ProvingSystemError;
 
@@ -105,13 +105,13 @@ pub fn get_g2_committer_key<'a>(
     }
 }
 
-fn load_generators<G: AffineCurve>(
+fn load_generators<G: Curve>(
     max_degree: usize,
     supported_degree: usize,
 ) -> Result<CommitterKey<G>, SerializationError> {
     let pp = InnerProductArgPC::<G, Digest>::setup(max_degree)
         .map_err(|_| SerializationError::InvalidData)?;
-    let (ck, _) = InnerProductArgPC::<G, Digest>::trim(&pp, supported_degree)
+    let (ck, _) = pp.trim(supported_degree)
         .map_err(|_| SerializationError::InvalidData)?;
 
     // Return the read/generated committer key

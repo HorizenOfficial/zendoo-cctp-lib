@@ -1,6 +1,6 @@
 use crate::type_mapping::{Error, FieldElement, GingerMHT};
 use crate::utils::commitment_tree::{add_leaf, hash_vec, new_mt};
-use algebra::Field;
+use algebra::Group;
 use primitives::FieldBasedMerkleTree;
 use std::borrow::BorrowMut;
 

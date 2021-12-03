@@ -1,7 +1,7 @@
 pub use algebra::biginteger::BigInteger256;
 use algebra::{curves::tweedle::*, fields::tweedle::*, FpParameters, PrimeField};
 use blake2::Blake2s;
-use poly_commit::ipa_pc::*;
+use poly_commit::{DomainExtendedPolynomialCommitment, ipa_pc::*};
 pub use primitives::merkle_tree::tweedle_dee::TWEEDLE_DEE_MHT_POSEIDON_PARAMETERS as GINGER_MHT_POSEIDON_PARAMETERS;
 use primitives::{crh::*, merkle_tree::*};
 pub use proof_systems::darlin::pcd::simple_marlin::MarlinProof;
@@ -10,9 +10,8 @@ use proof_systems::darlin::{data_structures::*, *};
 // Basic algebraic types
 
 pub type FieldElement = Fr;
-pub type G1 = dee::Affine;
-pub type G2 = dum::Affine;
-pub type G2Projective = dum::Projective;
+pub type G1 = dee::DeeJacobian;
+pub type G2 = dum::DumJacobian;
 
 pub type FieldBigInteger = BigInteger256;
 pub type ScalarFieldElement = Fq;
@@ -54,21 +53,21 @@ pub type GingerMHTPath = FieldBasedMHTPath<GingerMHTParams>;
 
 // Polynomial Commitment instantiations
 pub type Digest = Blake2s;
-pub type IPAPC = InnerProductArgPC<G1, Digest>;
+pub type IPAPC = DomainExtendedPolynomialCommitment<G1, InnerProductArgPC<G1, Digest>>;
 pub type CommitterKeyG1 = CommitterKey<G1>;
 pub type CommitterKeyG2 = CommitterKey<G2>;
 
 // Coboundary Marlin instantiations
-pub type CoboundaryMarlin = marlin::Marlin<FieldElement, IPAPC, Digest>;
+pub type CoboundaryMarlin = marlin::Marlin<G1, IPAPC, Digest>;
 pub type CoboundaryMarlinProof = MarlinProof<G1, Digest>;
-pub type CoboundaryMarlinProverKey = marlin::ProverKey<FieldElement, IPAPC>;
-pub type CoboundaryMarlinVerifierKey = marlin::VerifierKey<FieldElement, IPAPC>;
+pub type CoboundaryMarlinProverKey = marlin::ProverKey<G1, IPAPC>;
+pub type CoboundaryMarlinVerifierKey = marlin::VerifierKey<G1, IPAPC>;
 
 // (Final) Darlin instantiations
 pub type Darlin<'a> = FinalDarlin<'a, G1, G2, Digest>;
 pub type DarlinProof = FinalDarlinProof<G1, G2, Digest>;
-pub type DarlinProverKey = FinalDarlinProverKey<FieldElement, IPAPC>;
-pub type DarlinVerifierKey = FinalDarlinVerifierKey<FieldElement, IPAPC>;
+pub type DarlinProverKey = FinalDarlinProverKey<G1, IPAPC>;
+pub type DarlinVerifierKey = FinalDarlinVerifierKey<G1, IPAPC>;
 
 // Others
 pub type Error = Box<dyn std::error::Error>;
