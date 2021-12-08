@@ -501,7 +501,7 @@ dependencies = [
 [[package]]
 name = "r1cs-std"
 version = "0.3.0"
-source = "git+https://github.com/HorizenOfficial/ginger-lib?branch=refactor_ginger_dev#bc7c216da8641de651837bb30c385cfd3e5dc011"
+source = "git+https://github.com/HorizenOfficial/ginger-lib?branch=refactor_ginger_dev#7ef8626b749a96eeb7c8cb817e94045bc0e4b0f9"
 dependencies = [
  "algebra",
  "derivative",
