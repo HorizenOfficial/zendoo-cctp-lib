@@ -1,7 +1,6 @@
 use crate::type_mapping::{Error, FieldElement, GingerMHT};
 use crate::utils::commitment_tree::{add_leaf, hash_vec, new_mt};
 use primitives::FieldBasedMerkleTree;
-use std::borrow::BorrowMut;
 
 // Tunable parameters
 pub const CSW_MT_HEIGHT: usize = 12;
@@ -32,7 +31,7 @@ impl SidechainTreeCeased {
 
     // Gets commitment of the Ceased Sidechain Withdrawals tree
     pub fn get_csw_commitment(&mut self) -> Option<FieldElement> {
-        match self.csw_mt.borrow_mut().finalize() {
+        match self.csw_mt.finalize() {
             Ok(finalized_tree) => finalized_tree.root(),
             Err(_) => None,
         }

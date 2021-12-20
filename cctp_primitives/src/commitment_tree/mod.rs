@@ -274,16 +274,35 @@ impl CommitmentTree {
         }
     }
 
-    // Gets a proof of inclusion of a sidechain with specified ID into a current CommitmentTree
+    // Gets merkle path to the leaf of the Forward Transfers subtree of a specified SidechainTreeAlive
+    // Returns None if SidechainTreeAlive with a specified ID doesn't exist in a current CommitmentTree
+    //              if leaf_index is out of range
+    pub fn get_fwt_merkle_path(&mut self, sc_id: &FieldElement, leaf_index: usize) -> Option<GingerMHTPath> {
+        self.scta_get_subtree_leaf_merkle_path(sc_id, SidechainAliveSubtreeType::FWT, leaf_index)
+    }
+
+    // Gets merkle path to the leaf of the Backward Transfer Requests subtree of a specified SidechainTreeAlive
+    // Returns None if SidechainTreeAlive with a specified ID doesn't exist in a current CommitmentTree
+    //              if leaf_index is out of range
+    pub fn get_bwtr_merkle_path(&mut self, sc_id: &FieldElement, leaf_index: usize) -> Option<GingerMHTPath> {
+        self.scta_get_subtree_leaf_merkle_path(sc_id, SidechainAliveSubtreeType::BWTR, leaf_index)
+    }
+
+    // Gets merkle path to the leaf of the Certificates subtree of a specified SidechainTreeAlive
+    // Returns None if SidechainTreeAlive with a specified ID doesn't exist in a current CommitmentTree
+    //              if leaf_index is out of range
+    pub fn get_cert_merkle_path(&mut self, sc_id: &FieldElement, leaf_index: usize) -> Option<GingerMHTPath> {
+        self.scta_get_subtree_leaf_merkle_path(sc_id, SidechainAliveSubtreeType::CERT, leaf_index)
+    }
+
+    // Gets merkle path to the sc_commitment with specified ID into a current CommitmentTree
     // Returns None if sidechain with a specified ID is absent in a current CommitmentTree,
     //              if get_commitments_tree or get_merkle_path returned None
-    pub fn get_sc_existence_proof(&mut self, sc_id: &FieldElement) -> Option<ScExistenceProof> {
+    pub fn get_sc_commitment_merkle_path(&mut self, sc_id: &FieldElement) -> Option<GingerMHTPath> {
         if let Some(index) = self.sc_id_to_index(sc_id) {
             if let Some(tree) = self.get_commitments_tree() {
                 match tree.finalize() {
-                    Ok(finalized_tree) => Some(ScExistenceProof::create(
-                        finalized_tree.get_merkle_path(index)?,
-                    )),
+                    Ok(finalized_tree) => finalized_tree.get_merkle_path(index),
                     Err(_) => None,
                 }
             } else {
@@ -292,6 +311,13 @@ impl CommitmentTree {
         } else {
             None
         }
+    }
+
+    // Gets a proof of inclusion of a sidechain with specified ID into a current CommitmentTree
+    // Returns None if sidechain with a specified ID is absent in a current CommitmentTree,
+    //              if get_commitments_tree or get_merkle_path returned None
+    pub fn get_sc_existence_proof(&mut self, sc_id: &FieldElement) -> Option<ScExistenceProof> {
+        self.get_sc_commitment_merkle_path(sc_id).map(|merkle_path| ScExistenceProof::create(merkle_path))
     }
 
     // Gets a proof of non-inclusion of a sidechain with specified ID into a current CommitmentTree
@@ -567,6 +593,36 @@ impl CommitmentTree {
         }
     }
 
+    // Gets merkle path to the leaf of a subtree of a specified type in a specified SidechainTreeAlive
+    // Returns None if get_sctc couldn't get SidechainTreeCeased with a specified ID
+    fn scta_get_subtree_leaf_merkle_path(
+        &mut self,
+        sc_id: &FieldElement,
+        subtree_type: SidechainAliveSubtreeType,
+        leaf_index: usize
+    ) -> Option<GingerMHTPath> {
+        if let Some(sc_tree) = self.get_scta_mut(sc_id) {
+            Some(match subtree_type {
+                SidechainAliveSubtreeType::FWT => match sc_tree.get_fwt_merkle_path(leaf_index) {
+                    Some(v) => v,
+                    None => return None,
+                },
+                SidechainAliveSubtreeType::BWTR => match sc_tree.get_bwtr_merkle_path(leaf_index) {
+                    Some(v) => v,
+                    None => return None,
+                },
+                SidechainAliveSubtreeType::CERT => match sc_tree.get_cert_merkle_path(leaf_index) {
+                    Some(v) => v,
+                    None => return None,
+                },
+                SidechainAliveSubtreeType::SCC => return None, // no merkle path for SCC exists
+            })
+        } else {
+            None
+        }
+    }
+
+
     // Gets commitment i.e. root of a subtree of a specified type in a specified SidechainTreeAlive
     // Returns None if get_sctc couldn't get SidechainTreeCeased with a specified ID
     fn scta_get_subtree_commitment(
@@ -787,6 +843,7 @@ mod test {
     use crate::utils::{
         commitment_tree::{rand_fe, rand_fe_vec, rand_vec},
         data_structures::{BackwardTransfer, BitVectorElementsConfig},
+        mht,
     };
     use algebra::{test_canonical_serialize_deserialize, Field};
     use rand::Rng;
@@ -818,6 +875,9 @@ mod test {
         assert_eq!(cmt.get_bwtr_commitment(sc_ids[1]), None);
         assert_eq!(cmt.get_cert_commitment(sc_ids[2]), None);
         assert_eq!(cmt.get_csw_commitment(sc_ids[3]), None);
+
+        // Merkle path to unknown SC Commitment must be absent
+        assert_eq!(cmt.get_sc_commitment_merkle_path(sc_ids[0]), None);
 
         // Set values in corresponding subtrees with transparent creation of the SCTs with specified IDs
         assert!(cmt.add_fwt_leaf(sc_ids[0], &fe[1]));
@@ -895,6 +955,35 @@ mod test {
             &existence_proof.unwrap(),
             cmt.get_commitment().as_ref().unwrap()
         ));
+
+        // Verify merkle path to sc commitment
+        let commitment = cmt.get_commitment().unwrap();
+        sc_ids
+            .clone()
+            .into_iter()
+            .for_each(|sc_id| {
+                let sc_commitment = cmt.get_sc_commitment(sc_id).unwrap();
+                let sc_commitment_merkle_path = cmt.get_sc_commitment_merkle_path(sc_id).unwrap();
+                assert!(mht::verify_ginger_merkle_path_without_length_check(&sc_commitment_merkle_path, &sc_commitment, &commitment));
+            });
+
+        // Verify merkle path to FT leaf
+        assert!(mht::verify_ginger_merkle_path_without_length_check(
+            &cmt.get_fwt_merkle_path(sc_ids[0], 0).unwrap(),
+            &fe[1],
+            &cmt.get_fwt_commitment(sc_ids[0]).unwrap()));
+
+        // Verify merkle path to BWTR leaf
+        assert!(mht::verify_ginger_merkle_path_without_length_check(
+            &cmt.get_bwtr_merkle_path(sc_ids[1], 0).unwrap(),
+            &fe[2],
+            &cmt.get_bwtr_commitment(sc_ids[1]).unwrap()));
+
+        // Verify merkle path to Cert leaf
+        assert!(mht::verify_ginger_merkle_path_without_length_check(
+            &cmt.get_cert_merkle_path(sc_ids[2], 0).unwrap(),
+            &fe[3],
+            &cmt.get_cert_commitment(sc_ids[2]).unwrap()));
     }
 
     #[test]
