@@ -1,15 +1,10 @@
-use crate::type_mapping::*;
-
-use algebra::{serialize::*, AffineCurve};
-
-use poly_commit::ipa_pc::{CommitterKey, InnerProductArgPC};
-use poly_commit::PolynomialCommitment;
-
 use crate::proving_system::error::ProvingSystemError;
-
+use crate::type_mapping::*;
+use algebra::{serialize::*, AffineCurve};
 use lazy_static::lazy_static;
-
-use std::sync::{RwLock, RwLockReadGuard};
+use poly_commit::ipa_pc::{InnerProductArgPC, UniversalParams};
+use poly_commit::{PCUniversalParams, PolynomialCommitment};
+use std::sync::RwLock;
 
 // We need a mutable static variable to store the committer key.
 // To avoid the usage of unsafe code blocks (required when mutating a static variable)
@@ -18,32 +13,46 @@ use std::sync::{RwLock, RwLockReadGuard};
 // additionally wrapped the committer key in a RwLock.
 
 lazy_static! {
-    pub static ref G1_COMMITTER_KEY: RwLock<Option<CommitterKeyG1>> = RwLock::new(None);
+    pub static ref G1_UNIVERSAL_PARAMS: RwLock<Option<UniversalParams<G1>>> = RwLock::new(None);
 }
 
 lazy_static! {
-    pub static ref G2_COMMITTER_KEY: RwLock<Option<CommitterKeyG2>> = RwLock::new(None);
+    pub static ref G2_UNIVERSAL_PARAMS: RwLock<Option<UniversalParams<G2>>> = RwLock::new(None);
 }
 
-/// Generate G1CommitterKey and store it in memory.
+/// Generate `G1_UNIVERSAL_PARAMETERS` and store it in memory.
+/// This function should be called exactly once during program execution and before any call to
+/// `get_g1_committer_key()`. Further calls leave `G1_UNIVERSAL_PARAMETERS` unchanged and return an
+/// error instead.
 /// The parameter `max_degree` is required in order to derive a unique hash for the key itself.
-pub fn load_g1_committer_key(
-    max_degree: usize,
-    supported_degree: usize,
-) -> Result<(), SerializationError> {
-    match load_generators::<G1>(max_degree, supported_degree) {
+pub fn load_g1_universal_params(max_degree: usize) -> Result<(), SerializationError> {
+    {
+        let pp_g1_guard = G1_UNIVERSAL_PARAMS.read().map_err(|_| {
+            SerializationError::IoError(std::io::Error::new(
+                std::io::ErrorKind::Other,
+                "Failed to acquire lock for G1_UNIVERSAL_PARAMS".to_owned(),
+            ))
+        })?;
+        if pp_g1_guard.is_some() {
+            return Err(SerializationError::IoError(std::io::Error::new(
+                std::io::ErrorKind::AlreadyExists,
+                "G1_UNIVERSAL_PARAMS has already been generated",
+            )));
+        }
+    }
+    match load_universal_params::<G1>(max_degree) {
         // Generation/Loading successfull, assign the key to the lazy_static
-        Ok(loaded_key) => {
-            G1_COMMITTER_KEY
+        Ok(loaded_params) => {
+            G1_UNIVERSAL_PARAMS
                 .write()
                 .as_mut()
                 .map_err(|_| {
                     SerializationError::IoError(std::io::Error::new(
                         std::io::ErrorKind::Other,
-                        "G1_COMMITTER_KEY write failed",
+                        "G1_UNIVERSAL_PARAMS write failed",
                     ))
                 })?
-                .replace(loaded_key);
+                .replace(loaded_params);
             Ok(())
         }
         // Error while generating/reading file/writing file
@@ -51,25 +60,39 @@ pub fn load_g1_committer_key(
     }
 }
 
-/// Generate G2CommitterKey and store it in memory.
+/// Generate `G1_UNIVERSAL_PARAMETERS` and store it in memory.
+/// This function should be called exactly once during program execution and before any call to
+/// `get_g1_committer_key()`. Further calls leave `G1_UNIVERSAL_PARAMETERS` unchanged and return an
+/// error instead.
 /// The parameter `max_degree` is required in order to derive a unique hash for the key itself.
-pub fn load_g2_committer_key(
-    max_degree: usize,
-    supported_degree: usize,
-) -> Result<(), SerializationError> {
-    match load_generators::<G2>(max_degree, supported_degree) {
+pub fn load_g2_universal_params(max_degree: usize) -> Result<(), SerializationError> {
+    {
+        let pp_g2_guard = G2_UNIVERSAL_PARAMS.read().map_err(|_| {
+            SerializationError::IoError(std::io::Error::new(
+                std::io::ErrorKind::Other,
+                "Failed to acquire lock for G2_UNIVERSAL_PARAMS".to_owned(),
+            ))
+        })?;
+        if pp_g2_guard.is_some() {
+            return Err(SerializationError::IoError(std::io::Error::new(
+                std::io::ErrorKind::AlreadyExists,
+                "G2_UNIVERSAL_PARAMS has already been generated",
+            )));
+        }
+    }
+    match load_universal_params::<G2>(max_degree) {
         // Generation/Loading successful, assign the key to the lazy_static
-        Ok(loaded_key) => {
-            G2_COMMITTER_KEY
+        Ok(loaded_params) => {
+            G2_UNIVERSAL_PARAMS
                 .write()
                 .as_mut()
                 .map_err(|_| {
                     SerializationError::IoError(std::io::Error::new(
                         std::io::ErrorKind::Other,
-                        "G2_COMMITTER_KEY write failed",
+                        "G2_UNIVERSAL_PARAMS write failed",
                     ))
                 })?
-                .replace(loaded_key);
+                .replace(loaded_params);
             Ok(())
         }
         // Error while generating/reading file/writing file
@@ -77,45 +100,117 @@ pub fn load_g2_committer_key(
     }
 }
 
-/// Return a RwLockGuard containing the G1CommitterKey, if G1CommitterKey has been initialized,
-/// otherwise return Error.
-pub fn get_g1_committer_key<'a>(
-) -> Result<RwLockReadGuard<'a, Option<CommitterKeyG1>>, ProvingSystemError> {
-    let ck_g1_guard = G1_COMMITTER_KEY.read().map_err(|_| {
-        ProvingSystemError::Other("Failed to acquire lock for G1 Committer Key".to_owned())
+/// If `G1_UNIVERSAL_PARAMETERS` has been initialized, return `CommitterKeyG1`, otherwise return
+/// Error.
+/// If `supported_degree.is_some()`, then `CommitterKeyG1` is trimmed to the specified size.
+pub fn get_g1_committer_key(
+    supported_degree: Option<usize>,
+) -> Result<CommitterKeyG1, ProvingSystemError> {
+    let pp_g1_guard = G1_UNIVERSAL_PARAMS.read().map_err(|_| {
+        ProvingSystemError::Other("Failed to acquire lock for G1_UNIVERSAL_PARAMS".to_owned())
     })?;
-    if ck_g1_guard.is_some() {
-        Ok(ck_g1_guard)
+
+    if pp_g1_guard.is_some() {
+        let supported_degree =
+            supported_degree.unwrap_or_else(|| pp_g1_guard.as_ref().unwrap().max_degree());
+        let (ck, _) =
+            InnerProductArgPC::<_, Digest>::trim(&pp_g1_guard.as_ref().unwrap(), supported_degree)
+                .map_err(|err| ProvingSystemError::Other(err.to_string()))?;
+        Ok(ck)
     } else {
         Err(ProvingSystemError::CommitterKeyNotInitialized)
     }
 }
 
-/// Return a RwLockGuard containing the G2CommitterKey, if G2CommitterKey has been initialized,
-/// otherwise return Error.
-pub fn get_g2_committer_key<'a>(
-) -> Result<RwLockReadGuard<'a, Option<CommitterKeyG2>>, ProvingSystemError> {
-    let ck_g2_guard = G2_COMMITTER_KEY.read().map_err(|_| {
-        ProvingSystemError::Other("Failed to acquire lock for G2 Committer Key".to_owned())
+/// If `G2_UNIVERSAL_PARAMETERS` has been initialized, return `CommitterKeyG2`, otherwise return
+/// Error.
+/// If `supported_degree.is_some()`, then `CommitterKeyG2` is trimmed to the specified size.
+pub fn get_g2_committer_key(
+    supported_degree: Option<usize>,
+) -> Result<CommitterKeyG2, ProvingSystemError> {
+    let pp_g2_guard = G2_UNIVERSAL_PARAMS.read().map_err(|_| {
+        ProvingSystemError::Other("Failed to acquire lock for G2_UNIVERSAL_PARAMS".to_owned())
     })?;
-    if ck_g2_guard.is_some() {
-        Ok(ck_g2_guard)
+
+    if pp_g2_guard.is_some() {
+        let supported_degree =
+            supported_degree.unwrap_or_else(|| pp_g2_guard.as_ref().unwrap().max_degree());
+        let (ck, _) =
+            InnerProductArgPC::<_, Digest>::trim(&pp_g2_guard.as_ref().unwrap(), supported_degree)
+                .map_err(|err| ProvingSystemError::Other(err.to_string()))?;
+        Ok(ck)
     } else {
         Err(ProvingSystemError::CommitterKeyNotInitialized)
     }
 }
 
-fn load_generators<G: AffineCurve>(
+fn load_universal_params<G: AffineCurve>(
     max_degree: usize,
-    supported_degree: usize,
-) -> Result<CommitterKey<G>, SerializationError> {
+) -> Result<UniversalParams<G>, SerializationError> {
     let pp = InnerProductArgPC::<G, Digest>::setup(max_degree)
         .map_err(|_| SerializationError::InvalidData)?;
-    let (ck, _) = InnerProductArgPC::<G, Digest>::trim(&pp, supported_degree)
-        .map_err(|_| SerializationError::InvalidData)?;
 
-    // Return the read/generated committer key
-    Ok(ck)
+    // Return the read/generated universal parameters
+    Ok(pp)
+}
+
+#[cfg(test)]
+pub(crate) fn max_pow_for_testing() -> usize {
+    return 10;
+}
+
+#[cfg(test)]
+/// In normal usage, `load_g{1,2}_universal_params()` should be called exactly once during program
+/// execution, because further calls to these functions generate an error.
+/// This pattern of usage however is not ideal in unit tests, because:
+/// - the unit test containing the call to `load_g{1,2}_universal_params()` would need to be run
+///   before the other unit tests using the committer key. This would generate an unwanted ordering
+///   constraint in unit tests execution and interfere with parallel test execution.
+/// - the unit tests using the committer key would pass when run in batch, but fail when run
+///   individually.
+/// To overcome this difficulty, the functions `set_g{1,2}_universal_params()` are provided. They
+/// are simple wrappers around `load_g{1,2}_universal_params()`, fixing a uniform value for
+/// `max_degree` and catching (and discarding) the error generated by additional calls to
+/// `load_g{1,2}_universal_params()`.
+///
+/// Every unit test which needs to access committer keys should call `set_g{1,2}_universal_params()`
+/// in advance. This solves the aforementioned problems, by ensuring that the committer key is
+/// initialized before being accessed.
+pub(crate) fn set_g1_universal_params_for_testing() {
+    let max_degree = 1 << max_pow_for_testing();
+    let result_g1 = load_g1_universal_params(max_degree);
+    match result_g1 {
+        Ok(_) => {
+            // Do nothing.
+        }
+        Err(SerializationError::IoError(err))
+            if err.kind() == std::io::ErrorKind::AlreadyExists =>
+        {
+            // The universal parameters have already been loaded. Do nothing.
+        }
+        _ => {
+            panic!("Failed to set G1_UNIVERSAL_PARAMS")
+        }
+    }
+}
+
+#[cfg(test)]
+pub(crate) fn set_g2_universal_params_for_testing() {
+    let max_degree = 1 << max_pow_for_testing();
+    let result_g2 = load_g2_universal_params(max_degree);
+    match result_g2 {
+        Ok(_) => {
+            // Do nothing.
+        }
+        Err(SerializationError::IoError(err))
+            if err.kind() == std::io::ErrorKind::AlreadyExists =>
+        {
+            // The universal parameters have already been loaded. Do nothing.
+        }
+        _ => {
+            panic!("Failed to set G2_UNIVERSAL_PARAMS")
+        }
+    }
 }
 
 #[cfg(test)]
@@ -129,17 +224,17 @@ mod test {
     #[test]
     #[serial]
     fn check_load_g1_committer_key() {
-        let max_degree = 1 << 10;
-        let supported_degree = 1 << 9;
+        let max_degree = 1 << max_pow_for_testing();
+        let supported_degree = 1 << (max_pow_for_testing() - 1);
 
         let pp = InnerProductArgPC::<G1, Digest>::setup(max_degree).unwrap();
         let (pk, _) = InnerProductArgPC::<G1, Digest>::trim(&pp, supported_degree).unwrap();
 
-        load_g1_committer_key(max_degree, supported_degree).unwrap();
+        set_g1_universal_params_for_testing();
 
-        let ck = get_g1_committer_key().unwrap();
+        let ck = get_g1_committer_key(Some(supported_degree));
 
-        assert!(ck.is_some());
+        assert!(ck.is_ok());
 
         let ck = ck.as_ref().unwrap();
 
@@ -154,17 +249,17 @@ mod test {
     #[test]
     #[serial]
     fn check_load_g2_committer_key() {
-        let max_degree = 1 << 10;
-        let supported_degree = 1 << 9;
+        let max_degree = 1 << max_pow_for_testing();
+        let supported_degree = 1 << (max_pow_for_testing() - 1);
 
         let pp = InnerProductArgPC::<G2, Digest>::setup(max_degree).unwrap();
         let (pk, _) = InnerProductArgPC::<G2, Digest>::trim(&pp, supported_degree).unwrap();
 
-        load_g2_committer_key(max_degree, supported_degree).unwrap();
+        load_g2_universal_params(max_degree).unwrap();
 
-        let ck = get_g2_committer_key().unwrap();
+        let ck = get_g2_committer_key(Some(supported_degree));
 
-        assert!(ck.is_some());
+        assert!(ck.is_ok());
 
         let ck = ck.as_ref().unwrap();
 

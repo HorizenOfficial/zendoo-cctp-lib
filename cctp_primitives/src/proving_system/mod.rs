@@ -1,7 +1,7 @@
 use crate::{
     proving_system::{
         error::ProvingSystemError,
-        init::{load_g1_committer_key, load_g2_committer_key},
+        init::{load_g1_universal_params, load_g2_universal_params},
     },
     type_mapping::{
         CoboundaryMarlinProof, CoboundaryMarlinProverKey, CoboundaryMarlinVerifierKey, DarlinProof,
@@ -485,19 +485,15 @@ impl SemanticallyValid for ZendooProverKey {
 
 /// Utility function: initialize and save to specified paths the G1CommitterKey
 /// and G2CommitterKey (iff ProvingSystem::Darlin).
-pub fn init_dlog_keys(
-    proving_system: ProvingSystem,
-    max_segment_size: usize,
-    supported_segment_size: usize,
-) -> Result<(), Error> {
+pub fn init_dlog_keys(proving_system: ProvingSystem, max_segment_size: usize) -> Result<(), Error> {
     if matches!(proving_system, ProvingSystem::Undefined) {
         return Err(ProvingSystemError::UndefinedProvingSystem)?;
     }
 
-    load_g1_committer_key(max_segment_size - 1, supported_segment_size - 1)?;
+    load_g1_universal_params(max_segment_size - 1)?;
 
     if matches!(proving_system, ProvingSystem::Darlin) {
-        load_g2_committer_key(max_segment_size - 1, supported_segment_size - 1)?
+        load_g2_universal_params(max_segment_size - 1)?
     }
 
     Ok(())
