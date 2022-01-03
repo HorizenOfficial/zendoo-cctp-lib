@@ -113,6 +113,9 @@ pub fn get_g1_committer_key(
     if pp_g1_guard.is_some() {
         let supported_degree =
             supported_degree.unwrap_or_else(|| pp_g1_guard.as_ref().unwrap().max_degree());
+        // TODO: Everytime the committer key is trimmed, a copy of the generators is performed.
+        //   Currently the generators in the CommitterKey struct are stored as a Vec. Maybe we can
+        //   do better by defining them as a slice with some lifetime?
         let (ck, _) =
             InnerProductArgPC::<_, Digest>::trim(&pp_g1_guard.as_ref().unwrap(), supported_degree)
                 .map_err(|err| ProvingSystemError::Other(err.to_string()))?;
@@ -135,6 +138,9 @@ pub fn get_g2_committer_key(
     if pp_g2_guard.is_some() {
         let supported_degree =
             supported_degree.unwrap_or_else(|| pp_g2_guard.as_ref().unwrap().max_degree());
+        // TODO: Everytime the committer key is trimmed, a copy of the generators is performed.
+        //   Currently the generators in the CommitterKey struct are stored as a Vec. Maybe we can
+        //   do better by defining them as a slice with some lifetime?
         let (ck, _) =
             InnerProductArgPC::<_, Digest>::trim(&pp_g2_guard.as_ref().unwrap(), supported_degree)
                 .map_err(|err| ProvingSystemError::Other(err.to_string()))?;
