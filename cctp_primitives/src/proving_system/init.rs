@@ -60,9 +60,9 @@ pub fn load_g1_committer_key(max_degree: usize) -> Result<(), SerializationError
     }
 }
 
-/// Generate `G1_UNIVERSAL_PARAMETERS` and store it in memory.
+/// Generate `G2_UNIVERSAL_PARAMETERS` and store it in memory.
 /// This function should be called exactly once during program execution and before any call to
-/// `get_g1_committer_key()`. Further calls leave `G1_UNIVERSAL_PARAMETERS` unchanged and return an
+/// `get_g2_committer_key()`. Further calls leave `G2_UNIVERSAL_PARAMETERS` unchanged and return an
 /// error instead.
 /// The parameter `max_degree` is required in order to derive a unique hash for the key itself.
 pub fn load_g2_committer_key(max_degree: usize) -> Result<(), SerializationError> {
