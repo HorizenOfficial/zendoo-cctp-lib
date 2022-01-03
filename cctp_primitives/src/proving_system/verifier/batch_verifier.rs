@@ -106,8 +106,8 @@ impl ZendooBatchVerifier {
         rng: &mut R,
     ) -> Result<bool, ProvingSystemError> {
         // Retrieve committer keys
-        let g1_ck = get_g1_committer_key()?;
-        let g2_ck = get_g2_committer_key()?;
+        let g1_ck = get_g1_committer_key(None)?;
+        let g2_ck = get_g2_committer_key(None)?;
 
         if ids.len() == 0 {
             Err(ProvingSystemError::NoProofsToVerify)
@@ -121,12 +121,7 @@ impl ZendooBatchVerifier {
                 .collect::<Result<Vec<_>, ProvingSystemError>>()?;
 
             // Perform batch verifications of the requested proofs
-            let res = Self::batch_verify_proofs(
-                to_verify,
-                g1_ck.as_ref().unwrap(),
-                g2_ck.as_ref().unwrap(),
-                rng,
-            );
+            let res = Self::batch_verify_proofs(to_verify, &g1_ck, &g2_ck, rng);
 
             // Return the id of the first failing proof if it's possible to determine it
             if res.is_err() {
@@ -169,7 +164,8 @@ mod test {
             error::ProvingSystemError,
             init::{
                 get_g1_committer_key, get_g2_committer_key, load_g1_committer_key,
-                load_g2_committer_key,
+                load_g2_committer_key, COMMITTER_KEY_MAX_DEGREE_FOR_TESTING, G1_UNIVERSAL_PARAMS,
+                G2_UNIVERSAL_PARAMS,
             },
             verifier::{
                 ceased_sidechain_withdrawal::CSWProofUserInputs,
@@ -204,41 +200,26 @@ mod test {
     }
 
     fn get_params() -> (UniversalParams<G1>, UniversalParams<G2>, usize, usize) {
-        let max_pow = 7usize;
-        let segment_size = 1 << max_pow;
+        let segment_size_pow = 7usize;
+        let segment_size = 1 << segment_size_pow;
 
-        // Init committer keys
-        let committer_key_g1 = {
-            load_g1_committer_key(segment_size - 1, segment_size - 1).unwrap();
-            get_g1_committer_key().unwrap()
-        }
-        .as_ref()
-        .unwrap()
-        .clone();
+        let _result_g1 = load_g1_committer_key(COMMITTER_KEY_MAX_DEGREE_FOR_TESTING);
+        let _result_g2 = load_g2_committer_key(COMMITTER_KEY_MAX_DEGREE_FOR_TESTING);
 
-        let params_g1 = UniversalParams::<G1> {
-            hash: committer_key_g1.hash.clone(),
-            comm_key: committer_key_g1.comm_key.clone(),
-            h: committer_key_g1.h.clone(),
-            s: committer_key_g1.s.clone(),
-        };
+        let params_g1 = G1_UNIVERSAL_PARAMS
+            .read()
+            .unwrap()
+            .as_ref()
+            .unwrap()
+            .clone();
+        let params_g2 = G2_UNIVERSAL_PARAMS
+            .read()
+            .unwrap()
+            .as_ref()
+            .unwrap()
+            .clone();
 
-        let committer_key_g2 = {
-            load_g2_committer_key(segment_size - 1, segment_size - 1).unwrap();
-            get_g2_committer_key().unwrap()
-        }
-        .as_ref()
-        .unwrap()
-        .clone();
-
-        let params_g2 = UniversalParams::<G2> {
-            hash: committer_key_g2.hash.clone(),
-            comm_key: committer_key_g2.comm_key.clone(),
-            h: committer_key_g2.h.clone(),
-            s: committer_key_g2.s.clone(),
-        };
-
-        (params_g1, params_g2, max_pow, segment_size)
+        (params_g1, params_g2, segment_size_pow, segment_size)
     }
 
     #[test]
@@ -495,8 +476,8 @@ mod test {
             rng: &mut R,
         ) -> Result<bool, ProvingSystemError> {
             // Retrieve committer keys
-            let g1_ck = get_g1_committer_key()?;
-            let g2_ck = get_g2_committer_key()?;
+            let g1_ck = get_g1_committer_key(None)?;
+            let g2_ck = get_g2_committer_key(None)?;
 
             if ids.len() == 0 {
                 Err(ProvingSystemError::NoProofsToVerify)
@@ -510,12 +491,7 @@ mod test {
                     .collect::<Result<Vec<_>, ProvingSystemError>>()?;
 
                 // Perform batch verifications of the requested proofs
-                let res = Self::batch_verify_proofs(
-                    to_verify,
-                    g1_ck.as_ref().unwrap(),
-                    g2_ck.as_ref().unwrap(),
-                    rng,
-                );
+                let res = Self::batch_verify_proofs(to_verify, &g1_ck, &g2_ck, rng);
 
                 // Return the id of the first failing proof if it's possible to determine it
                 if res.is_err() {
