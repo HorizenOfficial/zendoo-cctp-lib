@@ -163,8 +163,9 @@ mod test {
         proving_system::{
             error::ProvingSystemError,
             init::{
-                get_g1_committer_key, get_g2_committer_key, set_g1_universal_params_for_testing,
-                set_g2_universal_params_for_testing, G1_UNIVERSAL_PARAMS, G2_UNIVERSAL_PARAMS,
+                get_g1_committer_key, get_g2_committer_key, load_g1_committer_key,
+                load_g2_committer_key, COMMITTER_KEY_MAX_DEGREE_FOR_TESTING, G1_UNIVERSAL_PARAMS,
+                G2_UNIVERSAL_PARAMS,
             },
             verifier::{
                 ceased_sidechain_withdrawal::CSWProofUserInputs,
@@ -199,11 +200,11 @@ mod test {
     }
 
     fn get_params() -> (UniversalParams<G1>, UniversalParams<G2>, usize, usize) {
-        let max_pow = 7usize;
-        let segment_size = 1 << max_pow;
+        let segment_size_pow = 7usize;
+        let segment_size = 1 << segment_size_pow;
 
-        set_g1_universal_params_for_testing();
-        set_g2_universal_params_for_testing();
+        let _result_g1 = load_g1_committer_key(COMMITTER_KEY_MAX_DEGREE_FOR_TESTING);
+        let _result_g2 = load_g2_committer_key(COMMITTER_KEY_MAX_DEGREE_FOR_TESTING);
 
         let params_g1 = G1_UNIVERSAL_PARAMS
             .read()
@@ -218,7 +219,7 @@ mod test {
             .unwrap()
             .clone();
 
-        (params_g1, params_g2, max_pow, segment_size)
+        (params_g1, params_g2, segment_size_pow, segment_size)
     }
 
     #[test]
