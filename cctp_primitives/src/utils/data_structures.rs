@@ -22,6 +22,7 @@ impl Default for BitVectorElementsConfig {
 pub struct BackwardTransfer {
     pub pk_dest: [u8; MC_PK_SIZE],
     pub amount: u64,
+    pub is_phantom: bool
 }
 
 impl Default for BackwardTransfer {
@@ -29,6 +30,7 @@ impl Default for BackwardTransfer {
         Self {
             pk_dest: [0u8; MC_PK_SIZE],
             amount: 0u64,
+            is_phantom: true
         }
     }
 }
@@ -51,8 +53,9 @@ impl CanonicalDeserialize for BackwardTransfer {
             let byte: u8 = CanonicalDeserialize::deserialize(&mut reader)?;
             pk_dest[i] = byte;
         }
-        let amount: u64 = CanonicalDeserialize::deserialize(reader)?;
-        Ok(Self { pk_dest, amount })
+        let amount: u64 = CanonicalDeserialize::deserialize(&mut reader)?;
+        let is_phantom: bool = CanonicalDeserialize::deserialize(reader)?;
+        Ok(Self { pk_dest, amount, is_phantom })
     }
 }
 
