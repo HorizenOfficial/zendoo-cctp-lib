@@ -174,9 +174,9 @@ impl SidechainTreeAlive {
 mod test {
     use crate::commitment_tree::sidechain_tree_alive::SidechainTreeAlive;
     use crate::type_mapping::FieldElement;
+    use crate::utils::mht;
     use algebra::Field;
     use primitives::FieldBasedMerkleTree;
-    use crate::utils::mht;
 
     #[test]
     fn sidechain_tree_tests() {
@@ -236,9 +236,21 @@ mod test {
         assert!(cert_merkle_path_opt.is_some());
 
         // Verify merkle path
-        assert!(mht::verify_ginger_merkle_path_without_length_check(&fwt_merkle_path_opt.unwrap(), &fe, &updated_fwt.unwrap()));
-        assert!(mht::verify_ginger_merkle_path_without_length_check(&bwtr_merkle_path_opt.unwrap(), &fe, &updated_bwtr.unwrap()));
-        assert!(mht::verify_ginger_merkle_path_without_length_check(&cert_merkle_path_opt.unwrap(), &fe, &updated_cert.unwrap()));
+        assert!(mht::verify_ginger_merkle_path_without_length_check(
+            &fwt_merkle_path_opt.unwrap(),
+            &fe,
+            &updated_fwt.unwrap()
+        ));
+        assert!(mht::verify_ginger_merkle_path_without_length_check(
+            &bwtr_merkle_path_opt.unwrap(),
+            &fe,
+            &updated_bwtr.unwrap()
+        ));
+        assert!(mht::verify_ginger_merkle_path_without_length_check(
+            &cert_merkle_path_opt.unwrap(),
+            &fe,
+            &updated_cert.unwrap()
+        ));
 
         // Path to empty leaf should exist
         assert!(sct.get_fwt_merkle_path(1).is_some());
