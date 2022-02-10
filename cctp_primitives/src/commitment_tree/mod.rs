@@ -277,21 +277,33 @@ impl CommitmentTree {
     // Gets merkle path to the leaf of the Forward Transfers subtree of a specified SidechainTreeAlive
     // Returns None if SidechainTreeAlive with a specified ID doesn't exist in a current CommitmentTree
     //              if leaf_index is out of range
-    pub fn get_fwt_merkle_path(&mut self, sc_id: &FieldElement, leaf_index: usize) -> Option<GingerMHTPath> {
+    pub fn get_fwt_merkle_path(
+        &mut self,
+        sc_id: &FieldElement,
+        leaf_index: usize,
+    ) -> Option<GingerMHTPath> {
         self.scta_get_subtree_leaf_merkle_path(sc_id, SidechainAliveSubtreeType::FWT, leaf_index)
     }
 
     // Gets merkle path to the leaf of the Backward Transfer Requests subtree of a specified SidechainTreeAlive
     // Returns None if SidechainTreeAlive with a specified ID doesn't exist in a current CommitmentTree
     //              if leaf_index is out of range
-    pub fn get_bwtr_merkle_path(&mut self, sc_id: &FieldElement, leaf_index: usize) -> Option<GingerMHTPath> {
+    pub fn get_bwtr_merkle_path(
+        &mut self,
+        sc_id: &FieldElement,
+        leaf_index: usize,
+    ) -> Option<GingerMHTPath> {
         self.scta_get_subtree_leaf_merkle_path(sc_id, SidechainAliveSubtreeType::BWTR, leaf_index)
     }
 
     // Gets merkle path to the leaf of the Certificates subtree of a specified SidechainTreeAlive
     // Returns None if SidechainTreeAlive with a specified ID doesn't exist in a current CommitmentTree
     //              if leaf_index is out of range
-    pub fn get_cert_merkle_path(&mut self, sc_id: &FieldElement, leaf_index: usize) -> Option<GingerMHTPath> {
+    pub fn get_cert_merkle_path(
+        &mut self,
+        sc_id: &FieldElement,
+        leaf_index: usize,
+    ) -> Option<GingerMHTPath> {
         self.scta_get_subtree_leaf_merkle_path(sc_id, SidechainAliveSubtreeType::CERT, leaf_index)
     }
 
@@ -317,7 +329,8 @@ impl CommitmentTree {
     // Returns None if sidechain with a specified ID is absent in a current CommitmentTree,
     //              if get_commitments_tree or get_merkle_path returned None
     pub fn get_sc_existence_proof(&mut self, sc_id: &FieldElement) -> Option<ScExistenceProof> {
-        self.get_sc_commitment_merkle_path(sc_id).map(|merkle_path| ScExistenceProof::create(merkle_path))
+        self.get_sc_commitment_merkle_path(sc_id)
+            .map(ScExistenceProof::create)
     }
 
     // Gets a proof of non-inclusion of a sidechain with specified ID into a current CommitmentTree
@@ -395,9 +408,9 @@ impl CommitmentTree {
                 &left.id < absent_id
                     && absent_id < &right.id
                     && left_path_status.is_ok()
-                    && left_path_status.unwrap() == true
+                    && left_path_status.unwrap()
                     && right_path_status.is_ok()
-                    && right_path_status.unwrap() == true
+                    && right_path_status.unwrap()
                     && left.mpath.leaf_index() + 1 == right.mpath.leaf_index() // the smaller and bigger IDs have adjacent positions in MT
             } else {
                 false // couldn't build sc_commitment
@@ -412,7 +425,7 @@ impl CommitmentTree {
 
                 &left.id < absent_id
                     && left_path_status.is_ok()
-                    && left_path_status.unwrap() == true
+                    && left_path_status.unwrap()
                     && (left.mpath.is_rightmost() || left.mpath.are_right_leaves_empty())
             // is a last leaf in MT or a last non-empty leaf in MT
             } else {
@@ -429,7 +442,7 @@ impl CommitmentTree {
 
                 absent_id < &right.id
                     && right_path_status.is_ok()
-                    && right_path_status.unwrap() == true
+                    && right_path_status.unwrap()
                     && right.mpath.is_leftmost() // the bigger ID is the smallest one in MT
             } else {
                 false // couldn't build sc_commitment
@@ -561,7 +574,7 @@ impl CommitmentTree {
                     }
                 };
                 // If contents of the commitment tree has been updated then it should be rebuilt, so discard its current version
-                if self.commitments_tree.is_some() && result == true {
+                if self.commitments_tree.is_some() && result {
                     self.commitments_tree = None
                 }
                 result
@@ -581,7 +594,7 @@ impl CommitmentTree {
             if let Some(sctc) = self.get_add_sctc_mut(&sc_id) {
                 let result = sctc.add_csw(leaf);
                 // If contents of the commitment tree has been updated then it should be rebuilt, so discard its current version
-                if self.commitments_tree.is_some() && result == true {
+                if self.commitments_tree.is_some() && result {
                     self.commitments_tree = None
                 }
                 result
@@ -599,7 +612,7 @@ impl CommitmentTree {
         &mut self,
         sc_id: &FieldElement,
         subtree_type: SidechainAliveSubtreeType,
-        leaf_index: usize
+        leaf_index: usize,
     ) -> Option<GingerMHTPath> {
         if let Some(sc_tree) = self.get_scta_mut(sc_id) {
             Some(match subtree_type {
@@ -621,7 +634,6 @@ impl CommitmentTree {
             None
         }
     }
-
 
     // Gets commitment i.e. root of a subtree of a specified type in a specified SidechainTreeAlive
     // Returns None if get_sctc couldn't get SidechainTreeCeased with a specified ID
@@ -812,11 +824,8 @@ impl CommitmentTree {
                 let bigger_id = sc_ids.iter().find(|(_, id)| *id > absent_id);
                 Some(
                     // Return a pair of neighbours according to a relative position of absent_id in sorted SC-IDs list
-                    if bigger_id.is_none() {
-                        // There is no bigger neighbour, so the last, i.e. the biggest existing SC-ID is the lesser neighbour
-                        (Some(copy(sc_ids[sc_ids.len() - 1])), None)
-                    } else {
-                        let right = bigger_id.unwrap().to_owned();
+                    if let Some(bigger_id) = bigger_id {
+                        let right = bigger_id.to_owned();
                         let right_index = right.0;
                         if right_index == 0 {
                             // There is no lesser neighbour, so the first i.e. the smallest existing SC-ID is the bigger neighbour
@@ -825,6 +834,9 @@ impl CommitmentTree {
                             // The lesser neighbour is the previous one
                             (Some(copy(sc_ids[right_index - 1])), Some(copy(right)))
                         }
+                    } else {
+                        // There is no bigger neighbour, so the last, i.e. the biggest existing SC-ID is the lesser neighbour
+                        (Some(copy(sc_ids[sc_ids.len() - 1])), None)
                     },
                 )
             } else {
@@ -958,32 +970,36 @@ mod test {
 
         // Verify merkle path to sc commitment
         let commitment = cmt.get_commitment().unwrap();
-        sc_ids
-            .clone()
-            .into_iter()
-            .for_each(|sc_id| {
-                let sc_commitment = cmt.get_sc_commitment(sc_id).unwrap();
-                let sc_commitment_merkle_path = cmt.get_sc_commitment_merkle_path(sc_id).unwrap();
-                assert!(mht::verify_ginger_merkle_path_without_length_check(&sc_commitment_merkle_path, &sc_commitment, &commitment));
-            });
+        sc_ids.clone().into_iter().for_each(|sc_id| {
+            let sc_commitment = cmt.get_sc_commitment(sc_id).unwrap();
+            let sc_commitment_merkle_path = cmt.get_sc_commitment_merkle_path(sc_id).unwrap();
+            assert!(mht::verify_ginger_merkle_path_without_length_check(
+                &sc_commitment_merkle_path,
+                &sc_commitment,
+                &commitment
+            ));
+        });
 
         // Verify merkle path to FT leaf
         assert!(mht::verify_ginger_merkle_path_without_length_check(
             &cmt.get_fwt_merkle_path(sc_ids[0], 0).unwrap(),
             &fe[1],
-            &cmt.get_fwt_commitment(sc_ids[0]).unwrap()));
+            &cmt.get_fwt_commitment(sc_ids[0]).unwrap()
+        ));
 
         // Verify merkle path to BWTR leaf
         assert!(mht::verify_ginger_merkle_path_without_length_check(
             &cmt.get_bwtr_merkle_path(sc_ids[1], 0).unwrap(),
             &fe[2],
-            &cmt.get_bwtr_commitment(sc_ids[1]).unwrap()));
+            &cmt.get_bwtr_commitment(sc_ids[1]).unwrap()
+        ));
 
         // Verify merkle path to Cert leaf
         assert!(mht::verify_ginger_merkle_path_without_length_check(
             &cmt.get_cert_merkle_path(sc_ids[2], 0).unwrap(),
             &fe[3],
-            &cmt.get_cert_commitment(sc_ids[2]).unwrap()));
+            &cmt.get_cert_commitment(sc_ids[2]).unwrap()
+        ));
     }
 
     #[test]
@@ -1105,11 +1121,12 @@ mod test {
         let comm2 = cmt.get_commitment();
         assert_ne!(comm1, comm2);
 
+        let default_bt_vec = vec![BackwardTransfer::default(); 10];
         assert!(cmt.add_cert(
             &rand_fe(),
             rng.gen(),
             rng.gen(),
-            Some(&vec![BackwardTransfer::default(); 10]),
+            Some(default_bt_vec.as_slice()),
             Some(rand_fe_vec(2).iter().collect()),
             &rand_fe(),
             rng.gen(),
@@ -1133,6 +1150,7 @@ mod test {
         let comm4 = cmt.get_commitment();
         assert_ne!(comm3, comm4);
 
+        let default_bv_config = vec![BitVectorElementsConfig::default(); 10];
         assert!(cmt.add_scc(
             &rand_fe(),
             rng.gen(),
@@ -1142,7 +1160,7 @@ mod test {
             rng.gen(),
             rng.gen(),
             Some(&rand_vec(10)),
-            Some(&vec![BitVectorElementsConfig::default(); 10]),
+            Some(default_bv_config.as_slice()),
             rng.gen(),
             rng.gen(),
             Some(&rand_vec(100)),

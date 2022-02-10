@@ -29,7 +29,7 @@ pub fn merkle_root_from_bytes(
     uncompressed_bit_vector: &[u8],
 ) -> Result<algebra::Fp256<algebra::fields::tweedle::FrParameters>, Error> {
     let bv = BitVec::from_bytes(&uncompressed_bit_vector);
-    let bool_vector: Vec<bool> = bv.into_iter().map(|x| x).collect();
+    let bool_vector: Vec<bool> = bv.into_iter().collect();
 
     // The bit vector may contain some padding bits at the end that have to be discarded
     let real_bit_vector_size: usize = bool_vector.len() - bool_vector.len() % FIELD_CAPACITY;
@@ -41,7 +41,7 @@ pub fn merkle_root_from_bytes(
     let leaves = bool_vector[..real_bit_vector_size].to_field_elements()?;
 
     if leaves.len() != num_leaves {
-        Err(format!("Merkle tree leaves count check failed"))?
+        Err("Merkle tree leaves count check failed")?
     }
 
     for leaf in leaves.into_iter() {

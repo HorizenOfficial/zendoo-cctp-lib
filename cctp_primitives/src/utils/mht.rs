@@ -26,10 +26,7 @@ pub fn get_ginger_mht_root(tree: &GingerMHT) -> Option<FieldElement> {
 }
 
 pub fn get_ginger_mht_path(tree: &GingerMHT, leaf_index: u64) -> Option<GingerMHTPath> {
-    match tree.get_merkle_path(leaf_index as usize) {
-        Some(path) => Some(path.into()),
-        None => None,
-    }
+    tree.get_merkle_path(leaf_index as usize)
 }
 
 pub fn reset_ginger_mht(tree: &mut GingerMHT) {
