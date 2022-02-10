@@ -24,7 +24,7 @@ fn _get_root_from_field_vec(
         ))?
     }
 
-    if field_vec.is_empty() {
+    if !field_vec.is_empty() {
         let mut mt = GingerMHT::init(height, 2usize.pow(height as u32))?;
         for fe in field_vec.into_iter() {
             mt.append(fe)?;
