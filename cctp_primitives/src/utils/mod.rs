@@ -24,14 +24,14 @@ fn _get_root_from_field_vec(
         ))?
     }
 
-    if field_vec.len() > 0 {
+    if field_vec.is_empty() {
         let mut mt = GingerMHT::init(height, 2usize.pow(height as u32))?;
         for fe in field_vec.into_iter() {
             mt.append(fe)?;
         }
         mt.finalize_in_place()?;
         mt.root()
-            .ok_or(Error::from("Failed to compute Merkle Tree root"))
+            .ok_or_else(|| Error::from("Failed to compute Merkle Tree root"))
     } else {
         Ok(GINGER_MHT_POSEIDON_PARAMETERS.nodes[height])
     }
@@ -39,8 +39,7 @@ fn _get_root_from_field_vec(
 
 /// Get the Merkle Root of a Binary Merkle Tree of height 12 built from the Backward Transfer list
 pub fn get_bt_merkle_root(bt_list: Option<&[BackwardTransfer]>) -> Result<FieldElement, Error> {
-    let leaves = if bt_list.is_some() {
-        let bt_list = bt_list.unwrap();
+    let leaves = if let Some(bt_list) = bt_list {
         let mut leaves = Vec::with_capacity(bt_list.len());
         for bt in bt_list.iter() {
             let bt_fes = DataAccumulator::init().update(bt)?.get_field_elements()?;
@@ -71,12 +70,8 @@ pub fn get_cert_data_hash(
     // Compute linear hash of custom fields (if present)
     let mut custom_fields_hash = None;
 
-    if custom_fields.is_some() {
-        let custom_fes = custom_fields
-            .unwrap()
-            .into_iter()
-            .map(|custom_field| *custom_field)
-            .collect::<Vec<_>>();
+    if let Some(custom_fields) = custom_fields {
+        let custom_fes = custom_fields.into_iter().copied().collect::<Vec<_>>();
         custom_fields_hash = Some(hash_vec(custom_fes)?)
     }
 
@@ -129,8 +124,8 @@ pub fn get_cert_data_hash_from_bt_root_and_custom_fields_hash(
     let mut fes = Vec::new();
 
     // Add custom fields hash if present
-    if custom_fields_hash.is_some() {
-        fes.push(custom_fields_hash.unwrap())
+    if let Some(custom_fields_hash) = custom_fields_hash {
+        fes.push(custom_fields_hash)
     }
 
     // Add cert_sysdata_hash

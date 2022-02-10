@@ -60,30 +60,25 @@ impl ZendooBatchVerifier {
         let batch_len = proofs_vks_ins.len();
 
         // Collect all data in (GeneralPCD, VerificationKey) pairs
-        let pcds_vks = proofs_vks_ins
-            .into_iter()
-            .map(|(proof, vk, ins)| match (proof, vk) {
-                (ZendooProof::CoboundaryMarlin(proof), ZendooVerifierKey::CoboundaryMarlin(vk)) => {
-                    (
-                        GeneralPCD::SimpleMarlin(SimpleMarlinPCD::<G1, Digest>::new(proof, ins)),
-                        vk,
-                    )
-                }
-                (ZendooProof::Darlin(proof), ZendooVerifierKey::Darlin(vk)) => (
-                    GeneralPCD::FinalDarlin(FinalDarlinPCD::<G1, G2, Digest>::new(proof, ins)),
-                    vk,
-                ),
-                _ => unreachable!(),
-            })
-            .collect::<Vec<_>>();
-
-        // Collect PCDs and Vks in separate vecs
         let mut pcds = Vec::with_capacity(batch_len);
         let mut vks = Vec::with_capacity(batch_len);
-        pcds_vks.into_iter().for_each(|(pcd, vk)| {
-            pcds.push(pcd);
-            vks.push(vk);
-        });
+        proofs_vks_ins
+            .into_iter()
+            .for_each(|(proof, vk, ins)| match (proof, vk) {
+                (ZendooProof::CoboundaryMarlin(proof), ZendooVerifierKey::CoboundaryMarlin(vk)) => {
+                    pcds.push(GeneralPCD::SimpleMarlin(
+                        SimpleMarlinPCD::<G1, Digest>::new(proof, ins),
+                    ));
+                    vks.push(vk);
+                }
+                (ZendooProof::Darlin(proof), ZendooVerifierKey::Darlin(vk)) => {
+                    pcds.push(GeneralPCD::FinalDarlin(
+                        FinalDarlinPCD::<G1, G2, Digest>::new(proof, ins),
+                    ));
+                    vks.push(vk);
+                }
+                _ => unreachable!(),
+            });
 
         // Perform batch_verification
         let result = proof_systems::darlin::proof_aggregator::batch_verify_proofs(
@@ -109,14 +104,14 @@ impl ZendooBatchVerifier {
         let g1_ck = get_g1_committer_key(None)?;
         let g2_ck = get_g2_committer_key(None)?;
 
-        if ids.len() == 0 {
+        if ids.is_empty() {
             Err(ProvingSystemError::NoProofsToVerify)
         } else {
             let to_verify = ids
                 .iter()
                 .map(|id| match self.verifier_data.get(id) {
                     Some(data) => Ok(data.clone()),
-                    None => return Err(ProvingSystemError::ProofNotPresent(id.clone())),
+                    None => Err(ProvingSystemError::ProofNotPresent(*id)),
                 })
                 .collect::<Result<Vec<_>, ProvingSystemError>>()?;
 
@@ -124,12 +119,12 @@ impl ZendooBatchVerifier {
             let res = Self::batch_verify_proofs(to_verify, &g1_ck, &g2_ck, rng);
 
             // Return the id of the first failing proof if it's possible to determine it
-            if res.is_err() {
-                match res.unwrap_err() {
+            if let Err(res) = res {
+                match res {
                     Some(indices) => {
                         let mut offending_ids =
                             indices.into_iter().map(|idx| ids[idx]).collect::<Vec<_>>();
-                        offending_ids.sort();
+                        offending_ids.sort_unstable();
                         return Err(ProvingSystemError::FailedBatchVerification(Some(
                             offending_ids,
                         )));
@@ -146,13 +141,7 @@ impl ZendooBatchVerifier {
     /// If the verification procedure fails, it may be possible to get the id of
     /// the proof that has caused the failure.
     pub fn batch_verify_all<R: RngCore>(&self, rng: &mut R) -> Result<bool, ProvingSystemError> {
-        self.batch_verify_subset(
-            self.verifier_data
-                .keys()
-                .map(|k| k.clone())
-                .collect::<Vec<_>>(),
-            rng,
-        )
+        self.batch_verify_subset(self.verifier_data.keys().copied().collect::<Vec<_>>(), rng)
     }
 }
 
@@ -396,10 +385,10 @@ mod test {
         let succeeding_ids = total_ids
             .difference(&failing_ids)
             .into_iter()
-            .map(|id| *id)
+            .copied()
             .collect::<HashSet<u32>>();
         let mut failing_ids_vec = failing_ids.into_iter().collect::<Vec<u32>>();
-        failing_ids_vec.sort();
+        failing_ids_vec.sort_unstable();
 
         // Assert that the batch verification of all the succeeding_proofs is ok
         assert!(batch_verifier
@@ -479,14 +468,14 @@ mod test {
             let g1_ck = get_g1_committer_key(None)?;
             let g2_ck = get_g2_committer_key(None)?;
 
-            if ids.len() == 0 {
+            if ids.is_empty() {
                 Err(ProvingSystemError::NoProofsToVerify)
             } else {
                 let to_verify = ids
                     .iter()
                     .map(|id| match self.verifier_data.get(id) {
                         Some(data) => Ok(data.clone()),
-                        None => return Err(ProvingSystemError::ProofNotPresent(id.clone())),
+                        None => Err(ProvingSystemError::ProofNotPresent(*id)),
                     })
                     .collect::<Result<Vec<_>, ProvingSystemError>>()?;
 
@@ -494,8 +483,8 @@ mod test {
                 let res = Self::batch_verify_proofs(to_verify, &g1_ck, &g2_ck, rng);
 
                 // Return the id of the first failing proof if it's possible to determine it
-                if res.is_err() {
-                    match res.unwrap_err() {
+                if let Err(res) = res {
+                    match res {
                         Some(indices) => {
                             let offending_ids =
                                 indices.into_iter().map(|idx| ids[idx]).collect::<Vec<_>>();
@@ -512,13 +501,7 @@ mod test {
         }
 
         fn batch_verify_all<R: RngCore>(&self, rng: &mut R) -> Result<bool, ProvingSystemError> {
-            self.batch_verify_subset(
-                self.verifier_data
-                    .keys()
-                    .map(|k| k.clone())
-                    .collect::<Vec<_>>(),
-                rng,
-            )
+            self.batch_verify_subset(self.verifier_data.keys().copied().collect::<Vec<_>>(), rng)
         }
     }
 
@@ -665,10 +648,10 @@ mod test {
         let succeeding_ids = total_ids
             .difference(&failing_ids)
             .into_iter()
-            .map(|id| *id)
+            .copied()
             .collect::<HashSet<u32>>();
         let mut failing_ids_vec = failing_ids.into_iter().collect::<Vec<u32>>();
-        failing_ids_vec.sort();
+        failing_ids_vec.sort_unstable();
 
         // Assert that the batch verification of all the succeeding_proofs is ok
         assert!(batch_verifier

@@ -20,11 +20,7 @@ pub fn new_mt(height: usize) -> Result<GingerMHT, Error> {
 /// Sequentially inserts leafs into an MT by using a specified position which is incremented afterwards
 /// Returns false if there is no more place to insert a leaf
 pub fn add_leaf(tree: &mut GingerMHT, leaf: &FieldElement) -> bool {
-    if append_leaf_to_ginger_mht(tree, leaf).is_ok() {
-        true
-    } else {
-        false
-    }
+    append_leaf_to_ginger_mht(tree, leaf).is_ok()
 }
 
 //--------------------------------------------------------------------------------------------------

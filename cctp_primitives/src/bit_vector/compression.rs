@@ -97,11 +97,11 @@ pub fn compress_bit_vector(
         CompressionAlgorithm::Gzip => compressed_bit_vector_result = gzip_compress(raw_bit_vector),
     }
 
-    if compressed_bit_vector_result.is_ok() {
-        let mut compressed_bit_vector = compressed_bit_vector_result.unwrap();
+    if let Ok(compressed_bit_vector_result) = compressed_bit_vector_result {
+        let mut compressed_bit_vector = compressed_bit_vector_result;
         compressed_bit_vector.insert(0, algorithm as u8);
         compressed_bit_vector.shrink_to_fit();
-        return Ok(compressed_bit_vector);
+        Ok(compressed_bit_vector)
     } else {
         compressed_bit_vector_result
     }
@@ -171,8 +171,8 @@ fn decompress_bit_vector_with_opt_checks(
         expected_size_opt
     );
 
-    if expected_size_opt.is_some() {
-        max_decompressed_size = expected_size_opt.unwrap();
+    if let Some(expected_size_opt) = expected_size_opt {
+        max_decompressed_size = expected_size_opt;
 
         if max_decompressed_size > MAX_DECOMPRESSION_SIZE {
             Err(format!(
@@ -195,8 +195,8 @@ fn decompress_bit_vector_with_opt_checks(
 
     printlndbg!("Decompressed size: {}", raw_bit_vector_result.len());
 
-    if expected_size_opt.is_some() {
-        let expected_size = expected_size_opt.unwrap();
+    if let Some(expected_size_opt) = expected_size_opt {
+        let expected_size = expected_size_opt;
         if raw_bit_vector_result.len() != expected_size {
             Err(format!(
                 "Wrong bit vector size. Expected {} bytes, found {} bytes",
@@ -281,7 +281,7 @@ fn gzip_decompress(
         }
     }
 
-    return Ok(uncompressed_bitvector);
+    Ok(uncompressed_bitvector)
 }
 
 #[cfg(test)]

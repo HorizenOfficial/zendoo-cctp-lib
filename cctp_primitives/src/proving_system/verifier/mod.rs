@@ -50,7 +50,7 @@ pub fn verify_zendoo_proof<I: UserInputs, R: RngCore>(
                 proof,
                 match rng {
                     Some(v) => v,
-                    None => Err(ProvingSystemError::Other(format!("rng not set")))?,
+                    None => Err(ProvingSystemError::Other("rng not set".to_string()))?,
                 },
             )
             .map_err(|e| ProvingSystemError::ProofVerificationFailed(format!("{:?}", e)))?

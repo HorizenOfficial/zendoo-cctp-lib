@@ -14,7 +14,7 @@ impl SidechainTreeCeased {
     // Creates a new instance of SidechainTree with a specified ID
     pub fn create(sc_id: &FieldElement) -> Result<Self, Error> {
         Ok(Self {
-            sc_id: (*sc_id).clone(),
+            sc_id: *sc_id,
             csw_mt: new_mt(CSW_MT_HEIGHT)?,
         })
     }
@@ -54,7 +54,7 @@ impl SidechainTreeCeased {
             Ok(v) => Some(v),
             Err(e) => {
                 eprintln!("{}", e);
-                return None;
+                None
             }
         }
     }

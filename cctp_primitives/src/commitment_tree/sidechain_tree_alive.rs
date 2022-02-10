@@ -29,7 +29,7 @@ impl SidechainTreeAlive {
     // Creates a new instance of SidechainTreeAlive with a specified ID
     pub fn create(sc_id: &FieldElement) -> Result<Self, Error> {
         Ok(Self {
-            sc_id: (*sc_id).clone(),
+            sc_id: *sc_id,
 
             // Default SCC value for an empty SidechainTreeAlive; Probability of collision with a real SCC value considering it is a random FieldElement is negligible
             scc: FieldElement::zero(),
@@ -164,7 +164,7 @@ impl SidechainTreeAlive {
             Ok(v) => Some(v),
             Err(e) => {
                 eprint!("{}", e);
-                return None;
+                None
             }
         }
     }

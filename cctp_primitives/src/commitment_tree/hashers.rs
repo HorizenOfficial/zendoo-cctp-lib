@@ -22,7 +22,7 @@ pub fn hash_fwt(
         .update(&tx_hash[..])?
         .update(out_idx)?;
 
-    debug_assert!(accumulator.clone().get_field_elements().unwrap().len() == 4);
+    debug_assert!(accumulator.get_field_elements().unwrap().len() == 4);
     accumulator.compute_field_hash_constant_length()
 }
 
@@ -150,8 +150,8 @@ pub fn hash_scc(
         );
     }
 
-    if constant.is_some() {
-        fes.push(*constant.unwrap());
+    if let Some(constant) = constant {
+        fes.push(*constant);
     }
 
     // Compute cert_verification_key hash and add it to fes
@@ -227,11 +227,12 @@ mod test {
         )
         .is_ok());
 
+        let default_bt_vec = vec![BackwardTransfer::default(); 10];
         assert!(hash_cert(
             &rand_fe(),
             rng.gen(),
             rng.gen(),
-            Some(&vec![BackwardTransfer::default(); 10]),
+            Some(default_bt_vec.as_slice()),
             Some(rand_fe_vec(2).iter().collect()),
             &rand_fe(),
             rng.gen(),
@@ -251,6 +252,7 @@ mod test {
         )
         .is_ok());
 
+        let default_bv_config = vec![BitVectorElementsConfig::default(); 10];
         assert!(hash_scc(
             rng.gen(),
             &rand_vec(32).try_into().unwrap(),
@@ -259,7 +261,7 @@ mod test {
             rng.gen(),
             rng.gen(),
             Some(&rand_vec(10)),
-            Some(&vec![BitVectorElementsConfig::default(); 10]),
+            Some(default_bv_config.as_slice()),
             rng.gen(),
             rng.gen(),
             Some(&rand_vec(100)),
