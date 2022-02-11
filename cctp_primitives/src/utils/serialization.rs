@@ -104,7 +104,7 @@ pub fn read_from_file<T: CanonicalDeserialize + SemanticallyValid>(
     semantic_checks: Option<bool>,
     compressed: Option<bool>,
 ) -> Result<T, SerializationError> {
-    let fs = File::open(file_path).map_err(|e| SerializationError::IoError(e))?;
+    let fs = File::open(file_path).map_err(SerializationError::IoError)?;
     let reader = BufReader::with_capacity(DEFAULT_BUF_SIZE, fs);
 
     _deserialize_inner(reader, semantic_checks, compressed)
@@ -120,7 +120,7 @@ pub fn write_to_file<T: CanonicalSerialize>(
 ) -> Result<(), SerializationError> {
     let compressed = compressed.unwrap_or(false);
 
-    let fs = File::create(file_path).map_err(|e| SerializationError::IoError(e))?;
+    let fs = File::create(file_path).map_err(SerializationError::IoError)?;
     let mut writer = BufWriter::with_capacity(DEFAULT_BUF_SIZE, fs);
 
     if compressed {
@@ -129,7 +129,7 @@ pub fn write_to_file<T: CanonicalSerialize>(
         CanonicalSerialize::serialize_uncompressed(to_write, &mut writer)?;
     }
 
-    writer.flush().map_err(|e| SerializationError::IoError(e))?;
+    writer.flush().map_err(SerializationError::IoError)?;
     Ok(())
 }
 

@@ -1,6 +1,6 @@
 [package]
 name = "cctp_primitives"
-version = "0.1.1"
+version = "0.1.2"
 authors = [
     "Alberto Benegiamo",
     "Daniele Di Benedetto <daniele@horizenlabs.io>",
@@ -11,16 +11,17 @@ authors = [
     "Alberto Sala <alsala@zensystem.io>",
     "Luigi Varriale <luigi@horizenlabs.io>",
     "cronicc <cronic@horizenlabs.io>",
+    "Luca Giussani <lucagiussani@horizenlabs.io>"
 ]
 edition = "2018"
 
 [dependencies]
-algebra = { git = "https://github.com/HorizenOfficial/ginger-lib", tag = "0.3.1", features = ["parallel", "tweedle", "derive"] }
-primitives = { git = "https://github.com/HorizenOfficial/ginger-lib.git", tag = "0.3.1", features = ["merkle_tree", "tweedle"]}
-proof-systems = { git = "https://github.com/HorizenOfficial/ginger-lib.git", tag = "0.3.1", features = ["darlin"]}
+algebra = { git = "https://github.com/HorizenOfficial/ginger-lib", branch = "development", features = ["parallel", "tweedle", "derive"] }
+primitives = { git = "https://github.com/HorizenOfficial/ginger-lib.git", branch = "development", features = ["merkle_tree", "tweedle"]}
+proof-systems = { git = "https://github.com/HorizenOfficial/ginger-lib.git", branch = "development", features = ["darlin"]}
 
-marlin = { git = "https://github.com/HorizenLabs/marlin", tag = "0.2.1" }
-poly-commit = { git = "https://github.com/HorizenLabs/poly-commit", tag = "0.2.1" }
+marlin = { git = "https://github.com/HorizenLabs/marlin", branch = "dev" }
+poly-commit = { git = "https://github.com/HorizenLabs/poly-commit", branch = "dev" }
 
 rand = { version = "=0.8.4" }
 byteorder = "=1.4.3"
@@ -35,4 +36,4 @@ flate2 = "=1.0.21"
 serial_test = "*"
 
 [features]
-asm = ["marlin/asm", "poly-commit/asm", "algebra/llvm_asm"]
+asm = ["marlin/asm", "poly-commit/asm", "algebra/llvm_asm", "primitives/llvm_asm"]

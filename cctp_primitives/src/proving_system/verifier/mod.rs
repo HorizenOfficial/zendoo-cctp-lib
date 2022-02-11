@@ -29,28 +29,28 @@ pub fn verify_zendoo_proof<I: UserInputs, R: RngCore>(
         return Err(ProvingSystemError::ProvingSystemMismatch);
     }
 
-    let ck_g1 = get_g1_committer_key()?;
+    let ck_g1 = get_g1_committer_key(None)?;
 
     // Verify proof (selecting the proper proving system)
     let res = match (proof, vk) {
         // Verify CoboundaryMarlinProof
         (ZendooProof::CoboundaryMarlin(proof), ZendooVerifierKey::CoboundaryMarlin(vk)) => {
-            CoboundaryMarlin::verify(vk, ck_g1.as_ref().unwrap(), usr_ins.as_slice(), &proof.0)
+            CoboundaryMarlin::verify(vk, &ck_g1, usr_ins.as_slice(), &proof.0)
                 .map_err(|e| ProvingSystemError::ProofVerificationFailed(format!("{:?}", e)))?
         }
 
         // Verify DarlinProof
         (ZendooProof::Darlin(proof), ZendooVerifierKey::Darlin(vk)) => {
-            let ck_g2 = get_g2_committer_key()?;
+            let ck_g2 = get_g2_committer_key(None)?;
             Darlin::verify(
                 vk,
-                ck_g1.as_ref().unwrap(),
-                ck_g2.as_ref().unwrap(),
+                &ck_g1,
+                &ck_g2,
                 usr_ins.as_slice(),
                 proof,
                 match rng {
                     Some(v) => v,
-                    None => Err(ProvingSystemError::Other(format!("rng not set")))?,
+                    None => Err(ProvingSystemError::Other("rng not set".to_string()))?,
                 },
             )
             .map_err(|e| ProvingSystemError::ProofVerificationFailed(format!("{:?}", e)))?

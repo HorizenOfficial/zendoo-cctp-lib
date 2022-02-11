@@ -47,9 +47,8 @@ impl CanonicalSerialize for BackwardTransfer {
 impl CanonicalDeserialize for BackwardTransfer {
     fn deserialize<R: Read>(mut reader: R) -> Result<Self, SerializationError> {
         let mut pk_dest = [0u8; MC_PK_SIZE];
-        for i in 0..MC_PK_SIZE {
-            let byte: u8 = CanonicalDeserialize::deserialize(&mut reader)?;
-            pk_dest[i] = byte;
+        for b in pk_dest.iter_mut() {
+            *b = CanonicalDeserialize::deserialize(&mut reader)?;
         }
         let amount: u64 = CanonicalDeserialize::deserialize(reader)?;
         Ok(Self { pk_dest, amount })

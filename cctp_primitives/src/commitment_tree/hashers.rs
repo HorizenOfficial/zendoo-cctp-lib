@@ -14,7 +14,7 @@ pub fn hash_fwt(
     out_idx: u32,
 ) -> Result<FieldElement, Error> {
     // ceil(256 + 256 + 160 + 96/254) = ceil(768/254) = 4 fes
-    let mut accumulator = ByteAccumulator::init();
+    let mut accumulator = DataAccumulator::init();
     accumulator
         .update(amount)?
         .update(&pub_key[..])?
@@ -22,7 +22,7 @@ pub fn hash_fwt(
         .update(&tx_hash[..])?
         .update(out_idx)?;
 
-    debug_assert!(accumulator.clone().get_field_elements().unwrap().len() == 4);
+    debug_assert!(accumulator.get_field_elements().unwrap().len() == 4);
     accumulator.compute_field_hash_constant_length()
 }
 
@@ -35,7 +35,7 @@ pub fn hash_bwtr(
     out_idx: u32,
 ) -> Result<FieldElement, Error> {
     // ceil(256 + 160 + 96/254) = ceil(512/254) = 3 fes
-    let mut fes = ByteAccumulator::init()
+    let mut fes = DataAccumulator::init()
         .update(sc_fee)?
         .update(&mc_destination_address[..])?
         .update(&tx_hash[..])?
@@ -97,7 +97,7 @@ pub fn hash_scc(
 
     // Convert tx data to field elements
     // ceil(256 + 256 + 96/254) = ceil(608/254) = 3 fes
-    let mut tx_data_fes = ByteAccumulator::init()
+    let mut tx_data_fes = DataAccumulator::init()
         .update(amount)?
         .update(&pub_key[..])?
         .update(&tx_hash[..])?
@@ -108,7 +108,7 @@ pub fn hash_scc(
 
     // Convert sc base configuration data into field elements
     let mut sc_base_conf_fes = {
-        let mut accumulator = ByteAccumulator::init();
+        let mut accumulator = DataAccumulator::init();
         accumulator
             .update(withdrawal_epoch_length)?
             .update(mc_btr_request_data_length)?
@@ -118,7 +118,7 @@ pub fn hash_scc(
 
     // Convert custom configuration data into field elements
     if custom_field_elements_configs.is_some() || custom_bitvector_elements_configs.is_some() {
-        let mut digest = ByteAccumulator::init();
+        let mut digest = DataAccumulator::init();
 
         if custom_field_elements_configs.is_some() {
             digest.update(custom_field_elements_configs.unwrap())?;
@@ -134,7 +134,7 @@ pub fn hash_scc(
     }
 
     // Pack btr_fee and ft_min_amount into a single field element
-    let mut fees_field_elements = ByteAccumulator::init()
+    let mut fees_field_elements = DataAccumulator::init()
         .update(btr_fee)?
         .update(ft_min_amount)?
         .get_field_elements()?;
@@ -144,19 +144,19 @@ pub fn hash_scc(
     // Compute custom_creation_data hash and add it to fes
     if custom_creation_data.is_some() {
         fes.push(
-            ByteAccumulator::init()
+            DataAccumulator::init()
                 .update(custom_creation_data.unwrap())?
                 .compute_field_hash_constant_length()?,
         );
     }
 
-    if constant.is_some() {
-        fes.push(*constant.unwrap());
+    if let Some(constant) = constant {
+        fes.push(*constant);
     }
 
     // Compute cert_verification_key hash and add it to fes
     fes.push(
-        ByteAccumulator::init()
+        DataAccumulator::init()
             .update(cert_verification_key)?
             .compute_field_hash_constant_length()?,
     );
@@ -164,7 +164,7 @@ pub fn hash_scc(
     // Compute csw_verification_key hash (if present) and add it to fes
     if csw_verification_key.is_some() {
         fes.push(
-            ByteAccumulator::init()
+            DataAccumulator::init()
                 .update(csw_verification_key.unwrap())?
                 .compute_field_hash_constant_length()?,
         );
@@ -181,7 +181,7 @@ pub fn hash_csw(
     mc_pk_hash: &[u8; MC_PK_SIZE],
 ) -> Result<FieldElement, Error> {
     // Pack amount and pk_hash into a single field element
-    let mut fes = ByteAccumulator::init()
+    let mut fes = DataAccumulator::init()
         .update(amount)?
         .update(&mc_pk_hash[..])?
         .get_field_elements()?;
@@ -227,11 +227,12 @@ mod test {
         )
         .is_ok());
 
+        let default_bt_vec = vec![BackwardTransfer::default(); 10];
         assert!(hash_cert(
             &rand_fe(),
             rng.gen(),
             rng.gen(),
-            Some(&vec![BackwardTransfer::default(); 10]),
+            Some(default_bt_vec.as_slice()),
             Some(rand_fe_vec(2).iter().collect()),
             &rand_fe(),
             rng.gen(),
@@ -251,6 +252,7 @@ mod test {
         )
         .is_ok());
 
+        let default_bv_config = vec![BitVectorElementsConfig::default(); 10];
         assert!(hash_scc(
             rng.gen(),
             &rand_vec(32).try_into().unwrap(),
@@ -259,7 +261,7 @@ mod test {
             rng.gen(),
             rng.gen(),
             Some(&rand_vec(10)),
-            Some(&vec![BitVectorElementsConfig::default(); 10]),
+            Some(default_bv_config.as_slice()),
             rng.gen(),
             rng.gen(),
             Some(&rand_vec(100)),
