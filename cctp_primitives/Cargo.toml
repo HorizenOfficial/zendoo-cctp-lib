@@ -1,6 +1,6 @@
 [package]
 name = "cctp_primitives"
-version = "0.1.0"
+version = "0.1.2"
 authors = [
     "Alberto Benegiamo",
     "Daniele Di Benedetto <daniele@horizenlabs.io>",
@@ -11,29 +11,30 @@ authors = [
     "Alberto Sala <alsala@zensystem.io>",
     "Luigi Varriale <luigi@horizenlabs.io>",
     "cronicc <cronic@horizenlabs.io>",
+    "Luca Giussani <lucagiussani@horizenlabs.io>"
 ]
 edition = "2018"
 
 [dependencies]
 algebra = { git = "https://github.com/HorizenOfficial/ginger-lib", branch = "development", features = ["parallel", "tweedle", "derive"] }
-primitives = { git = "https://github.com/HorizenOfficial/ginger-lib.git", branch = "development", features = ["merkle_tree", "tweedle"]}
-proof-systems = { git = "https://github.com/HorizenOfficial/ginger-lib.git", branch = "development", features = ["darlin"]}
+primitives = { git = "https://github.com/HorizenOfficial/ginger-lib.git", branch = "feat/concrete_instantiations", features = ["merkle_tree", "tweedle"]}
+proof-systems = { git = "https://github.com/HorizenOfficial/ginger-lib.git", branch = "feat/concrete_instantiations", features = ["darlin"]}
 type-mappings = { git = "https://github.com/HorizenOfficial/ginger-lib.git", features = ["tweedle", "darlin"], branch = "feat/concrete_instantiations"}
 
 marlin = { git = "https://github.com/HorizenLabs/marlin", branch = "dev" }
 poly-commit = { git = "https://github.com/HorizenLabs/poly-commit", branch = "dev" }
 
-rand = { version = "0.8.4" }
-byteorder = "1.4.2"
-lazy_static = "1.4.0"
-blake2 = { version = "0.8.1", default-features = false }
-sha1 = "0.6.0"
-bit-vec = "0.6"
-bzip2 = "0.4.2"
-flate2 = "1.0.20"
+rand = { version = "=0.8.4" }
+byteorder = "=1.4.3"
+lazy_static = "=1.4.0"
+blake2 = { version = "=0.8.1", default-features = false }
+sha1 = "=0.6.0"
+bit-vec = "=0.6.3"
+bzip2 = "=0.4.3"
+flate2 = "=1.0.21"
 
 [dev-dependencies]
 serial_test = "*"
 
 [features]
-asm = ["marlin/asm", "poly-commit/asm", "algebra/llvm_asm"]
+asm = ["marlin/asm", "poly-commit/asm", "algebra/llvm_asm", "primitives/llvm_asm"]

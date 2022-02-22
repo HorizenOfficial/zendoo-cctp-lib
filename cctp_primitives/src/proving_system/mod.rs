@@ -1,12 +1,12 @@
+use std::marker::PhantomData;
 use crate::{
     proving_system::{
         error::ProvingSystemError,
         init::{load_g1_committer_key, load_g2_committer_key},
     },
-    CoboundaryMarlinProof, CoboundaryMarlinProverKey, CoboundaryMarlinVerifierKey, DarlinProof,
-    DarlinProverKey, DarlinVerifierKey, Error, FieldElement,
 };
 use algebra::{serialize::*, SemanticallyValid};
+use super::*;
 
 pub mod error;
 pub mod init;
@@ -483,19 +483,15 @@ impl SemanticallyValid for ZendooProverKey {
 
 /// Utility function: initialize and save to specified paths the G1CommitterKey
 /// and G2CommitterKey (iff ProvingSystem::Darlin).
-pub fn init_dlog_keys(
-    proving_system: ProvingSystem,
-    max_segment_size: usize,
-    supported_segment_size: usize,
-) -> Result<(), Error> {
+pub fn init_dlog_keys(proving_system: ProvingSystem, max_segment_size: usize) -> Result<(), Error> {
     if matches!(proving_system, ProvingSystem::Undefined) {
         return Err(ProvingSystemError::UndefinedProvingSystem)?;
     }
 
-    load_g1_committer_key(max_segment_size - 1, supported_segment_size - 1)?;
+    load_g1_committer_key(max_segment_size - 1)?;
 
     if matches!(proving_system, ProvingSystem::Darlin) {
-        load_g2_committer_key(max_segment_size - 1, supported_segment_size - 1)?
+        load_g2_committer_key(max_segment_size - 1)?
     }
 
     Ok(())
@@ -624,12 +620,14 @@ pub(crate) fn compute_max_constraints_and_variables(
         // the smallest domain h possible
         let h = num_constraints.next_power_of_two();
 
-        let mut info = IndexInfo::<FieldElement>::default();
-        info.num_constraints = num_constraints;
         // we choose the most greedy setting,
-        info.num_witness = h - num_inputs;
-        info.num_inputs = num_inputs;
-        info.num_non_zero = k;
+        let info = IndexInfo::<FieldElement> {
+            num_witness: h - num_inputs,
+            num_inputs,
+            num_constraints,
+            num_non_zero: k,
+            f: PhantomData,
+        };
 
         // we compute proof_size and vk_size in the most conservative setting for num_variables.
         let (proof_size, vk_size) = compute_proof_vk_size(segment_size, info, zk, proof_type);
@@ -642,10 +640,13 @@ pub(crate) fn compute_max_constraints_and_variables(
             // we exceed the max_proof_size (then we break)
             let k = 1 << (k_ctr - 1);
             let num_constraints = k / density;
-            let mut info = IndexInfo::<FieldElement>::default();
-            info.num_constraints = num_constraints;
-            info.num_inputs = num_inputs;
-            info.num_non_zero = k;
+            let mut info = IndexInfo::<FieldElement> {
+                num_witness: 0,
+                num_inputs,
+                num_constraints,
+                num_non_zero: k,
+                f: PhantomData,
+            };
 
             // even though we know that the conservative num_variables (vk_size,proof_size) is below the thresholds
             // for the previous domain_k_size, we start again from it.
@@ -700,12 +701,14 @@ fn test_check_proof_vk_size() {
                         density, max_proof_size, max_vk_size, proof_type, zk, size, num_inputs, max_num_constraints, max_num_variables, proof_size, vk_size
                     );
 
-                    let mut info = IndexInfo::<FieldElement>::default();
                     let h = max_num_variables;
-                    info.num_constraints = max_num_constraints;
-                    info.num_witness = h - num_inputs;
-                    info.num_inputs = num_inputs;
-                    info.num_non_zero = (max_num_constraints * density).next_power_of_two();
+                    let mut info = IndexInfo::<FieldElement> {
+                        num_witness: h - num_inputs,
+                        num_inputs,
+                        num_constraints: max_num_constraints,
+                        num_non_zero: (max_num_constraints * density).next_power_of_two(),
+                        f: PhantomData,
+                    };
                     assert!(check_proof_vk_size(
                         segment_size,
                         info,

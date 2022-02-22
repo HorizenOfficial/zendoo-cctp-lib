@@ -2,12 +2,10 @@
 //!
 //! `merkle_tree` exposes functions to compute a bit vector Merkle tree.
 
-use super::compression;
+use super::*;
 use crate::{FIELD_CAPACITY, GingerMHT, Error};
 
 use algebra::{log2, ToConstraintField};
-use primitives::merkle_tree::field_based_mht::FieldBasedMerkleTree;
-
 use bit_vec::BitVec;
 
 /// Computes the root hash of the Merkle tree created as a representation
@@ -29,7 +27,7 @@ pub fn merkle_root_from_bytes(
     uncompressed_bit_vector: &[u8],
 ) -> Result<algebra::Fp256<algebra::fields::tweedle::FrParameters>, Error> {
     let bv = BitVec::from_bytes(&uncompressed_bit_vector);
-    let bool_vector: Vec<bool> = bv.into_iter().map(|x| x).collect();
+    let bool_vector: Vec<bool> = bv.into_iter().collect();
 
     // The bit vector may contain some padding bits at the end that have to be discarded
     let real_bit_vector_size: usize = bool_vector.len() - bool_vector.len() % FIELD_CAPACITY;
@@ -41,7 +39,7 @@ pub fn merkle_root_from_bytes(
     let leaves = bool_vector[..real_bit_vector_size].to_field_elements()?;
 
     if leaves.len() != num_leaves {
-        Err(format!("Merkle tree leaves count check failed"))?
+        Err("Merkle tree leaves count check failed")?
     }
 
     for leaf in leaves.into_iter() {
@@ -98,7 +96,7 @@ mod test {
     use crate::FieldElement;
     use compression::{compress_bit_vector, CompressionAlgorithm};
 
-    use std::fmt::Write;
+    use std::{fmt::Write, fs::{read, read_to_string}};
 
     #[test]
     fn expected_size() {
@@ -165,8 +163,8 @@ mod test {
     }
 
     fn check_root_hash_computation_from_file(bit_vector_path: &str, root_hash_path: &str) {
-        let mut raw_byte_vector: Vec<u8> = std::fs::read(bit_vector_path).unwrap();
-        let root_hash = std::fs::read_to_string(root_hash_path).unwrap();
+        let mut raw_byte_vector: Vec<u8> = read(bit_vector_path).unwrap();
+        let root_hash = read_to_string(root_hash_path).unwrap();
 
         let computed_root = merkle_root_from_bytes(&raw_byte_vector).unwrap();
         let compressed_bit_vector =

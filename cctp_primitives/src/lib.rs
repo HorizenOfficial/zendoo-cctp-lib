@@ -40,7 +40,8 @@
     clippy::map_collect_result_unit,
     clippy::not_unsafe_ptr_arg_deref,
     clippy::suspicious_op_assign_impl,
-    clippy::assertions_on_constants
+    clippy::assertions_on_constants,
+    clippy::large_enum_variant
 )]
 
 pub mod bit_vector;

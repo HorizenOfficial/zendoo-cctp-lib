@@ -1,7 +1,6 @@
 use crate::utils::data_structures::BackwardTransfer;
-use crate::{FieldElement, Error, GingerMHT, GINGER_MHT_POSEIDON_PARAMETERS};
-use crate::utils::commitment_tree::{hash_vec, ByteAccumulator};
-use primitives::FieldBasedMerkleTree;
+use crate::utils::commitment_tree::{hash_vec, DataAccumulator};
+use super::*;
 
 pub mod commitment_tree;
 pub mod data_structures;
@@ -20,14 +19,14 @@ fn _get_root_from_field_vec(
         ))?
     }
 
-    if field_vec.len() > 0 {
+    if !field_vec.is_empty() {
         let mut mt = GingerMHT::init(height, 2usize.pow(height as u32))?;
         for fe in field_vec.into_iter() {
             mt.append(fe)?;
         }
         mt.finalize_in_place()?;
         mt.root()
-            .ok_or(Error::from("Failed to compute Merkle Tree root"))
+            .ok_or_else(|| Error::from("Failed to compute Merkle Tree root"))
     } else {
         Ok(GINGER_MHT_POSEIDON_PARAMETERS.nodes[height])
     }
@@ -35,11 +34,10 @@ fn _get_root_from_field_vec(
 
 /// Get the Merkle Root of a Binary Merkle Tree of height 12 built from the Backward Transfer list
 pub fn get_bt_merkle_root(bt_list: Option<&[BackwardTransfer]>) -> Result<FieldElement, Error> {
-    let leaves = if bt_list.is_some() {
-        let bt_list = bt_list.unwrap();
+    let leaves = if let Some(bt_list) = bt_list {
         let mut leaves = Vec::with_capacity(bt_list.len());
         for bt in bt_list.iter() {
-            let bt_fes = ByteAccumulator::init().update(bt)?.get_field_elements()?;
+            let bt_fes = DataAccumulator::init().update(bt)?.get_field_elements()?;
             assert_eq!(bt_fes.len(), 1);
             leaves.push(bt_fes[0]);
         }
@@ -61,8 +59,41 @@ pub fn get_cert_data_hash(
     btr_fee: u64,
     ft_min_amount: u64,
 ) -> Result<FieldElement, Error> {
+    // Compute bt_list merkle root
+    let bt_root = get_bt_merkle_root(bt_list)?;
+
+    // Compute linear hash of custom fields (if present)
+    let mut custom_fields_hash = None;
+
+    if let Some(custom_fields) = custom_fields {
+        let custom_fes = custom_fields.into_iter().copied().collect::<Vec<_>>();
+        custom_fields_hash = Some(hash_vec(custom_fes)?)
+    }
+
+    get_cert_data_hash_from_bt_root_and_custom_fields_hash(
+        sc_id,
+        epoch_number,
+        quality,
+        bt_root,
+        custom_fields_hash,
+        end_cumulative_sc_tx_commitment_tree_root,
+        btr_fee,
+        ft_min_amount,
+    )
+}
+
+pub fn get_cert_data_hash_from_bt_root_and_custom_fields_hash(
+    sc_id: &FieldElement,
+    epoch_number: u32,
+    quality: u64,
+    bt_root: FieldElement,
+    custom_fields_hash: Option<FieldElement>, //aka proof_data - includes custom_field_elements and bit_vectors merkle roots
+    end_cumulative_sc_tx_commitment_tree_root: &FieldElement,
+    btr_fee: u64,
+    ft_min_amount: u64,
+) -> Result<FieldElement, Error> {
     // Pack btr_fee and ft_min_amount into a single field element
-    let fees_field_elements = ByteAccumulator::init()
+    let fees_field_elements = DataAccumulator::init()
         .update(btr_fee)?
         .update(ft_min_amount)?
         .get_field_elements()?;
@@ -73,9 +104,6 @@ pub fn get_cert_data_hash(
     // the circuit)
     let epoch_number_fe = FieldElement::from(epoch_number);
     let quality_fe = FieldElement::from(quality);
-
-    // Compute bt_list merkle root
-    let bt_root = get_bt_merkle_root(bt_list)?;
 
     // Compute cert sysdata hash
     let cert_sysdata_hash = hash_vec(vec![
@@ -90,14 +118,9 @@ pub fn get_cert_data_hash(
     // Final field elements to hash
     let mut fes = Vec::new();
 
-    // Compute linear hash of custom fields (if present) and add the digest to fes
-    if custom_fields.is_some() {
-        let custom_fes = custom_fields
-            .unwrap()
-            .into_iter()
-            .map(|custom_field| *custom_field)
-            .collect::<Vec<_>>();
-        fes.push(hash_vec(custom_fes)?)
+    // Add custom fields hash if present
+    if let Some(custom_fields_hash) = custom_fields_hash {
+        fes.push(custom_fields_hash)
     }
 
     // Add cert_sysdata_hash
@@ -108,7 +131,7 @@ pub fn get_cert_data_hash(
 }
 
 pub fn compute_sc_id(tx_hash: &[u8; 32], pos: u32) -> Result<FieldElement, Error> {
-    ByteAccumulator::init()
+    DataAccumulator::init()
         .update(&tx_hash[..])?
         .update(pos)?
         .compute_field_hash_constant_length()
