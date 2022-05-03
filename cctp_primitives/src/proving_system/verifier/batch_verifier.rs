@@ -92,17 +92,32 @@ impl ZendooBatchVerifier {
         Ok(result)
     }
 
-    /// Verify only the proofs whose id is contained in `ids`.
-    /// If the verification procedure fails, it may be possible to get the id of
-    /// the proof that has caused the failure.
     pub fn batch_verify_subset<R: RngCore>(
         &self,
         ids: Vec<u32>,
         rng: &mut R,
     ) -> Result<bool, ProvingSystemError> {
+        self.batch_verify_subset_with_segment_size(ids, rng, None)
+    }
+
+    /// Verify only the proofs whose id is contained in `ids`.
+    /// If the verification procedure fails, it may be possible to get the id of
+    /// the proof that has caused the failure.
+    pub fn batch_verify_subset_with_segment_size<R: RngCore>(
+        &self,
+        ids: Vec<u32>,
+        rng: &mut R,
+        segment_size: Option<usize>
+    ) -> Result<bool, ProvingSystemError> {
         // Retrieve committer keys
-        let g1_ck = get_g1_committer_key(None)?;
-        let g2_ck = get_g2_committer_key(None)?;
+        let supported_degree: Option<usize> = {
+            match segment_size {
+                Some(seg_size) => Some(seg_size - 1),
+                None => None,
+            }
+        };
+        let g1_ck = get_g1_committer_key(supported_degree)?;
+        let g2_ck = get_g2_committer_key(supported_degree)?;
 
         if ids.is_empty() {
             Err(ProvingSystemError::NoProofsToVerify)
