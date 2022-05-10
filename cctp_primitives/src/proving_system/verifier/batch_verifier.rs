@@ -281,7 +281,7 @@ mod test {
             test_canonical_serialize_deserialize(true, &vk);
 
             // Verification success
-            assert!(verify_zendoo_proof(usr_ins, &proof, &vk, Some(generation_rng)).unwrap());
+            assert!(verify_zendoo_proof(usr_ins, &proof, &vk, Some(iteration_segment_size), Some(generation_rng)).unwrap());
 
             // Verification failure
             let wrong_usr_ins = TestCircuitInputs {
@@ -289,7 +289,7 @@ mod test {
                 d: generation_rng.gen(),
             };
 
-            let res = verify_zendoo_proof(wrong_usr_ins, &proof, &vk, Some(generation_rng));
+            let res = verify_zendoo_proof(wrong_usr_ins, &proof, &vk, Some(iteration_segment_size), Some(generation_rng));
             assert!(res.is_err() || !res.unwrap());
         }
     }

@@ -21,6 +21,7 @@ pub fn verify_zendoo_proof<I: UserInputs, R: RngCore>(
     inputs: I,
     proof: &ZendooProof,
     vk: &ZendooVerifierKey,
+    segment_size: Option<usize>,
     rng: Option<&mut R>,
 ) -> Result<bool, ProvingSystemError> {
     let usr_ins = inputs.get_circuit_inputs()?;
@@ -29,7 +30,12 @@ pub fn verify_zendoo_proof<I: UserInputs, R: RngCore>(
         return Err(ProvingSystemError::ProvingSystemMismatch);
     }
 
-    let ck_g1 = get_g1_committer_key(None)?;
+    let supported_degree: Option<usize> = match segment_size {
+        Some(s) => Some(s - 1),
+        None => None,
+    };
+
+    let ck_g1 = get_g1_committer_key(supported_degree)?;
 
     // Verify proof (selecting the proper proving system)
     let res = match (proof, vk) {
