@@ -22,14 +22,14 @@ proof-systems = { git = "https://github.com/HorizenOfficial/ginger-lib.git", tag
 marlin = { git = "https://github.com/HorizenLabs/marlin", tag = "0.2.0" }
 poly-commit = { git = "https://github.com/HorizenLabs/poly-commit", tag = "0.2.0" }
 
-rand = { version = "0.8.4" }
-byteorder = "1.4.2"
-lazy_static = "1.4.0"
-blake2 = { version = "0.8.1", default-features = false }
-sha1 = "0.6.0"
-bit-vec = "0.6"
-bzip2 = "0.4.2"
-flate2 = "1.0.20"
+rand = { version = "=0.8.4" }
+byteorder = "=1.4.3"
+lazy_static = "=1.4.0"
+blake2 = { version = "=0.8.1", default-features = false }
+sha1 = "=0.6.0"
+bit-vec = "=0.6.3"
+bzip2 = { version = "=0.4.3", features = ["static"] }
+flate2 = "=1.0.22"
 
 [dev-dependencies]
 serial_test = "*"
