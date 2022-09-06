@@ -551,6 +551,7 @@ mod test {
             end_cumulative_sc_tx_commitment_tree_root: &rand_fe(),
             btr_fee: 0,
             ft_min_amount: 0,
+            sc_prev_wcert_hash: None
         };
 
         let csw_usr_ins = CSWProofUserInputs {
