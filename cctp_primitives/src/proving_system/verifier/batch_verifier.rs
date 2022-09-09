@@ -532,6 +532,16 @@ mod test {
     #[serial]
     #[test]
     fn dummy_batch_verifier_test() {
+        dummy_batch_verifier_internal(false)
+    }
+
+    #[serial]
+    #[test]
+    fn dummy_batch_verifier_test_with_prev_hash() {
+        dummy_batch_verifier_internal(true)
+    }
+
+    fn dummy_batch_verifier_internal(generate_prev_wcert_hash :bool) {
         use std::convert::TryInto;
 
         let num_proofs = 100;
@@ -540,6 +550,7 @@ mod test {
         let (params_g1, params_g2, _, segment_size) = get_params();
         let num_constraints = segment_size;
 
+        let prev_cert_hash = rand_fe();
         let bt_list = vec![BackwardTransfer::default()];
         let cert_usr_ins = CertificateProofUserInputs {
             constant: None,
@@ -551,7 +562,11 @@ mod test {
             end_cumulative_sc_tx_commitment_tree_root: &rand_fe(),
             btr_fee: 0,
             ft_min_amount: 0,
-            sc_prev_wcert_hash: None
+            sc_prev_wcert_hash: if generate_prev_wcert_hash {
+                Some(&prev_cert_hash)
+            } else {
+                None
+            }
         };
 
         let csw_usr_ins = CSWProofUserInputs {
