@@ -29,7 +29,7 @@ lazy_static = "=1.4.0"
 blake2 = { version = "=0.8.1", default-features = false }
 sha1 = "=0.6.0"
 bit-vec = "=0.6.3"
-bzip2 = "=0.4.3"
+bzip2 = { version = "=0.4.3", features = ["static"] }
 flate2 = "=1.0.21"
 
 [dev-dependencies]
