@@ -42,9 +42,6 @@ impl UserInputs for CertificateProofUserInputs<'_> {
         .map_err(|e| ProvingSystemError::Other(format!("{:?}", e)))?;
         inputs.push(cert_data_hash);
 
-        // Currently, this additional parameter may disrupt the functionality of the
-        // proof verification of mc-crypto lib, until it will be properly managed by
-        // the library itself.
         if self.sc_prev_wcert_hash.is_some() {
             inputs.push(*self.sc_prev_wcert_hash.unwrap());
         }
