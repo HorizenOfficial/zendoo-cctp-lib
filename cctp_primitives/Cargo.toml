@@ -1,6 +1,6 @@
 [package]
 name = "cctp_primitives"
-version = "0.1.2"
+version = "0.2.0-alpha2"
 authors = [
     "Alberto Benegiamo",
     "Daniele Di Benedetto <daniele@horizenlabs.io>",
