@@ -28,9 +28,5 @@ panic = "unwind"
 #bench-utils = { path = '../ginger-lib/bench-utils' }
 #proof-systems = { path = '../ginger-lib/proof-systems' }
 #r1cs-core = { path = '../ginger-lib/r1cs/core' }
-#
-#[patch.'https://github.com/HorizenLabs/marlin.git']
-#marlin = { path = '../marlin' }
-#
-#[patch.'https://github.com/HorizenLabs/poly-commit.git']
-#poly-commit = { path = '../poly-commit' }
+#marlin = { path = '../ginger-lib/proof-systems/src/marlin' }
+#poly-commit = { path = '../ginger-lib/proof-systems/src/poly-commit' }
