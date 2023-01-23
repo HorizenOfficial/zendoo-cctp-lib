@@ -33,7 +33,7 @@ bzip2 = { version = "=0.4.4", features = ["static"] }
 flate2 = "=1.0.21"
 
 [dev-dependencies]
-serial_test = "0.5.1"
+serial_test = "=0.5.1"
 
 [features]
 asm = ["marlin/asm", "poly-commit/asm", "algebra/llvm_asm", "primitives/llvm_asm"]
