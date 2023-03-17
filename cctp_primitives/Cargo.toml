@@ -1,6 +1,6 @@
 [package]
 name = "cctp_primitives"
-version = "0.1.2"
+version = "0.2.0"
 authors = [
     "Alberto Benegiamo",
     "Daniele Di Benedetto <daniele@horizenlabs.io>",
@@ -16,12 +16,12 @@ authors = [
 edition = "2018"
 
 [dependencies]
-algebra = { git = "https://github.com/HorizenOfficial/ginger-lib", branch = "development", features = ["parallel", "tweedle", "derive"] }
-primitives = { git = "https://github.com/HorizenOfficial/ginger-lib.git", branch = "development", features = ["merkle_tree", "tweedle"]}
-proof-systems = { git = "https://github.com/HorizenOfficial/ginger-lib.git", branch = "development", features = ["darlin"]}
+algebra = { git = "https://github.com/HorizenOfficial/ginger-lib", tag = "0.5.0", features = ["parallel", "tweedle", "derive"] }
+primitives = { git = "https://github.com/HorizenOfficial/ginger-lib.git", tag = "0.5.0", features = ["merkle_tree", "tweedle"]}
+proof-systems = { git = "https://github.com/HorizenOfficial/ginger-lib.git", tag = "0.5.0", features = ["darlin"]}
 
-marlin = { git = "https://github.com/HorizenOfficial/ginger-lib.git", branch = "development" }
-poly-commit = { git = "https://github.com/HorizenOfficial/ginger-lib.git", branch = "development" }
+marlin = { git = "https://github.com/HorizenOfficial/ginger-lib.git", tag = "0.5.0" }
+poly-commit = { git = "https://github.com/HorizenOfficial/ginger-lib.git", tag = "0.5.0" }
 
 rand = { version = "=0.8.4" }
 byteorder = "=1.4.3"
