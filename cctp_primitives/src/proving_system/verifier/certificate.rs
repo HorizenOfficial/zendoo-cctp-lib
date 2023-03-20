@@ -18,6 +18,7 @@ pub struct CertificateProofUserInputs<'a> {
     pub end_cumulative_sc_tx_commitment_tree_root: &'a FieldElement,
     pub btr_fee: u64,
     pub ft_min_amount: u64,
+    pub sc_prev_wcert_hash: Option<&'a FieldElement>,
 }
 
 impl UserInputs for CertificateProofUserInputs<'_> {
@@ -40,6 +41,10 @@ impl UserInputs for CertificateProofUserInputs<'_> {
         )
         .map_err(|e| ProvingSystemError::Other(format!("{:?}", e)))?;
         inputs.push(cert_data_hash);
+
+        if self.sc_prev_wcert_hash.is_some() {
+            inputs.push(*self.sc_prev_wcert_hash.unwrap());
+        }
 
         Ok(inputs)
     }

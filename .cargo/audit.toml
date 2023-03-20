@@ -1,0 +1,9 @@
+[advisories]
+ignore = [
+    "RUSTSEC-2021-0145", # We use attty just for benches and tracing in tests
+]
+informational_warnings = ["unmaintained", "unsound"]
+
+[output]
+deny = ["warnings", "unsound", "yanked"]
+quiet = false
