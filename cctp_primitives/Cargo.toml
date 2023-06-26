@@ -11,17 +11,26 @@ authors = [
     "Alberto Sala <alsala@zensystem.io>",
     "Luigi Varriale <luigi@horizenlabs.io>",
     "cronicc <cronic@horizenlabs.io>",
-    "Luca Giussani <lucagiussani@horizenlabs.io>"
+    "Luca Giussani <lucagiussani@horizenlabs.io>",
 ]
 edition = "2018"
 
 [dependencies]
-algebra = { git = "https://github.com/HorizenOfficial/ginger-lib", tag = "0.5.0", features = ["parallel", "tweedle", "derive"] }
-primitives = { git = "https://github.com/HorizenOfficial/ginger-lib.git", tag = "0.5.0", features = ["merkle_tree", "tweedle"]}
-proof-systems = { git = "https://github.com/HorizenOfficial/ginger-lib.git", tag = "0.5.0", features = ["darlin"]}
+algebra = { git = "https://github.com/HorizenOfficial/ginger-lib", branch = "zend-516-remove-rust-toolchain", features = [
+    "parallel",
+    "tweedle",
+    "derive",
+] }
+primitives = { git = "https://github.com/HorizenOfficial/ginger-lib.git", branch = "zend-516-remove-rust-toolchain", features = [
+    "merkle_tree",
+    "tweedle",
+] }
+proof-systems = { git = "https://github.com/HorizenOfficial/ginger-lib.git", branch = "zend-516-remove-rust-toolchain", features = [
+    "darlin",
+] }
 
-marlin = { git = "https://github.com/HorizenOfficial/ginger-lib.git", tag = "0.5.0" }
-poly-commit = { git = "https://github.com/HorizenOfficial/ginger-lib.git", tag = "0.5.0" }
+marlin = { git = "https://github.com/HorizenOfficial/ginger-lib.git", branch = "zend-516-remove-rust-toolchain" }
+poly-commit = { git = "https://github.com/HorizenOfficial/ginger-lib.git", branch = "zend-516-remove-rust-toolchain" }
 
 rand = { version = "=0.8.4" }
 byteorder = "=1.4.3"
@@ -36,4 +45,4 @@ flate2 = "=1.0.21"
 serial_test = "=0.5.1"
 
 [features]
-asm = ["marlin/asm", "poly-commit/asm", "algebra/llvm_asm", "primitives/llvm_asm"]
+asm = ["marlin/asm", "poly-commit/asm", "algebra/asm", "primitives/asm"]
