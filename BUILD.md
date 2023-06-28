@@ -4,8 +4,8 @@ The library compiles on the `stable` toolchain of the Rust compiler. To install 
 After that, use `cargo`, the standard Rust build tool, to build the library:
 
 ```bash
-git clone https://github.com/HorizenOfficial/ginger-lib.git
-cd ginger-lib
+git clone https://github.com/HorizenOfficial/zendoo-cctp-lib.git
+cd zendoo-cctp-lib
 cargo build --release
 ```
 
