@@ -1,6 +1,6 @@
 [package]
 name = "cctp_primitives"
-version = "0.2.0"
+version = "0.2.1"
 authors = [
     "Alberto Benegiamo",
     "Daniele Di Benedetto <daniele@horizenlabs.io>",
@@ -12,25 +12,26 @@ authors = [
     "Luigi Varriale <luigi@horizenlabs.io>",
     "cronicc <cronic@horizenlabs.io>",
     "Luca Giussani <lucagiussani@horizenlabs.io>",
+    "Michele d'Amico <mdamico@horizenlabs.io>",
 ]
 edition = "2018"
 
 [dependencies]
-algebra = { git = "https://github.com/HorizenOfficial/ginger-lib", branch = "zend-516-remove-rust-toolchain", features = [
+algebra = { git = "https://github.com/HorizenOfficial/ginger-lib", tag = "0.6.0", features = [
     "parallel",
     "tweedle",
     "derive",
 ] }
-primitives = { git = "https://github.com/HorizenOfficial/ginger-lib.git", branch = "zend-516-remove-rust-toolchain", features = [
+primitives = { git = "https://github.com/HorizenOfficial/ginger-lib.git", tag = "0.6.0", features = [
     "merkle_tree",
     "tweedle",
 ] }
-proof-systems = { git = "https://github.com/HorizenOfficial/ginger-lib.git", branch = "zend-516-remove-rust-toolchain", features = [
+proof-systems = { git = "https://github.com/HorizenOfficial/ginger-lib.git", tag = "0.6.0", features = [
     "darlin",
 ] }
 
-marlin = { git = "https://github.com/HorizenOfficial/ginger-lib.git", branch = "zend-516-remove-rust-toolchain" }
-poly-commit = { git = "https://github.com/HorizenOfficial/ginger-lib.git", branch = "zend-516-remove-rust-toolchain" }
+marlin = { git = "https://github.com/HorizenOfficial/ginger-lib.git", tag = "0.6.0" }
+poly-commit = { git = "https://github.com/HorizenOfficial/ginger-lib.git", tag = "0.6.0" }
 
 rand = { version = "=0.8.4" }
 byteorder = "=1.4.3"
