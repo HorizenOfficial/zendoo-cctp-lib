@@ -23,20 +23,19 @@ proofs, our Marlin variant, and *Final Darlin* proofs, the proving system used i
 
 ## Build guide
 
-The library compiles on the `1.51.0 stable` toolchain of the Rust compiler.
-To install Rust, first install `rustup` by following the instructions [here](https://rustup.rs/), or via your platform's package manager.
-Once `rustup` is installed, install the appropriate Rust toolchain by invoking:
-```bash
-rustup install 1.51.0
-```
+The library compiles on the `stable` toolchain of the Rust compiler. To install Rust, first install `rustup` by following the instructions [here](https://rustup.rs/), or via your platform's package manager.
 After that, use `cargo`, the standard Rust build tool, to build the library:
+
 ```bash
-git clone https://github.com/HorizenOfficial/zendoo-sc-cryptolib.git
-cd zendoo-sc-cryptolib
+git clone https://github.com/HorizenOfficial/zendoo-cctp-lib.git
+cd zendoo-cctp-lib
 cargo build --release
 ```
+
 This library comes with unit tests for each of the provided crates. Run the tests with:
+
 ```bash
-cargo test
-``` 
+cargo test --all-features
+```
+
 More detailed build guide can be found in in our [build guide](BUILD.md).
