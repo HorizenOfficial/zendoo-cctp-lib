@@ -33,17 +33,17 @@ proof-systems = { git = "https://github.com/HorizenOfficial/ginger-lib.git", tag
 marlin = { git = "https://github.com/HorizenOfficial/ginger-lib.git", tag = "0.6.0" }
 poly-commit = { git = "https://github.com/HorizenOfficial/ginger-lib.git", tag = "0.6.0" }
 
-rand = { version = "=0.8.4" }
-byteorder = "=1.4.3"
-lazy_static = "=1.4.0"
-blake2 = { version = "=0.8.1", default-features = false }
-sha1 = "=0.6.0"
-bit-vec = "=0.6.3"
-bzip2 = { version = "=0.4.4", features = ["static"] }
-flate2 = "=1.0.21"
+rand = { version = "0.8.4" }
+byteorder = "1.4.3"
+lazy_static = "1.4.0"
+blake2 = { version = "0.8.1", default-features = false }
+sha1 = "0.6.0"
+bit-vec = "0.6.3"
+bzip2 = { version = "0.4.4", features = ["static"] }
+flate2 = "1.0.21"
 
 [dev-dependencies]
-serial_test = "=0.5.1"
+serial_test = "0.5.1"
 
 [features]
 asm = ["marlin/asm", "poly-commit/asm", "algebra/asm", "primitives/asm"]
