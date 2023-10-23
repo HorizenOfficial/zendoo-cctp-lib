@@ -7,7 +7,6 @@ use primitives::FieldBasedMerkleTree;
 
 pub mod commitment_tree;
 pub mod data_structures;
-pub mod debug;
 pub mod mht;
 pub mod poseidon_hash;
 pub mod serialization;

@@ -22,11 +22,11 @@ panic = "unwind"
 
 # Uncomment these lines for local development pathsd
 #
-#[patch.'https://github.com/HorizenOfficial/ginger-lib.git']
-#algebra = { path = '../ginger-lib/algebra' }
-#primitives = { path = '../ginger-lib/primitives' }
-#bench-utils = { path = '../ginger-lib/bench-utils' }
-#proof-systems = { path = '../ginger-lib/proof-systems' }
-#r1cs-core = { path = '../ginger-lib/r1cs/core' }
-#marlin = { path = '../ginger-lib/proof-systems/src/marlin' }
-#poly-commit = { path = '../ginger-lib/proof-systems/src/poly-commit' }
+# [patch.'https://github.com/HorizenOfficial/ginger-lib.git']
+# algebra = { path = '../ginger-lib/algebra' }
+# primitives = { path = '../ginger-lib/primitives' }
+# bench-utils = { path = '../ginger-lib/bench-utils' }
+# proof-systems = { path = '../ginger-lib/proof-systems' }
+# r1cs-core = { path = '../ginger-lib/r1cs/core' }
+# marlin = { path = '../ginger-lib/proof-systems/src/marlin' }
+# poly-commit = { path = '../ginger-lib/proof-systems/src/poly-commit' }
