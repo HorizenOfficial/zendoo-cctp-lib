@@ -17,21 +17,21 @@ authors = [
 edition = "2018"
 
 [dependencies]
-algebra = { git = "https://github.com/HorizenOfficial/ginger-lib", tag = "0.6.0", features = [
+algebra = { git = "https://github.com/HorizenOfficial/ginger-lib", tag = "0.6.1", features = [
     "parallel",
     "tweedle",
     "derive",
 ] }
-primitives = { git = "https://github.com/HorizenOfficial/ginger-lib.git", tag = "0.6.0", features = [
+primitives = { git = "https://github.com/HorizenOfficial/ginger-lib.git", tag = "0.6.1", features = [
     "merkle_tree",
     "tweedle",
 ] }
-proof-systems = { git = "https://github.com/HorizenOfficial/ginger-lib.git", tag = "0.6.0", features = [
+proof-systems = { git = "https://github.com/HorizenOfficial/ginger-lib.git", tag = "0.6.1", features = [
     "darlin",
 ] }
 
-marlin = { git = "https://github.com/HorizenOfficial/ginger-lib.git", tag = "0.6.0" }
-poly-commit = { git = "https://github.com/HorizenOfficial/ginger-lib.git", tag = "0.6.0" }
+marlin = { git = "https://github.com/HorizenOfficial/ginger-lib.git", tag = "0.6.1" }
+poly-commit = { git = "https://github.com/HorizenOfficial/ginger-lib.git", tag = "0.6.1" }
 
 rand = { version = "0.8.4" }
 byteorder = "1.4.3"
