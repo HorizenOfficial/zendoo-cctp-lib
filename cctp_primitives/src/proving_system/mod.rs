@@ -700,7 +700,7 @@ fn test_check_proof_vk_size() {
                             max_vk_size,
                             proof_type,
                         );
-                    println!(
+                    log::info!(
                         "For Density: {}, MaxProofSize: {}, MaxVkSize: {}, ProofType: {:?}, Zk: {}, SegmentSize: 1 << {}, Num inputs: {}, Max supported constraints are: {}, Max supported variables are: {}, Proof size: {} bytes, Vk size: {} bytes",
                         density, max_proof_size, max_vk_size, proof_type, zk, size, num_inputs, max_num_constraints, max_num_variables, proof_size, vk_size
                     );

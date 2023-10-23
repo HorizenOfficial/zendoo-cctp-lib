@@ -179,9 +179,9 @@ mod test {
         assert_eq!(compressed_root_hash, computed_root_hash);
         assert_eq!(root_hash, computed_root_hash);
 
-        println!("Expected root hash: {}", root_hash);
-        println!("Computed root hash: {}", computed_root_hash);
-        println!("Compressed root hash: {}", compressed_root_hash);
+        log::info!("Expected root hash: {}", root_hash);
+        log::info!("Computed root hash: {}", computed_root_hash);
+        log::info!("Compressed root hash: {}", compressed_root_hash);
 
         // Add some bytes to make the merkle root hash change.
         raw_byte_vector.extend(vec![1; raw_byte_vector.len()]);

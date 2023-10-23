@@ -9,7 +9,7 @@ use std::io::{Read, Write};
 use bzip2::read::{BzDecoder, BzEncoder};
 use flate2::{read::GzDecoder, write::GzEncoder, Compression as GzipCompression};
 
-use crate::{printlndbg, type_mapping::Error};
+use crate::type_mapping::Error;
 
 /// The chunk size used in the decompression functions.
 const DECOMPRESSION_CHUNK_SIZE: usize = 1024;
@@ -79,8 +79,8 @@ pub fn compress_bit_vector(
 ) -> Result<Vec<u8>, Error> {
     let compressed_bit_vector_result;
 
-    printlndbg!("Compressing bit vector...");
-    printlndbg!(
+    log::info!("Compressing bit vector...");
+    log::debug!(
         "Algorithm: {}, size: {}, address: {:p}",
         algorithm as u8,
         raw_bit_vector.len(),
@@ -154,8 +154,8 @@ fn decompress_bit_vector_with_opt_checks(
     compressed_bit_vector: &[u8],
     expected_size_opt: Option<usize>,
 ) -> Result<Vec<u8>, Error> {
-    printlndbg!("Decompressing bit vector...");
-    printlndbg!(
+    log::info!("Decompressing bit vector...");
+    log::debug!(
         "Algorithm: {}, size: {}, expected decompressed size: {:?} (check: {}), address: {:p}",
         compressed_bit_vector[0],
         compressed_bit_vector.len(),
@@ -165,7 +165,7 @@ fn decompress_bit_vector_with_opt_checks(
     );
 
     let mut max_decompressed_size: usize = MAX_DECOMPRESSION_SIZE;
-    printlndbg!(
+    log::debug!(
         "MAX_DECOMPRESSION_SIZE: {}, expected: {:?}",
         MAX_DECOMPRESSION_SIZE,
         expected_size_opt
@@ -193,7 +193,7 @@ fn decompress_bit_vector_with_opt_checks(
         Err(_) => Err("Compression algorithm not supported")?,
     }?;
 
-    printlndbg!("Decompressed size: {}", raw_bit_vector_result.len());
+    log::debug!("Decompressed size: {}", raw_bit_vector_result.len());
 
     if let Some(expected_size_opt) = expected_size_opt {
         let expected_size = expected_size_opt;
