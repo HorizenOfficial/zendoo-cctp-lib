@@ -79,7 +79,7 @@ pub fn compress_bit_vector(
 ) -> Result<Vec<u8>, Error> {
     let compressed_bit_vector_result;
 
-    log::info!("Compressing bit vector...");
+    log::debug!("Compressing bit vector...");
     log::debug!(
         "Algorithm: {}, size: {}, address: {:p}",
         algorithm as u8,
@@ -154,7 +154,7 @@ fn decompress_bit_vector_with_opt_checks(
     compressed_bit_vector: &[u8],
     expected_size_opt: Option<usize>,
 ) -> Result<Vec<u8>, Error> {
-    log::info!("Decompressing bit vector...");
+    log::debug!("Decompressing bit vector...");
     log::debug!(
         "Algorithm: {}, size: {}, expected decompressed size: {:?} (check: {}), address: {:p}",
         compressed_bit_vector[0],

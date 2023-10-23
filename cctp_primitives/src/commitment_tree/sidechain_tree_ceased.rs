@@ -53,7 +53,7 @@ impl SidechainTreeCeased {
         match hash_vec(vec![csw_mr, sc_id]) {
             Ok(v) => Some(v),
             Err(e) => {
-                log::info!("{}", e);
+                log::error!("{}", e);
                 None
             }
         }
