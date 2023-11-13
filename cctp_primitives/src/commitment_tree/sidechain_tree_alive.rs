@@ -163,7 +163,7 @@ impl SidechainTreeAlive {
         match hash_vec(vec![fwt_mr, bwtr_mr, cert_mr, scc, sc_id]) {
             Ok(v) => Some(v),
             Err(e) => {
-                eprint!("{}", e);
+                log::error!("{}", e);
                 None
             }
         }

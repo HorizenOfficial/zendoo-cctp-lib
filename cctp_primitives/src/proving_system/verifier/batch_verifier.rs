@@ -26,6 +26,11 @@ impl ZendooBatchVerifier {
         }
     }
 
+    /// Return the number of proofs currently in the ZendooBatchVerifier
+    pub fn num_proofs(&self) -> usize {
+        self.verifier_data.len()
+    }
+
     /// Add a proof, uniquely identified by `id`, to the batch of proof to be verified.
     /// `proof` and `vk` must belong to the same proving system, as enforced by
     /// `check_matching_proving_system_type()` function.
