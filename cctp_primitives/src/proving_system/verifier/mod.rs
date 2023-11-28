@@ -11,7 +11,7 @@ pub mod ceased_sidechain_withdrawal;
 pub mod certificate;
 
 /// Wrapper for the user inputs of a circuit, assumed to be a vector of Field Elements
-pub trait UserInputs {
+pub trait UserInputs: std::fmt::Debug {
     /// Handle all the boiler plate to get the user inputs of a given circuit.
     fn get_circuit_inputs(&self) -> Result<Vec<FieldElement>, ProvingSystemError>;
 }

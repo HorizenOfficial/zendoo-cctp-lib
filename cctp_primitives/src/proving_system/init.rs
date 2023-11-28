@@ -40,6 +40,7 @@ pub fn load_g1_committer_key(max_degree: usize) -> Result<(), SerializationError
             )));
         }
     }
+    log::info!("Generating G1 Dlog Keys of degree: {}", max_degree);
     match load_universal_params::<G1>(max_degree) {
         // Generation/Loading successfull, assign the key to the lazy_static
         Ok(loaded_params) => {
@@ -80,6 +81,7 @@ pub fn load_g2_committer_key(max_degree: usize) -> Result<(), SerializationError
             )));
         }
     }
+    log::info!("Generating G2 Dlog Keys of degree: {}", max_degree);
     match load_universal_params::<G2>(max_degree) {
         // Generation/Loading successful, assign the key to the lazy_static
         Ok(loaded_params) => {
@@ -156,6 +158,7 @@ fn load_universal_params<G: AffineCurve>(
     let pp = InnerProductArgPC::<G, Digest>::setup(max_degree)
         .map_err(|_| SerializationError::InvalidData)?;
 
+    log::debug!("Generated DLOG keys: {:?}", pp);
     // Return the read/generated universal parameters
     Ok(pp)
 }

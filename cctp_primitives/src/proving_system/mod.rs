@@ -492,12 +492,15 @@ pub fn init_dlog_keys(proving_system: ProvingSystem, max_segment_size: usize) ->
         return Err(ProvingSystemError::UndefinedProvingSystem)?;
     }
 
+    log::info!("Generating DLOG keys for {:?}", proving_system);
+
     load_g1_committer_key(max_segment_size - 1)?;
 
     if matches!(proving_system, ProvingSystem::Darlin) {
         load_g2_committer_key(max_segment_size - 1)?
     }
 
+    log::info!("DLOG Keys successfully generated");
     Ok(())
 }
 

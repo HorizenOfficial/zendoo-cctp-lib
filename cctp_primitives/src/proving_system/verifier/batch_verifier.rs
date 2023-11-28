@@ -14,6 +14,7 @@ use std::collections::HashMap;
 /// The struct provides function to add new proofs and to verify a subset of them.
 /// Data is not cleared automatically from the `verifier_data` HashMap after
 /// the corresponding verification procedure has been performed.
+#[derive(Debug)]
 pub struct ZendooBatchVerifier {
     pub(crate) verifier_data: HashMap<u32, (ZendooProof, ZendooVerifierKey, Vec<FieldElement>)>,
 }
@@ -148,6 +149,25 @@ impl ZendooBatchVerifier {
     pub fn batch_verify_all<R: RngCore>(&self, rng: &mut R) -> Result<bool, ProvingSystemError> {
         self.batch_verify_subset(self.verifier_data.keys().copied().collect::<Vec<_>>(), rng)
     }
+
+    /// Returns the proofs and the associated data having id specified in the `ids` parameter.
+    /// If None is passed, all the proofs will be returned.
+    /// Returns Error if one of the provided ids doesn't exist.
+    pub fn get_proofs_by_id(&self, ids: Option<Vec<u32>>) -> Result<HashMap<u32, (ZendooProof, ZendooVerifierKey, Vec<FieldElement>)>, ProvingSystemError> {
+        if ids.is_none() {
+            Ok(self.verifier_data.clone())
+        } else {
+            let mut new_map = HashMap::new();
+            for id in ids.unwrap().iter() {
+                let val = self
+                    .verifier_data
+                    .get(id)
+                    .ok_or(ProvingSystemError::Other(format!("Proof with id {} not present", id)))?;
+                new_map.insert(*id, val.clone());
+            }
+            Ok(new_map)
+        }
+    }
 }
 
 #[cfg(test)]
@@ -182,6 +202,7 @@ mod test {
     use serial_test::serial;
 
     // ***********************Tests with real test circuit*************************
+    #[derive(Debug)]
     struct TestCircuitInputs {
         c: FieldElement,
         d: FieldElement,

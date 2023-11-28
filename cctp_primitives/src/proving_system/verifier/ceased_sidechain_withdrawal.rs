@@ -13,7 +13,7 @@ pub const PHANTOM_CERT_DATA_HASH: FieldElement = field_new!(
     ])
 );
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct CSWProofUserInputs<'a> {
     pub amount: u64,
     pub constant: Option<&'a FieldElement>,

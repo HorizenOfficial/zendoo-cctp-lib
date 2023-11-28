@@ -7,7 +7,7 @@ use crate::{
 
 /// All the data needed to reconstruct the aggregated input for the NaiveThresholdSignatureCircuit
 /// included in the Certificate.
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct CertificateProofUserInputs<'a> {
     pub constant: Option<&'a FieldElement>,
     pub sc_id: &'a FieldElement,
